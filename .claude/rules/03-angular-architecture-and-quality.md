@@ -12,8 +12,8 @@ với `class App`, `app.html`, `app.css`, không hậu tố `.component`).
 
 ```
 src/app/
-  core/        # dùng toàn app, tạo một lần: api client, auth, interceptors, guards, cấu hình, xử lý lỗi
-  shared/      # thành phần/pipe/directive dùng lại, không phụ thuộc nghiệp vụ cụ thể
+  core/        # dùng toàn app, tạo một lần: api client, auth, interceptors, guards, cấu hình, xử lý lỗi, constants, models, services, validators
+  shared/      # thành phần/pipe/directive, widget dùng lại, không phụ thuộc nghiệp vụ cụ thể
   features/    # mỗi nhóm chức năng một thư mục, bám module backend:
     auth/ program/ course/ assessment/ academic/ score-import/ measurement/ report/ improvement/
 ```
