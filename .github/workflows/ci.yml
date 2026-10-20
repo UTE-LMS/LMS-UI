@@ -1,0 +1,37 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Unit tests with coverage
+        run: npx ng test --no-watch --coverage
+
+      - name: Build
+        run: npm run build
+
+      # Quét phụ thuộc. Các chặng còn lại (quét secret, Docker, deploy, giám sát) sẽ được bổ sung dần,
+      # xem LMS-API/doc/ke-hoach-xay-dung.md mục 7 và LMS-API/doc/tech-debt.md TD-09.
+      - name: Dependency audit
+        run: npm audit --audit-level=high
