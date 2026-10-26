@@ -1,6 +1,6 @@
 {
-  "name": "angular-main-structure",
-  "version": "19.0.0",
+  "name": "LMS-UI",
+  "version": "1.0.0",
   "scripts": {
     "ng": "node node_modules/@angular/cli/bin/ng",
     "start": "node node_modules/@angular/cli/bin/ng serve",
