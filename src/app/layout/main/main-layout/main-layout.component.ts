@@ -59,7 +59,7 @@ export class MainLayoutComponent implements OnInit {
     this.router.events
       .pipe(
         filter((event): event is NavigationEnd => event instanceof NavigationEnd),
-        takeUntilDestroyed(this.destroyRef)
+        takeUntilDestroyed(this.destroyRef),
       )
       .subscribe(event => {
         this.updatePageState(event.urlAfterRedirects);
@@ -70,7 +70,7 @@ export class MainLayoutComponent implements OnInit {
     timer(0, 1000)
       .pipe(
         take(10),
-        takeUntilDestroyed(this.destroyRef)
+        takeUntilDestroyed(this.destroyRef),
       )
       .subscribe(() => window.dispatchEvent(new Event('resize')));
   }

@@ -69,18 +69,18 @@ export class UploadFileComponent {
       const isFileInfoType = 'fileInfo' in item;
 
       if (isFileInfoType) {
-        const infoItem = item as IListFilesPatchFileInfo;
+        const infoItem = item;
         return {
           id: infoItem.id,
-          filename: infoItem.fileInfo?.fileName || '',
-          fileInfo: infoItem.fileInfo
+          filename: infoItem.fileInfo?.fileName ?? '',
+          fileInfo: infoItem.fileInfo,
         };
       } else {
         const idItem = item as IListFilesPatchId;
         return {
           id: idItem.id,
-          filename: idItem.filename || '',
-          fileInfo: null
+          filename: idItem.filename ?? '',
+          fileInfo: null,
         };
       }
     });
@@ -96,18 +96,18 @@ export class UploadFileComponent {
           const isFileInfoType = 'fileInfo' in item;
 
           if (isFileInfoType) {
-            const infoItem = item as IListFilesPatchFileInfo;
+            const infoItem = item;
             return {
               id: infoItem.id,
-              filename: infoItem.fileInfo?.fileName || '',
-              fileInfo: infoItem.fileInfo
+              filename: infoItem.fileInfo?.fileName ?? '',
+              fileInfo: infoItem.fileInfo,
             };
           } else {
             const idItem = item as IListFilesPatchId;
             return {
               id: idItem.id,
-              filename: idItem.filename || '',
-              fileInfo: null
+              filename: idItem.filename ?? '',
+              fileInfo: null,
             };
           }
         });
@@ -145,7 +145,7 @@ export class UploadFileComponent {
                   return {
                     id: body?.id ?? '',
                     filename: body?.fileName ?? '',
-                    fileInfo: body
+                    fileInfo: body,
                   };
                 });
 
@@ -181,7 +181,7 @@ export class UploadFileComponent {
               this.listFiles.set([{
                 id: body?.id ?? '',
                 filename: body?.fileName ?? '',
-                fileInfo: body
+                fileInfo: body,
               }]);
               this.emitResult();
               this.isStartUpload.set(false);
@@ -278,7 +278,9 @@ export class UploadFileComponent {
         }
         this.spinner.hide();
       },
-      error: () => this.spinner.hide()
+      error: () => {
+        this.spinner.hide();
+      },
     });
   }
 }

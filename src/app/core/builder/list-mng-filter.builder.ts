@@ -29,7 +29,7 @@ export function createListManagerFilter<T, FilterType>(
     size: number,
     sort?: string,
     column?: string,
-  ) => Observable<IPagedResults<T>>
+  ) => Observable<IPagedResults<T>>,
 ) {
   const filter: Partial<FilterType> = {};
   const appliedQuery = signal({
@@ -48,7 +48,7 @@ export function createListManagerFilter<T, FilterType>(
       switchMap(query => fetchDataFn(query.filter, query.page, query.size, query.sort, query.column)
         .pipe(catchError(() => of(null)))),
     ),
-    { initialValue: null }
+    { initialValue: null },
   );
 
   const listData = computed(() => {
@@ -71,7 +71,7 @@ export function createListManagerFilter<T, FilterType>(
     appliedQuery.update(q => ({
       ...q,
       page: isResetPage ? 1 : q.page,
-      filter: { ...filter }
+      filter: { ...filter },
     }));
   };
 
@@ -86,7 +86,7 @@ export function createListManagerFilter<T, FilterType>(
     appliedQuery.update(q => ({
       ...q,
       page: page.currentPage,
-      size: page.limit
+      size: page.limit,
     }));
   };
 
