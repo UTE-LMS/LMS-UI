@@ -1,0 +1,29 @@
+/* Menu */
+.menu-alone,
+.sub-menu ::ng-deep .ant-menu-submenu-title {
+  padding-left: 12px !important;
+  padding-right: 20px !important;
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  background-color: var(--color-primary-light-2x) !important;
+  font-weight: 700;
+  letter-spacing: -0.7px;
+  height: 32px;
+  line-height: 32px;
+}
+
+/* Menu sub */
+.sub-menu ::ng-deep .ant-menu-sub li {
+  padding-left: 16px !important;
+  padding-right: 16px !important;
+  letter-spacing: -0.5px;
+  height: 32px;
+  line-height: 32px;
+  margin: 0;
+}
+
+::ng-deep .ant-menu-submenu-title .ant-menu-submenu-arrow {
+  right: 10px;
+}

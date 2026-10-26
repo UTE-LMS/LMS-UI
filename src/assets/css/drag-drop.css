@@ -1,0 +1,33 @@
+/* Drag Drop */
+tr.cdk-drag {
+  background-color: #fff;
+}
+
+.cdk-drag-preview {
+  box-sizing: border-box;
+  border-radius: 0.25rem;
+  box-shadow: 0 5px 5px -3px rgba(0,0,0,0.2), 0 8px 10px 1px rgba(0,0,0,0.14), 0 3px 14px 2px rgba(0,0,0,0.12);
+}
+
+.cdk-drag-placeholder {
+  opacity: 0;
+}
+
+.cdk-drag-animating {
+  transition-property: transform;
+  transition-duration: 200ms;
+  transition-timing-function: ease-out;
+  transition-delay: 0s;
+}
+
+.example-box:last-child {
+  border: 0;
+}
+
+.example-list.cdk-drop-list-dragging .example-box:not(.cdk-drag-placeholder) {
+  transition-property: transform;
+  transition-duration: 200ms;
+  transition-timing-function: ease-out;
+  transition-delay: 0s;
+}
+/* End Drag Drop */

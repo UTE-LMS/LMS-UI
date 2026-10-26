@@ -1,0 +1,41 @@
+<div class="flex flex-col min-h-screen">
+
+  <app-main-header />
+
+  <div class="flex-1 flex flex-col pl-2.5 pr-2.5">
+
+    <nz-layout class="bg-white flex-1">
+
+      <nz-drawer [nzVisible]="isShowDrawer()" nzPlacement="left" nzTitle="QUẢN LÝ KHCN - HCM-UTE"
+        (nzOnClose)="isShowDrawer.set(false)">
+        <ng-container *nzDrawerContent>
+          <app-main-sidebar />
+        </ng-container>
+      </nz-drawer>
+
+      @if (isShowSider()) {
+      <nz-sider nzTheme="light" [nzWidth]="sliderWidth()"
+        class="a-box mb-0 border border-solid border-lightgray-dark p-2.5 rounded-md shadow-[1px_1px_5px_0px_#e1e1e1] bg-white">
+        <app-main-sidebar />
+      </nz-sider>
+      }
+
+      <nz-content
+        [class]="isPubPage() ? '' : 'a-box mb-0 border border-solid border-lightgray-dark p-2.5 rounded-md shadow-[1px_1px_5px_0px_#e1e1e1] bg-white'">
+        <router-outlet></router-outlet>
+      </nz-content>
+
+    </nz-layout>
+  </div>
+
+  <app-main-footer />
+
+</div>
+
+@if (!isShowSider() && !isPubPage()) {
+<div
+  class=" fixed left-0 top-31.5 bg-primary-light-2x text-primary p-2.5 border border-solid border-gray border-l-0 rounded-tr-sm rounded-br-sm z-1000 cursor-pointer ease-linear duration-300 opacity-40 hover:opacity-100"
+  (click)="isShowDrawer.set(!isShowDrawer())">
+  <i class="fa-solid fa-list text-2xl"></i>
+</div>
+}

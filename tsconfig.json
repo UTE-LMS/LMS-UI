@@ -1,26 +1,91 @@
-/* To learn more about Typescript configuration file: https://www.typescriptlang.org/docs/handbook/tsconfig-json.html. */
-/* To learn more about Angular compiler options: https://angular.dev/reference/configs/angular-compiler-options. */
+/* To learn more about this file see: https://angular.io/config/tsconfig. */
 {
   "compileOnSave": false,
   "compilerOptions": {
+    "allowJs": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "resolveJsonModule": true,
+    "outDir": "./dist/out-tsc",
+    "paths": {
+      "@constants/*": [
+        "./src/app/core/constants/*"
+      ],
+      "@guards/*": [
+        "./src/app/core/guards/*"
+      ],
+      "@interceptors/*": [
+        "./src/app/core/interceptors/*"
+      ],
+      "@models/*": [
+        "./src/app/core/models/*"
+      ],
+      "@services/*": [
+        "./src/app/core/services/*"
+      ],
+      "@validators/*": [
+        "./src/app/core/validators/*"
+      ],
+      "@layouts/*": [
+        "./src/app/layouts/*"
+      ],
+      "@component-shared/*": [
+        "./src/app/shared/component-shared/*"
+      ],
+      "@widget/*": [
+        "./src/app/shared/widget/*"
+      ],
+      "@languages/*": [
+        "./src/assets/languages/*"
+      ],
+      "@env": [
+        "./src/environments/environment.ts"
+      ],
+      "@auth/*": [
+        "./src/app/auth/*"
+      ],
+      "@main/*": [
+        "./src/app/main/*"
+      ],
+      "@mng/*": [
+        "./src/app/mng/*"
+      ]
+    },
+    "forceConsistentCasingInFileNames": true,
     "strict": true,
+    "strictNullChecks": true,
     "noImplicitOverride": true,
-    "noPropertyAccessFromIndexSignature": true,
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true,
     "skipLibCheck": true,
     "isolatedModules": true,
+    "esModuleInterop": true,
+    "sourceMap": true,
+    "declaration": false,
     "experimentalDecorators": true,
+    "moduleResolution": "bundler",
     "importHelpers": true,
     "target": "ES2022",
-    "module": "preserve"
+    "module": "preserve",
+    "useDefineForClassFields": false
   },
   "angularCompilerOptions": {
     "enableI18nLegacyMessageIdFormat": false,
     "strictInjectionParameters": true,
     "strictInputAccessModifiers": true,
-    "strictTemplates": true
+    "strictTemplates": true,
+    "strictStandalone": true,
   },
+  "exclude": [
+    ".git",
+    ".angular",
+    ".vscode",
+    "dist",
+    "dist*",
+    "node_modules",
+    "**/dist/*",
+    "**/node_modules/*"
+  ],
   "files": [],
   "references": [
     {

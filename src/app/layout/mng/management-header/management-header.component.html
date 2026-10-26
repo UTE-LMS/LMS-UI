@@ -1,0 +1,39 @@
+<div nz-row class="pt-3.75 pb-3.5 leading-[100%]">
+  <div nz-col nzSpan="16" class="mt-auto mb-auto">
+    <b class="uppercase hidden sm:block"><span
+        class="hidden xl:[display:unset] text-transparent">__</span>
+      {{langData.HE_THONG_QUAN_TRI}}</b>
+  </div>
+  <div nz-col nzSpan="8" class="inline-flex justify-end gap-1.25">
+    @if (langCode === 'vi') {
+    <button nz-button nzType="default" type="button"
+      class="ml-1.25 p-1.25 mt-auto mb-auto cursor-pointer" (click)="switchLang('en')">
+      <div class="inline-flex items-center gap-1">
+        <img class="w-4.5 object-cover" src="assets/img/lang/vi.svg" alt="Vietnamese">
+        <span class="uppercase">{{langCode}}</span>
+      </div>
+    </button>
+    } @else {
+    <button nz-button nzType="default" type="button"
+      class="ml-1.25 p-1.25 mt-auto mb-auto cursor-pointer" (click)="switchLang('vi')">
+      <div class="inline-flex items-center gap-1">
+        <img class="w-4.5 object-cover" src="assets/img/lang/en.svg" alt="English">
+        <span class="uppercase">{{langCode}}</span>
+      </div>
+    </button>
+    }
+    <img alt="User Avatar" [attr.src]="avatarOfUser() ? avatarOfUser() : 'assets/img/other/user.png'"
+      onerror="this.src='assets/img/other/user.png'"
+      class="w-8.5 h-8.5 border border-solid border-white rounded-full cursor-pointer mt-auto mb-auto"
+      nz-dropdown [nzDropdownMenu]="menuUser">
+    <nz-dropdown-menu #menuUser="nzDropdownMenu">
+      <ul nz-menu>
+        <li nz-menu-item [routerLink]="[urlConst.ROUTE.MANAGEMENT.ADMIN_PROFILE]"><i
+            class="fa-solid fa-user mr-1"></i>{{langData.THONG_TIN_CA_NHAN}}</li>
+        <li nz-menu-divider></li>
+        <li nz-menu-item class="text-red" (click)="doLogout()"><i
+            class="fa-solid fa-power-off mr-1"></i>{{langData.DANG_XUAT}}</li>
+      </ul>
+    </nz-dropdown-menu>
+  </div>
+</div>

@@ -1,0 +1,78 @@
+<footer class="footer-part pl-2.5 pr-2.5 mt-5 pt-5 border-t">
+  <div class="w-full">
+    <div nz-row>
+      <div nz-col nzSpan="24" nzSm="12">
+        <div nz-row [nzGutter]="12">
+          <div nz-col nzSpan="4">
+            <img alt="HCM-UTE Logo" src="assets/img/logo/ute_logo.png"
+              class="w-full max-w-12.25 mt-1.25 ml-auto mr-3">
+          </div>
+          <div nz-col nzSpan="20">
+            <div>
+              <span>
+                {{ langData.THONG_TIN_TRUONG_1 }}<br>
+                {{ langData.THONG_TIN_TRUONG_2 }}<br>
+                {{ langData.THONG_TIN_KHOA }}
+                <br>
+                <a href="javascript:void(0);" class="mr-2.5"><i class="fa-solid fa-globe"></i></a>
+                <a href="javascript:void(0);" class="mr-2.5"><i
+                    class="fa-brands fa-facebook-square"></i></a></span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div nz-col nzSpan="24" nzSm="12">
+        <span class="font-bold">{{ langData.LIEN_HE_CHUNG_TOI }}</span>
+        <ul class="pl-4 list-none">
+          <li><i class="fa-solid fa-map-marked-alt mr-1"></i>
+            <span>
+              {{ langData.PHONG_BAN }},<br>
+              {{ langData.DIA_CHI_1 }}, {{ langData.DIA_CHI_2 }}
+            </span>
+          </li>
+          <li><a href="tel:{{langData.SO_DIEN_THOAI_LIEN_HE}}" class="no-underline text-black!"><i
+                class="fa-solid fa-phone mr-1"></i><span>{{langData.SO_DIEN_THOAI_LIEN_HE}}</span></a>
+          </li>
+          <li><a href="mailto:{{langData.EMAIL_LIEN_HE}}" class="no-underline text-black!"><i
+                class="fa-solid fa-envelope mr-1"></i><span
+                class="normal-case">{{langData.EMAIL_LIEN_HE}}</span></a>
+          </li>
+        </ul>
+      </div>
+      <div nz-col nzSpan="24" class="text-center">
+        <hr>
+        <p class="pt-1">© {{ nowYear }} <span>HCM-UTE</span>. {{ langData.DESIGN_BY_COST }} ·
+          Rev.{{ revison }} ·
+          <u class="cursor-pointer" (click)="openBugReportTpl(bugReportTpl)">{{
+            langData.BAO_CAO_SU_CO }}</u>
+        </p>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<ng-template #bugReportTpl>
+  <div nz-row>
+    <div nz-col nzSpan="24">
+      <span>
+        {{langDataSentry.SENTRY_ERR_SUBTITLE_MANUAL}}
+      </span>
+    </div>
+    <div nz-col nzSpan="24" class="mt-2">
+      <span class="font-bold">
+        {{langDataSentry.SENTRY_FORM_OTHER_INFO}}
+      </span><br>
+      <i>{{langDataSentry.SENTRY_LABEL_COMMENT}}</i><br>
+      <textarea class="w-full" nz-input [nzAutosize]="{minRows: 2, maxRows: 6}"
+        [(ngModel)]="bugReportData.otherInfo"
+        [placeholder]="langDataSentry.SENTRY_DESCRIPTION_PLACEHOLDER"></textarea>
+    </div>
+    <div nz-col nzSpan="24" class="mt-2">
+      <span class="font-bold">
+        {{langDataSentry.SENTRY_FORM_CONTACT_INFO}}
+      </span><br>
+      <input class="w-full" nz-input type="text" [(ngModel)]="bugReportData.email"
+        placeholder="Email/Zalo" />
+    </div>
+  </div>
+</ng-template>

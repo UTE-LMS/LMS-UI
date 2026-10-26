@@ -1,0 +1,40 @@
+<div nz-row [nzGutter]="8">
+  <div nz-col nzSpan="12">
+    <button nz-button nzType="default" nzSize="small" type="button" (click)="setPage(1)"
+      [disabled]="pageConfig().currentPage === 1">
+      <i class="fa-solid fa-angle-double-left"></i>
+    </button>
+    <button nz-button nzType="default" nzSize="small" type="button"
+      (click)="setPage(pageConfig().currentPage - 1)" [disabled]="pageConfig().currentPage === 1">
+      <i class="fa-solid fa-angle-left"></i>
+    </button>
+    <nz-input-number class="w-12.5" [(ngModel)]="pageConfig().currentPage" nzSize="small"
+      [nzMin]="1" [nzStep]="1" [nzMax]="pageConfig().totalPage"
+      (keyup.enter)="changedPage($any($event).target.value)"></nz-input-number>
+    <button nz-button nzType="default" nzSize="small" type="button"
+      (click)="setPage(pageConfig().currentPage + 1)"
+      [disabled]="pageConfig().currentPage === pageConfig().totalPage">
+      <i class="fa-solid fa-angle-right"></i>
+    </button>
+    <button nz-button nzType="default" nzSize="small" type="button"
+      (click)="setPage(pageConfig().totalPage)"
+      [disabled]="pageConfig().currentPage === pageConfig().totalPage">
+      <i class="fa-solid fa-angle-double-right"></i>
+    </button>
+
+    <span class="relative ml-2.5 mr-1.25">{{langData.SO_BAN_GHI}}:</span>
+    <select class="relative w-12.5 h-6 rounded-sm border border-lightgray-dark"
+      (change)="changedNumOfItem($any($event).target.value)">
+      <option value="10">10</option>
+      <option value="15">15</option>
+      <option value="20">20</option>
+      <option value="50">50</option>
+      <option value="100">100</option>
+    </select>
+  </div>
+  <div nz-col nzSpan="12" class="text-right">
+    <span>{{langData.TRANG}} {{ pageConfig().currentPage }}/{{ pageConfig().totalPage }}</span>
+    <span class="ml-1 mr-1">•</span>
+    <span>{{langData.TONG_SO}} {{ pageConfig().totalItem }} {{langData.BAN_GHI}}</span>
+  </div>
+</div>

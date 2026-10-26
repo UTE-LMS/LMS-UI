@@ -1,0 +1,37 @@
+::ng-deep .ant-layout-sider-zero-width-trigger {
+  height: 64px;
+  line-height: 64px;
+  top: 0;
+  background-color: transparent !important;
+  color: white !important;
+}
+
+/* Menu */
+.menu-alone,
+.sub-menu ::ng-deep .ant-menu-submenu-title {
+  font-size: 0.84375rem /* 13.5px */;
+  font-weight: 600;
+  letter-spacing: -0.7px;
+  height: 32px;
+  line-height: 32px;
+  padding-left: 12px !important;
+  padding-right: 20px !important;
+  margin: 0 auto !important;
+  color: var(--color-primary);
+  background-color: var(--color-primary-light-2x) !important;
+}
+
+/* Menu sub */
+.sub-menu ::ng-deep .ant-menu-sub li {
+  font-size: 0.84375rem;
+  letter-spacing: -0.5px;
+  height: 32px;
+  line-height: 32px;
+  margin: 0;
+  padding-left: 16px !important;
+  padding-right: 16px !important;
+}
+
+::ng-deep .ant-menu-submenu-title .ant-menu-submenu-arrow {
+  right: 10px;
+}

@@ -1,0 +1,59 @@
+<app-breadcrumb [breadcrumb]="breadcrumbObj" />
+<div nz-row>
+  <div nz-col nzSpan="12">
+    <span class="text-xl font-bold uppercase">{{breadcrumbObj.heading}}</span>
+  </div>
+  <div nz-col nzSpan="12" class="text-right">
+    <button nz-button class="nz-btn-green"><i class="fa-solid fa-plus mr-1"></i>Thêm mới</button>
+  </div>
+</div>
+<hr>
+
+Upload single file ID:<br>
+
+<app-upload-file class="w-full" returnType="id" subFolderOnServer="test"
+  [acceptFilesExtension]="'.pdf,.doc,.docx'" [isUploadMultiFile]="false"
+  [listFilesPatch]="fileSvc.extractFileFromListId([exampleForm.get('fieldOneFileId')?.value].flat())"
+  (returnedListId)="fileSvc.setIdFileToForm($any($event), 'fieldOneFileId', exampleForm)" />
+
+<br>
+
+Upload multi file ID:<br>
+<app-upload-file class="w-full" returnType="id" subFolderOnServer="test"
+  [acceptFilesExtension]="'.pdf,.doc,.docx'" [isUploadMultiFile]="true"
+  [listFilesPatch]="fileSvc.extractFileFromListId([exampleForm.get('fieldMultiFileId')?.value].flat())"
+  (returnedListId)="fileSvc.setListIdFileToForm($any($event), 'fieldMultiFileId', exampleForm)" />
+
+<br>
+
+Upload single file Info:<br>
+<app-upload-file class="w-full" returnType="fileInfo" subFolderOnServer="test"
+  [isUploadMultiFile]="false"
+  [listFilesPatch]="fileSvc.extractFileFromListFileInfo([exampleForm.get('fieldOneFileInfo')?.value].flat())"
+  (returnedListId)="fileSvc.setFileInfoToForm($any($event), 'fieldOneFileInfo', exampleForm)" />
+
+<br>
+
+Upload multi file Info:<br>
+<app-upload-file class="w-full" returnType="fileInfo" subFolderOnServer="test"
+  [isUploadMultiFile]="true"
+  [listFilesPatch]="fileSvc.extractFileFromListFileInfo([exampleForm.get('fieldMultiFileInfo')?.value].flat())"
+  (returnedListId)="fileSvc.setListFileInfoToForm($any($event), 'fieldMultiFileInfo', exampleForm)" />
+
+<button type="button" (click)="viewFormValue()">View form value</button>
+
+<br>
+
+TinyMCE Editor:<br>
+<button type="button" (click)="patchFormValue()">Patch form value to editor</button>
+<div nz-row>
+  <div nz-col nzSpan="24" [formGroup]="exampleForm">
+    <!-- <tinymce-editor formControlName="editorData" /> -->
+    <tinymce-editor [(ngModel)]="editorData" [ngModelOptions]="{standalone:true}" />
+  </div>
+</div>
+<br>
+Data:<br>
+@for (item of latexSvc.renderHtml(editorData()); track item) {
+<span [innerHTML]="item"></span>
+}

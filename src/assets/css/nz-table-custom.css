@@ -1,0 +1,43 @@
+/* Table mng */
+.table-margin-bot {
+  margin-bottom: 10px !important;
+}
+.table-margin-bot .table-header {
+  font-weight: 700 !important;
+}
+.table-border tr.ant-table-row > th,
+.table-border tr.ant-table-row > td {
+  border-left-style: solid;
+  border-left-width: 1px;
+}
+.table-border tr.ant-table-row > th:last-child,
+.table-border tr.ant-table-row > td:last-child {
+  border-right-style: solid;
+  border-right-width: 1px;
+}
+.table-border tr.ant-table-row:first-child > th {
+  border-top-style: solid;
+  border-top-width: 1px;
+}
+.table-cell-middle tr.ant-table-row > td {
+  padding: 6px !important;
+}
+
+tr.ant-table-row > th {
+  text-transform: uppercase;
+  background-color: var(--color-primary-light-2x) !important;
+  font-weight: 700 !important;
+}
+tr.ant-table-row > th,
+tr.ant-table-row > td {
+  border-color: var(--color-gray) !important;
+}
+/* .ant-menu-inline-collapsed li i svg {
+  font-size: 18px /*!important;
+} */
+/* E: Table Mng */
+
+/* no-border-right place at the last <td> tag */
+.no-border-right {
+  border-right-width: 0px !important;
+}

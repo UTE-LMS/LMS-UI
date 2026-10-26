@@ -1,0 +1,3 @@
+la-tex :host .page {
+  display: table-cell;
+}

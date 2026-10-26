@@ -1,0 +1,73 @@
+<h4>{{langData.XEM_TRUOC}} {{localViewer() === 'imageViewer' ? langData.ANH : ''}}</h4>
+<div>
+  <div>
+    @if (fileId()) {
+    <div>
+      <!-- <div class="toolbar-left">
+          <button type="button" class="btn btn-default btn-animation" (click)="hide()">
+            <i class="fa-solid fa-arrow-left"></i>
+          </button>
+        </div> -->
+      <!-- <div class="toolbar-right">
+          <button type="button" class="btn btn-default btn-animation">
+            <i class="fa-solid fa-cloud-download-alt"></i>
+          </button>
+          <button type="button" class="btn btn-default btn-animation">
+            <i class="fa-solid fa-ellipsis-v"></i>
+          </button>
+        </div> -->
+    </div>
+    }
+    <div>
+      <div class="w-full">
+        <div>
+          @switch (localViewer()) {
+          @case ('pdfViewer') {
+          <div>
+            @if (pdfBlob()) {
+            <ngx-extended-pdf-viewer [src]="pdfBlob()!" [showOpenFileButton]="false"
+              [showUnverifiedSignatures]="true" height="90vh"></ngx-extended-pdf-viewer>
+            } @else {
+            <h4>{{langData.FILE_KHONG_HO_TRO_XEM}}</h4>
+            }
+          </div>
+          }
+          @case ('officeViewer') {
+          <div class="text-center">
+            <!-- ngx-doc-viewer -->
+            <h4>{{langData.FILE_KHONG_HO_TRO_XEM}}</h4>
+            <button nz-button nzType="primary" type="button"
+              (click)="downloadUnsupportedViewFile()">{{langData.TAI_VE}}</button>
+          </div>
+          }
+          @case ('imageViewer') {
+          <div>
+            <img class="w-full" alt="Viewing file" [src]="safeResourceUrl()" (click)="rotateImage()"
+              id="image" (load)="getImgSize()">
+          </div>
+          }
+          @case ('unsupportViewer') {
+          <div class="text-center">
+            <h4>{{langData.FILE_KHONG_HO_TRO_XEM}}</h4>
+            <button nz-button nzType="primary" type="button"
+              (click)="downloadUnsupportedViewFile()">{{langData.TAI_VE}}</button>
+          </div>
+          }
+          @case ('') {
+          <div class="text-center">
+            <h5 class="translate-y-2.5">{{langData.DANG_TAI}}</h5>
+          </div>
+          }
+          @default {
+          <div class="text-center">
+            <h4>{{langData.FILE_KHONG_HO_TRO_XEM}}</h4>
+            <button nz-button nzType="primary" type="button"
+              (click)="downloadUnsupportedViewFile()">{{langData.TAI_VE}}</button>
+          </div>
+          }
+          }
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

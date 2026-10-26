@@ -1,0 +1,29 @@
+© {{currYear}} COST - HCM-UTE · Rev.{{ revison }} · <u class="cursor-pointer"
+  (click)="openBugReportTpl(bugReportTpl)">{{
+  langData.BAO_CAO_SU_CO }}</u>
+
+<ng-template #bugReportTpl>
+  <div nz-row>
+    <div nz-col nzSpan="24">
+      <span>
+        {{langDataSentry.SENTRY_ERR_SUBTITLE_MANUAL}}
+      </span>
+    </div>
+    <div nz-col nzSpan="24" class="mt-2">
+      <span class="font-bold">
+        {{langDataSentry.SENTRY_FORM_OTHER_INFO}}
+      </span><br>
+      <i>{{langDataSentry.SENTRY_LABEL_COMMENT}}</i><br>
+      <textarea class="w-full" nz-input [nzAutosize]="{minRows: 2, maxRows: 6}"
+        [(ngModel)]="bugReportData.otherInfo"
+        [placeholder]="langDataSentry.SENTRY_DESCRIPTION_PLACEHOLDER"></textarea>
+    </div>
+    <div nz-col nzSpan="24" class="mt-2">
+      <span class="font-bold">
+        {{langDataSentry.SENTRY_FORM_CONTACT_INFO}}
+      </span><br>
+      <input class="w-full" nz-input type="text" [(ngModel)]="bugReportData.email"
+        placeholder="Email/Zalo" />
+    </div>
+  </div>
+</ng-template>

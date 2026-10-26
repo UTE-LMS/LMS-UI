@@ -1,0 +1,78 @@
+src
+├─ app
+│  ├─ auth (Folder)
+│  │  ├─ auth routes config (File)
+│  │  ├─ login (Standalone-Component)
+│  │  ├─ register (Standalone-Component)
+│  │  └─ ...
+│  │
+│  ├─ core (Folder)
+│  │  ├─ core providers config (File)
+│  │  │  (if you want to separate appConfig.providers in app.config.ts)
+│  │  ├─ constants (Files)
+│  │  ├─ guards (Functional Files)
+│  │  ├─ interceptors (Functional Files)
+│  │  ├─ validators (Functional Files)
+│  │  ├─ models
+│  │  │  ├─ common (Files)
+│  │  │  ├─ main (Files)
+│  │  │  ├─ management (Files)
+│  │  │  └─ ...
+│  │  ├─ services
+│  │  │  ├─ auth (Service Files)
+│  │  │  ├─ common (Service Files)
+│  │  │  ├─ main (Service Files)
+│  │  │  ├─ management (Service Files)
+│  │  │  └─ ...
+│  │  └─ ...
+│  │
+│  ├─ layouts
+│  │  ├─ main (Folder)
+│  │  │  ├─ main-footer (Standalone-Component)
+│  │  │  ├─ main-header (Standalone-Component)
+│  │  │  └─ main-layout (Standalone-Component)
+│  │  ├─ management (Folder)
+│  │  │  ├─ management-footer (Standalone-Component)
+│  │  │  ├─ management-header (Standalone-Component)
+│  │  │  ├─ management-layout (Standalone-Component)
+│  │  │  └─ management-sidebar (Standalone-Component)
+│  │  └─ ...
+│  │
+│  ├─ main (Folder)
+│  │  ├─ main routes config (File)
+│  │  ├─ homepage (Standalone-Component)
+│  │  ├─ my-info (Folder of Standalone-Components)
+│  │  │  ├─ edit-info (Standalone-Component)
+│  │  │  ├─ check-info (Standalone-Component)
+│  │  │  └─ ...
+│  │  └─ ...
+│  │
+│  ├─ management (Folder)
+│  │  ├─ management routes config (File)
+│  │  ├─ dashboard (Standalone-Component)
+│  │  ├─ categories (Folder)
+│  │  │  ├─ academic-ranks (Folder of Standalone-Components)
+│  │  │  │  ├─ list-academic-ranks (Standalone-Component)
+│  │  │  │  └─ form-academic-ranks (Standalone-Component)
+│  │  │  └─ ...
+│  │  └─ ...
+│  │
+│  ├─ shared (Folder)
+│  │  ├─ component-shared (Folder of Standalone-Components)
+│  │  │  ├─ view-file (Standalone-Component)
+│  │  │  └─ ...
+│  │  └─ widget (Folder)
+│  │     ├─ directives (Folder of Standalone-Directive)
+│  │     ├─ pipes (Folder of Standalone-Pipes)
+│  │     └─ ...
+│  └─ ...
+│
+├─ assets
+│  ├─ css
+│  ├─ img
+│  ├─ libs
+│  ├─ fonts
+│  ├─ files
+│  ├─ pdfs
+│  └─ languages
+└─ environments

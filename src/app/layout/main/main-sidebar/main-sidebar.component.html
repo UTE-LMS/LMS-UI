@@ -1,0 +1,29 @@
+<ul nz-menu nzTheme="light" nzMode="inline" class="sub-menu border-r-0 bg-white">
+  @for (menu of listMenu; track menu.title) {
+  @if (menu.listChild.length && checkRole(menu.roles)) {
+  <li nz-submenu [nzTitle]="menu.title" [nzIcon]="menu.icon" nzOpen #subMenuItem>
+    <!-- (click)="autoHideMenu()" -->
+    <ul class="bg-white">
+      @for (subMenu of menu.listChild; track subMenu.title) {
+      @if (checkRole(subMenu.roles)) {
+      <li nz-menu-item [routerLink]="subMenu.routerLink" routerLinkActive="ant-menu-item-selected"
+        nzTooltipPlacement="right" nz-tooltip [nzTooltipTitle]="subMenu.title"
+        class="hover:bg-primary-light-3x">
+        <i [class]="'mr-2 ' + subMenu.icon"></i>
+        <span>{{subMenu.title}}</span>
+      </li>
+      }
+      }
+    </ul>
+  </li>
+  }
+  @if (!menu.listChild.length && checkRole(menu.roles)) {
+  <li nz-menu-item class="menu-alone" [routerLink]="menu.routerLink"
+    routerLinkActive="ant-menu-item-selected" nzTooltipPlacement="right" nz-tooltip
+    [nzTooltipTitle]="menu.title">
+    <i [class]="'mr-2 ' + menu.icon"></i>
+    <span>{{menu.title}}</span>
+  </li>
+  }
+  }
+</ul>
