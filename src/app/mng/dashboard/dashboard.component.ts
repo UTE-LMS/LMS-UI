@@ -80,7 +80,7 @@ export class DashboardComponent implements OnInit {
       fieldOneFileId: ['1', [Validators.required]],
       fieldMultiFileId: [['1', '2'], [Validators.required]],
 
-      fieldOneFileInfo: [{ id: '1', fileType: 'pdf', fileName: 'file1.pdf', fileNameEn: 'file1.pdf', fileSize: 1024, location: '/files/file1.pdf' } as IFileInfo, [Validators.required]],
+      fieldOneFileInfo: [{ id: '1', fileType: 'pdf', fileName: 'file1.pdf', fileNameEn: 'file1.pdf', fileSize: 1024, location: '/files/file1.pdf' }, [Validators.required]],
 
       fieldMultiFileInfo: [[
         { id: '1', fileType: 'pdf', fileName: 'file1.pdf', fileNameEn: 'file1.pdf', fileSize: 1024, location: '/files/file1.pdf' },

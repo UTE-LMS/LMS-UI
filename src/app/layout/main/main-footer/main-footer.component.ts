@@ -64,7 +64,9 @@ export class MainFooterComponent {
         this.spinner.show();
         this.bugsReportSvc
           .submitBugsReport(this.bugReportData)
-          .pipe(finalize(() => this.spinner.hide()))
+          .pipe(finalize(() => {
+            this.spinner.hide();
+          }))
           .subscribe({
             next: (res) => {
               if (res.status === 'success') {

@@ -29,7 +29,7 @@ export function createListManagerNoFilter<T>(
     search?: string,
     sort?: string,
     column?: string,
-  ) => Observable<IPagedResults<T>>
+  ) => Observable<IPagedResults<T>>,
 ) {
   const searchValue = signal('');
 
@@ -48,7 +48,7 @@ export function createListManagerNoFilter<T>(
       switchMap(query => fetchDataFn(query.page, query.size, searchValue(), query.sort, query.column)
         .pipe(catchError(() => of(null)))),
     ),
-    { initialValue: null }
+    { initialValue: null },
   );
 
   const listData = computed(() => {
@@ -84,7 +84,7 @@ export function createListManagerNoFilter<T>(
     appliedQuery.update(q => ({
       ...q,
       page: page.currentPage,
-      size: page.limit
+      size: page.limit,
     }));
   };
 
