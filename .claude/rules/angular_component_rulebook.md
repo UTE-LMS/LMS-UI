@@ -49,6 +49,9 @@ import { ... } from '@widget/breadcrumb/breadcrumb.model';
 import { ... } from '@widget/breadcrumb/breadcumb.component';
 import { ... } from '@widget/paginate/paginate.component';
 import { ... } from '@widget/field-error-display/field-error-display.component';
+import { ISiderMenu } from '@models/common/sider-menu.model';
+import { <featureCamel>MngMenu } from '@mng/<feature>/<feature>.menu';
+import { <featureCamel>UserMenu } from '@main/<feature>/<feature>.menu';
 ```
 
 #### 1.2.1 — Import Formatting
@@ -91,6 +94,110 @@ form-<feature-english-kebab>/
 - **Backend JSON properties:** Property names in request/response payloads (JSON) must still match the backend schema (even if some backend fields remain Vietnamese, such as `trangThai` or `thuTu`), but all structural containers (folders, files, classes, interfaces) must strictly be in English.
 
 Most screens rely entirely on Tailwind utilities and project-global classes. If no component-local CSS is required, either keep the repository's existing empty CSS convention or omit both the CSS file and `styleUrl`; never point `styleUrl` at a missing file.
+
+### 1.4 — Feature Menu Configuration Convention (`*.menu.ts`)
+
+Navigation menu items must **never** be defined directly or hardcoded inline within the sidebar component classes (`ManagementSidebarComponent` or `MainSidebarComponent`). Instead, each feature/module isolates its navigation configuration in a standalone `<feature-kebab>.menu.ts` file located in the feature root directory, and the sidebar spreads that array into `listMenu`.
+
+#### 1.4.1 — File Location and Export Naming
+
+Place the menu file at the top level of the feature directory:
+
+```
+src/app/mng/<feature-kebab>/
+  <feature-kebab>.menu.ts
+
+src/app/main/<feature-kebab>/
+  <feature-kebab>.menu.ts
+```
+
+- Management feature export: `export const <featureCamel>MngMenu: ISiderMenu[] = [ ... ];`
+- Main/User feature export: `export const <featureCamel>UserMenu: ISiderMenu[] = [ ... ];`
+
+#### 1.4.2 — Menu Item Properties and Rules
+
+Menu arrays are typed with `ISiderMenu[]` (imported from `@models/common/sider-menu.model`):
+
+```typescript
+export interface ISiderMenu {
+  icon: string;
+  title: string;
+  routerLink: string;
+  roles: string[];
+  listChild: ISiderMenuChild[];
+}
+```
+
+Rules for each property:
+
+1. **`icon` (Crucial distinction):**
+   - **Parent submenu with children (`listChild.length > 0`):** Must use an **Ng-Zorro icon name** (e.g., `'setting'`, `'pic-left'`, `'idcard'`) without any prefix, because the sidebar template binds it to the Ng-Zorro directive `[nzIcon]` on `nz-submenu`.
+   - **Child items / Standalone items (`listChild: []`):** Must use a **FontAwesome icon class string** (e.g., `'fa-solid fa-circle'`, `'fa-solid fa-solar-panel'`), because the sidebar template binds it via `<i [class]="'mr-2 ' + item.icon"></i>`.
+2. **`title`:** Vietnamese display label for the menu item (or localized string reference if internationalization is used).
+3. **`routerLink`:**
+   - Parent item containing children: set to empty string `''`.
+   - Leaf / Child item: set to the corresponding route constant from `UrlConstant.ROUTE.MANAGEMENT.*` or `UrlConstant.ROUTE.MAIN.*`.
+4. **`roles`:** Array of roles allowed to view the item (e.g., `[SystemConstant.MNG_ROLE.ADMIN]`). An empty array `[]` allows all authorized users who pass the shell's role check.
+5. **`listChild`:** Array of sub-items typed as `ISiderMenuChild[]`. Set to `[]` when the menu item has no nested submenus.
+
+#### 1.4.3 — Feature Menu Blueprint
+
+```typescript
+import { SystemConstant } from '@constants/system.constant';
+import { UrlConstant } from '@constants/url.constant';
+import { ISiderMenu } from '@models/common/sider-menu.model';
+
+export const <featureCamel>MngMenu: ISiderMenu[] = [
+  {
+    roles: [SystemConstant.MNG_ROLE.ADMIN],
+    icon: '<zorro-icon-name>', // Parent with children: MUST be Ng-Zorro icon name
+    title: '<Feature Title>',
+    routerLink: '',
+    listChild: [
+      {
+        roles: [SystemConstant.MNG_ROLE.ADMIN],
+        icon: 'fa-solid fa-circle', // Child item: MUST be FontAwesome icon class
+        title: '<Sub-feature Title>',
+        routerLink: UrlConstant.ROUTE.MANAGEMENT.<ROUTE_KEY>,
+      },
+    ],
+  },
+];
+```
+
+#### 1.4.4 — Sidebar Registration
+
+Import the menu constant and spread it directly into `readonly listMenu: ISiderMenu[]` in the appropriate sidebar component:
+
+- **Management Sidebar** (`src/app/layout/mng/management-sidebar/management-sidebar.component.ts`):
+  ```typescript
+  import { <featureCamel>MngMenu } from '@mng/<feature-kebab>/<feature-kebab>.menu';
+
+  // Inside ManagementSidebarComponent:
+  readonly listMenu: ISiderMenu[] = [
+    {
+      roles: [SystemConstant.MNG_ROLE.ADMIN],
+      icon: 'fa-solid fa-solar-panel',
+      title: this.langData.TONG_QUAN,
+      routerLink: UrlConstant.ROUTE.MANAGEMENT.DASHBOARD,
+      listChild: [],
+    },
+    ...danhMucMngMenu,
+    ...cauHinhMngMenu,
+    ...taiKhoanMngMenu,
+    ...<featureCamel>MngMenu,
+  ];
+  ```
+
+- **Main User Sidebar** (`src/app/layout/main/main-sidebar/main-sidebar.component.ts`):
+  ```typescript
+  import { <featureCamel>UserMenu } from '@main/<feature-kebab>/<feature-kebab>.menu';
+
+  // Inside MainSidebarComponent:
+  readonly listMenu: ISiderMenu[] = [
+    ...<featureCamel>UserMenu,
+  ];
+  ```
 
 ---
 
@@ -1897,6 +2004,7 @@ Prefer scalar-valued controls whenever the DTO is scalar. Object-valued selects 
 - [ ] Tailwind utilities exist in TailwindCSS 4 or the project `@theme`; no malformed legacy class or invalid `font-extra-light` spelling was copied.
 - [ ] Folders, files, classes, and interfaces are strictly named in English (kebab-case for folders/files, PascalCase for classes/interfaces).
 - [ ] Modal close/reload, status loading reset, and success/error paths leave the UI in a consistent state.
+- [ ] When adding or configuring navigation items, feature menus are isolated in `<feature-kebab>.menu.ts` typed with `ISiderMenu[]`, parent submenu icons use Ng-Zorro icon names, child/standalone items use FontAwesome classes, and the array is spread into the sidebar's `listMenu`.
 
 ---
 
@@ -1934,3 +2042,5 @@ Prefer scalar-valued controls whenever the DTO is scalar. Object-valued selects 
 - **NEVER** use `standalone: true` in the `@Component` decorator — it is the default in Angular v17+ and is not written explicitly in this codebase.
 - **NEVER** generate malformed legacy spacing classes such as `mr-5x1`; use the TailwindCSS 4 utility `mr-1.25`.
 - **NEVER** generate the invalid Tailwind class `font-extra-light`; use `font-extralight`.
+- **NEVER** define menu objects inline inside sidebar components (`ManagementSidebarComponent` or `MainSidebarComponent`); always isolate feature menus in `<feature-kebab>.menu.ts` and spread them into `listMenu`.
+- **NEVER** use FontAwesome class names for parent `nz-submenu` icons when `listChild` has items; parent icons must be valid Ng-Zorro icon names.
