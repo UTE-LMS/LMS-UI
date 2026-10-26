@@ -182,9 +182,6 @@ Import the menu constant and spread it directly into `readonly listMenu: ISiderM
       routerLink: UrlConstant.ROUTE.MANAGEMENT.DASHBOARD,
       listChild: [],
     },
-    ...danhMucMngMenu,
-    ...cauHinhMngMenu,
-    ...taiKhoanMngMenu,
     ...<featureCamel>MngMenu,
   ];
   ```
