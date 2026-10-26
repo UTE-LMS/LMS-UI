@@ -1,6 +1,6 @@
 export class SystemConstant {
   public static REVISON = '260703.1';
-  public static WEB_NAME = 'angular-main-structure';
+  public static WEB_NAME = 'LMS-UI';
 
   public static CURRENT_INFO = 'CURRENT_INFO';
   public static CURRENT_INFO_DATA = 'CURRENT_INFO_DATA';

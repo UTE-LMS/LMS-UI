@@ -1,6 +1,6 @@
 {
-  "name": "angular-main-structure",
-  "short_name": "angular-main-structure",
+  "name": "LMS-UI",
+  "short_name": "LMS-UI",
   "display": "standalone",
   "theme_color": "#2e3192",
   "background_color": "#fafafa",

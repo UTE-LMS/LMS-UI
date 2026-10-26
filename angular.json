@@ -10,7 +10,7 @@
   },
   "newProjectRoot": "projects",
   "projects": {
-    "angular-main-structure": {
+    "LMS-UI": {
       "projectType": "application",
       "schematics": {
         "@schematics/angular:component": {
@@ -116,10 +116,10 @@
           "builder": "@angular/build:dev-server",
           "configurations": {
             "production": {
-              "buildTarget": "angular-main-structure:build:production"
+              "buildTarget": "LMS-UI:build:production"
             },
             "development": {
-              "buildTarget": "angular-main-structure:build:development"
+              "buildTarget": "LMS-UI:build:development"
             }
           },
           "defaultConfiguration": "development"
