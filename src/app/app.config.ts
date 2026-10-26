@@ -64,7 +64,7 @@ export const appConfig: ApplicationConfig = {
     // https://github.com/NG-ZORRO/ng-zorro-antd/issues/9753#issuecomment-4568967198
     {
       provide: OVERLAY_DEFAULT_CONFIG,
-      useValue: { usePopover: false }
-    }
+      useValue: { usePopover: false },
+    },
   ],
 };
