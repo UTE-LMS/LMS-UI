@@ -1,0 +1,92 @@
+/* Global NzButton Color */
+.nz-btn-green {
+  border-color: var(--color-green);
+  background-color: var(--color-green);
+  color: #fff;
+}
+
+.nz-btn-green:not([disabled]):hover,
+.nz-btn-green:not([disabled]):focus {
+  border-color: var(--color-green-dark);
+  background-color: var(--color-green-dark);
+  color: #fff;
+}
+
+.nz-btn-red {
+  border-color: var(--color-red);
+  background-color: var(--color-red);
+  color: #fff;
+}
+
+.nz-btn-red:not([disabled]):hover,
+.nz-btn-red:not([disabled]):focus {
+  border-color: var(--color-red-dark);
+  background-color: var(--color-red-dark);
+  color: #fff;
+}
+
+.nz-btn-blue {
+  border-color: var(--color-blue);
+  background-color: var(--color-blue);
+  color: #fff;
+}
+
+.nz-btn-blue:not([disabled]):hover,
+.nz-btn-blue:not([disabled]):focus {
+  border-color: var(--color-blue-dark);
+  background-color: var(--color-blue-dark);
+  color: #fff;
+}
+
+.nz-btn-orange {
+  border-color: var(--color-orange);
+  background-color: var(--color-orange);
+  color: #fff;
+}
+
+.nz-btn-orange:not([disabled]):hover,
+.nz-btn-orange:not([disabled]):focus {
+  border-color: var(--color-orange-dark);
+  background-color: var(--color-orange-dark);
+  color: #fff;
+}
+
+.nz-btn-purple {
+  border-color: var(--color-purple);
+  background-color: var(--color-purple);
+  color: #fff;
+}
+
+.nz-btn-purple:not([disabled]):hover,
+.nz-btn-purple:not([disabled]):focus {
+  border-color: var(--color-purple-dark);
+  background-color: var(--color-purple-dark);
+  color: #fff;
+}
+
+.nz-btn-gray {
+  border-color: var(--color-gray);
+  background-color: var(--color-gray);
+  color: #fff;
+}
+
+.nz-btn-gray:not([disabled]):hover,
+.nz-btn-gray:not([disabled]):focus {
+  border-color: var(--color-gray-dark);
+  background-color: var(--color-gray-dark);
+  color: #fff;
+}
+
+/* End Global NzButton Color */
+
+/* Global NzSwitcher Color */
+/* OFF switcher must declair before ON switcher */
+.switcher-off-red .ant-switch {
+  background-color: var(--color-red-dark);
+}
+
+.switcher-on-green .ant-switch-checked {
+  background-color: var(--color-green-dark);
+}
+
+/* End Global NzSwitcher Color */

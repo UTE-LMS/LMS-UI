@@ -1,0 +1,16 @@
+user-agent: *
+Allow: /
+
+user-agent: *
+Disallow: /mng/
+
+user-agent: *
+Disallow: /*.jpg$
+
+user-agent: *
+Disallow: /*.png$
+
+user-agent: *
+Disallow: /*.svg$
+
+Sitemap: https://localhost:4200/sitemap.xml

@@ -66,18 +66,29 @@ import {
 
 - A single-specifier import remains on one line even when its aliased source path is long; do not introduce a multi-line block containing only one imported item.
 
-### 1.3 — File Naming Convention
-```
-list-<feature-kebab-case>/
-  list-<feature-kebab-case>.component.ts
-  list-<feature-kebab-case>.component.html
-  list-<feature-kebab-case>.component.css   (optional when local styles exist)
+### 1.3 — Folder, File, Interface, and Class Naming Conventions (Strictly in English)
 
-form-<feature-kebab-case>/
-  form-<feature-kebab-case>.component.ts
-  form-<feature-kebab-case>.component.html
-  form-<feature-kebab-case>.component.css   (optional when local styles exist)
+All directory paths, file names, component classes, and model interfaces **must be in English**. Do not use Vietnamese terms in technical identifiers (e.g., use `academic-rank` instead of `hoc-ham`, `scientific-paper` instead of `bai-bao-khoa-hoc`). Vietnamese is reserved exclusively for user-facing UI text, headings, breadcrumb labels, and notifications.
+
 ```
+list-<feature-english-kebab>/
+  list-<feature-english-kebab>.component.ts
+  list-<feature-english-kebab>.component.html
+  list-<feature-english-kebab>.component.css   (optional when local styles exist)
+
+form-<feature-english-kebab>/
+  form-<feature-english-kebab>.component.ts
+  form-<feature-english-kebab>.component.html
+  form-<feature-english-kebab>.component.css   (optional when local styles exist)
+```
+
+**Naming rules:**
+- **Folders:** English in `kebab-case` (e.g. `src/app/mng/academic-ranks/`, `list-academic-ranks/`, `form-academic-ranks/`).
+- **Files:** English in `kebab-case` with standard suffixes (`.component.ts`, `.component.html`, `.model.ts`, `.service.ts`).
+- **Component Classes:** English in `PascalCase` (e.g. `ListAcademicRanksComponent`, `FormAcademicRanksComponent`).
+- **Interfaces & Types:** English in `PascalCase` prefixed with `I` (e.g. `IAcademicRank`, `IAcademicRankDTO`, `IAcademicRankFilter`).
+- **Service Classes:** English in `PascalCase` ending in `Service` (e.g. `AcademicRankService`).
+- **Backend JSON properties:** Property names in request/response payloads (JSON) must still match the backend schema (even if some backend fields remain Vietnamese, such as `trangThai` or `thuTu`), but all structural containers (folders, files, classes, interfaces) must strictly be in English.
 
 Most screens rely entirely on Tailwind utilities and project-global classes. If no component-local CSS is required, either keep the repository's existing empty CSS convention or omit both the CSS file and `styleUrl`; never point `styleUrl` at a missing file.
 
@@ -1884,6 +1895,7 @@ Prefer scalar-valued controls whenever the DTO is scalar. Object-valued selects 
 - [ ] Every used Ng-Zorro control, `AsyncPipe`, and `DatePipe` is present in component imports; unused modules are omitted.
 - [ ] The root form prevents the default Enter action inline for every descendant control; all action buttons remain `type="button"`.
 - [ ] Tailwind utilities exist in TailwindCSS 4 or the project `@theme`; no malformed legacy class or invalid `font-extra-light` spelling was copied.
+- [ ] Folders, files, classes, and interfaces are strictly named in English (kebab-case for folders/files, PascalCase for classes/interfaces).
 - [ ] Modal close/reload, status loading reset, and success/error paths leave the UI in a consistent state.
 
 ---
@@ -1893,6 +1905,7 @@ Prefer scalar-valued controls whenever the DTO is scalar. Object-valued selects 
 - **NEVER** use `NgModule`.
 - **NEVER** use constructor parameter injection.
 - **NEVER** use `@Input()` or `@Output()` decorators in a newly generated component; use `input()` and `output()`.
+- **NEVER** name folders, files, component classes, service classes, or model interfaces in Vietnamese (e.g., avoid `danh-muc`, `bai-bao-khoa-hoc`, `list-bai-bao-khoa-hoc`, `IBaiBaoKhoaHoc`, `ListBaiBaoKhoaHocComponent`). Always use standard, clear English (e.g., `academic-ranks`, `scientific-papers`, `IScientificPaper`, `ListScientificPaperComponent`, `ScientificPaperService`). Vietnamese is reserved strictly for UI display text, headings, and alert notifications.
 - **NEVER** use `*ngIf`, `*ngFor`, or `*ngSwitch` directives.
 - **NEVER** omit `changeDetection: ChangeDetectionStrategy.OnPush`.
 - **NEVER** call the API directly inside `onSubmit()` — always go through `submit$.next()`.

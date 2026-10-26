@@ -1,0 +1,228 @@
+{
+  "APP": {
+    "CANH_BAO_HET_SESSION": "Warning: Your session will end soon. Please complete your work or log in again before start your new work.",
+    "CANH_BAO_WEBVIEW": "You are visiting the website from within another application (Facebook / Messenger / Zalo / Instagram, etc.)<br>For security reasons, some features will not work, please visit by the browser application on the device to be able to use all the features of the website.",
+    "CHUA_CO_CAP_NHAT": "No new version",
+    "CO_PHIEN_BAN_MOI": "The website has just been updated, please reload the page to check!",
+    "DANG_KIEM_TRA_CAP_NHAT": "Checking for updates...",
+    "DANG_TAI_PHIEN_BAN_MOI": "Downloading new app version",
+    "DA_HIEU": "Got it",
+    "DA_KET_NOI": "Connected",
+    "KHONG_THE_CAP_NHAT_PHIEN_BAN_MOI": "Website update error, please try again later!",
+    "MAT_KET_NOI": "Connection lost, reconnecting...",
+    "PHIEN_BAN_CAP_NHAT_LOI": "Failed to install app version",
+    "PHIEN_BAN_HIEN_TAI": "Current app version",
+    "PHIEN_BAN_MOI_SAN_SANG": "New app version ready for use",
+    "TAI_PHIEN_BAN_MOI": "The website has a new version and will update after a moment ..."
+  },
+  "AUTH": {
+    "LOGIN": {
+      "CHUA_NHAP_MAT_KHAU": "Please enter Password",
+      "CHUA_NHAP_TEN_DANG_NHAP": "Please enter Username",
+      "DANG_NHAP": "Login",
+      "DANG_NHAP_GOOGLE": "Login with Google",
+      "DA_GUI_YEU_CAU_CAP_LAI_MAT_KHAU": "Request sent, please check your email's Inbox or Spam!",
+      "EMAIL": "Email",
+      "EMAIL_KHONG_HOP_LE": "Invalid email",
+      "GHI_NHO_DANG_NHAP": "Remember me",
+      "HOAC": "Or",
+      "KHONG_DUOC_DE_TRONG": "Can not leave blank",
+      "MAT_KHAU": "Password",
+      "QUEN_MAT_KHAU": "Forgot password?",
+      "TAI_KHOAN_KHONG_CO_QUYEN": "Account doesn't have access permission",
+      "VUI_LONG_NHAP_EMAIL": "Please enter email",
+      "YEU_CAU_CAP_LAI_MAT_KHAU": "Send request"
+    },
+    "REGISTER": {
+      "CHUA_NHAP_MAT_KHAU": "Please enter Password",
+      "CHUA_NHAP_TEN_DANG_NHAP": "Please enter Username",
+      "DANG_KY": "Register",
+      "DANG_KY_THANH_CONG": "Register successfully!",
+      "DANG_NHAP_GOOGLE": "Login with Google",
+      "DA_CO_TAI_KHOAN": "Have account? Login",
+      "EMAIL": "Email",
+      "HOAC": "Or",
+      "MAT_KHAU": "Password",
+      "MAT_KHAU_CHUA_KHOP": "Passwords are not match",
+      "NHAP_LAI_MAT_KHAU": "Re-enter password",
+      "TAI_KHOAN_KHONG_HO_TRO": "Your account is not supported!"
+    },
+    "RESET_PASS": {
+      "CAP_NHAT": "Update",
+      "CAP_NHAT_THANH_CONG": "Update successfully!",
+      "CHUA_NHAP_MAT_KHAU": "Please enter Password",
+      "DAT_LAI_MAT_KHAU": "Reset password",
+      "MAT_KHAU": "Password",
+      "MAT_KHAU_CHUA_KHOP": "Passwords are not match",
+      "NHAP_LAI_MAT_KHAU": "Re-enter password"
+    }
+  },
+  "CORE": {
+    "AUTH": {
+      "PHAN_QUYEN_KHONG_TON_TAI": "This role is unavailable!",
+      "TAI_KHOAN_KHONG_HO_TRO": "Your account is not supported!",
+      "THONG_TIN_DINH_DANH_KHONG_HOP_LE": "Invalid identification information, please log in again!"
+    },
+    "GUARD": {
+      "TAI_KHOAN_KHONG_CO_QUYEN": "Account doesn't have access permission"
+    },
+    "HANDLE_ERROR": {
+      "CO_LOI_XAY_RA": "An error has occurred, please try again!",
+      "TAI_KHOAN_KHONG_CO_QUYEN": "Account doesn't have access permission"
+    },
+    "UTILS": {
+      "BA": "three",
+      "BAY": "seven",
+      "BON": "four",
+      "CHIN": "nine",
+      "HAI": "two",
+      "KHONG": "zero",
+      "KHONG_LCAP": "Zero",
+      "LE": "and",
+      "MOT_J": "one",
+      "MOT_S": "one",
+      "MUOI": "ty",
+      "MUOI_F": "ten",
+      "NAM": "years",
+      "NAM_L": "five",
+      "NAM_N": "fif",
+      "NAM_TRUOC": "years ago",
+      "NGAY": "days",
+      "NGAY_TRUOC": "days ago",
+      "NGHIN": "thousand",
+      "SAU": "six",
+      "TAM": "eight",
+      "THANG": "months",
+      "THANG_TRUOC": "months ago",
+      "TRAM": "hundred",
+      "TRIEU": "million",
+      "TY": "billion"
+    }
+  },
+  "LAYOUT": {
+    "MAIN": {
+      "FOOTER": {
+        "BAO_CAO_SU_CO": "Report problem",
+        "DESIGN_BY_COST": "Design & Development by COST - HCM-UTE",
+        "DIA_CHI_1": "01 Vo Van Ngan, Thu Duc",
+        "DIA_CHI_2": "Ho Chi Minh City",
+        "EMAIL_LIEN_HE": "hcmute@hcmute.edu.vn",
+        "LIEN_HE_CHUNG_TOI": "Contact us",
+        "PHONG_BAN": "Room ..., Area ...",
+        "SO_DIEN_THOAI_LIEN_HE": "(+84) 28 3722 xxxx",
+        "THONG_TIN_KHOA": "Faculty of ...",
+        "THONG_TIN_TRUONG_1": "Ho Chi Minh City University of",
+        "THONG_TIN_TRUONG_2": "Technology and Education"
+      },
+      "HEADER": {
+        "DANG_KY": "Register",
+        "DANG_NHAP": "Login",
+        "DANG_XUAT": "Logout",
+        "FILE_HUONG_DAN": "User manual files",
+        "HUONG_DAN": "Use Guide",
+        "QUAN_TRI": "Management system",
+        "TAI_KHOAN": "My Account",
+        "VIDEO_HUONG_DAN": "User manual videos"
+      }
+    },
+    "MNG": {
+      "FOOTER": {
+        "BAO_CAO_SU_CO": "Report problem"
+      },
+      "HEADER": {
+        "DANG_XUAT": "Logout",
+        "HE_THONG_QUAN_TRI": "Management System",
+        "THONG_TIN_CA_NHAN": "My Account"
+      },
+      "SIDEBAR": {
+        "CAU_HINH": "Configs",
+        "CONG_VIEC": "Works",
+        "DANH_MUC": "Categories",
+        "SINH_VIEN": "Students",
+        "TONG_QUAN": "Dashboard"
+      }
+    }
+  },
+  "MAIN": {
+    "HOMEPAGE": {
+      "A": "A"
+    }
+  },
+  "MNG": {
+    "CATEGORIES": {
+      "ACADEMIC_RANKS": {
+        "CAP_NHAT_THANH_CONG": "Update successfully!",
+        "CHINH_SUA": "Edit",
+        "DANH_MUC": "Categories",
+        "HOC_HAM": "Academic Ranks",
+        "HUY": "Cancel",
+        "KHONG_DUOC_DE_TRONG": "Can not leave blank",
+        "LUU": "Save",
+        "SO_THU_TU": "No.",
+        "TEN_HOC_HAM": "Academic rank",
+        "TEN_HOC_HAM_EN": "Academic rank (EN)",
+        "TEN_HOC_HAM_VN": "Academic rank (VN)",
+        "TEN_VIET_TAT": "Abbreviations",
+        "TEN_VIET_TAT_EN": "Abbreviations (EN)",
+        "TEN_VIET_TAT_VN": "Abbreviations (VN)",
+        "THAY_DOI_THANH_CONG": "Status change successfully!",
+        "THEM_MOI": "Add",
+        "THEM_MOI_THANH_CONG": "Added successfully!",
+        "TIM_KIEM": "Search",
+        "TRANG_THAI": "Status",
+        "XAC_NHAN": "Confirm",
+        "XAC_NHAN_THAY_DOI_TRANG_THAI": "Confirm to change status?"
+      }
+    },
+    "DASHBOARD": {
+      "DANH_MUC": "Categories",
+      "DASHBOARD": "Dashboard"
+    }
+  },
+  "SENTRY": {
+    "SENTRY_DESCRIPTION_PLACEHOLDER": "I clicked on 'X' and then hit 'Confirm'",
+    "SENTRY_ERR_SUBTITLE": "We've received the information and would like you to provide a more detailed of this issue.<br>You can click [Close] to ignore this dialog. This dialog will reappear if you have another problem after 24 hours.<br>To proactively report a problem, click [Report problem] at the footer of the website.",
+    "SENTRY_ERR_SUBTITLE_MANUAL": "If you'd like to help, tell us what happened below. In most cases, try to manipulate a few times, if the system still report errors, describe in detail below!",
+    "SENTRY_ERR_TITLE": "It looks like we're having issues",
+    "SENTRY_ERR_TITLE_MANUAL": "It looks like we're going to report an issue",
+    "SENTRY_FORM_CONTACT_INFO": "Email / Zalo (unblock strangers) (in case you wish to be contacted)",
+    "SENTRY_FORM_OTHER_INFO": "Error description",
+    "SENTRY_INPUT_INVALID": "Some fields were invalid. Please correct the errors and try again.",
+    "SENTRY_LABEL_CLOSE": "Close",
+    "SENTRY_LABEL_COMMENT": "What happened?",
+    "SENTRY_LABEL_NAME": "Name",
+    "SENTRY_LABEL_SUBMIT": "Submit Crash Report",
+    "SENTRY_SUBMIT_ERR": "An unknown error occurred while submitting your report. Please try again.",
+    "SENTRY_SUBMIT_OK": "We sincerely thank you and will fix this problem soon!"
+  },
+  "SHARED": {
+    "PAGINATE": {
+      "BAN_GHI": "record(s)",
+      "SO_BAN_GHI": "Records limit",
+      "TONG_SO": "Total",
+      "TRANG": "Page"
+    },
+    "UPLOAD_FILE": {
+      "CHON_TEP": "Select file",
+      "CHUA_CO_TEP_TIN": "No file",
+      "CO_LOI_XAY_RA": "An error has occurred, please try again!",
+      "DANG_HOAN_TAT": "Finishing",
+      "DANG_TAI_LEN": "Uploading",
+      "HUY": "Cancel",
+      "KHAC": "(other)",
+      "LOI": "Error!",
+      "TAI_VE": "Download",
+      "XEM_TRUOC": "Preview",
+      "XOA": "Delete",
+      "XOA_TEP_TIN_NAY": "Delete this file?"
+    },
+    "VIEW_FILE": {
+      "ANH": "Picture",
+      "CO_LOI_XAY_RA": "An error has occurred",
+      "DANG_TAI": "Loading, please wait...",
+      "FILE_KHONG_HO_TRO_XEM": "Preview was not supported for this file",
+      "TAI_VE": "Download",
+      "XEM_TRUOC": "Preview"
+    }
+  }
+}

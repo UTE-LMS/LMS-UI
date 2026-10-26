@@ -1,0 +1,228 @@
+{
+  "APP": {
+    "CANH_BAO_HET_SESSION": "Chú ý: Phiên đăng nhập của bạn sắp hết. Vui lòng hoàn thành công việc hoặc đăng nhập lại trước khi thực hiện công việc mới.",
+    "CANH_BAO_WEBVIEW": "Bạn đang truy cập website ở bên trong một ứng dụng khác (như Facebook / Messenger / Zalo / Instagram, v.v...)<br>Vì lý do bảo mật, một số tính năng sẽ không hoạt động, vui lòng truy cập bằng ứng dụng trình duyệt trên thiết bị để có thể sử dụng tất cả các tính năng của website.",
+    "CHUA_CO_CAP_NHAT": "Chưa có bản cập nhật",
+    "CO_PHIEN_BAN_MOI": "Website vừa được cập nhật, vui lòng tải lại trang để kiểm tra!",
+    "DANG_KIEM_TRA_CAP_NHAT": "Đang kiểm tra cập nhật...",
+    "DANG_TAI_PHIEN_BAN_MOI": "Đang tải phiên bản mới",
+    "DA_HIEU": "Đã hiểu",
+    "DA_KET_NOI": "Kết nối thành công",
+    "KHONG_THE_CAP_NHAT_PHIEN_BAN_MOI": "Lỗi cập nhật phiên bản website, vui lòng thử lại sau!",
+    "MAT_KET_NOI": "Mất kết nối, đang thử lại...",
+    "PHIEN_BAN_CAP_NHAT_LOI": "Lỗi cập nhật phiên bản",
+    "PHIEN_BAN_HIEN_TAI": "Phiên bản hiện tại",
+    "PHIEN_BAN_MOI_SAN_SANG": "Phiên bản mới đã sẵn sàng",
+    "TAI_PHIEN_BAN_MOI": "Website đã có phiên bản mới và sẽ cập nhật sau giây lát..."
+  },
+  "AUTH": {
+    "LOGIN": {
+      "CHUA_NHAP_MAT_KHAU": "Vui lòng nhập Mật khẩu",
+      "CHUA_NHAP_TEN_DANG_NHAP": "Vui lòng nhập Tên đăng nhập",
+      "DANG_NHAP": "Đăng nhập",
+      "DANG_NHAP_GOOGLE": "Đăng nhập bằng Google",
+      "DA_GUI_YEU_CAU_CAP_LAI_MAT_KHAU": "Yêu cầu đã được gửi, vui lòng kiểm tra email hoặc hộp thư rác!",
+      "EMAIL": "Email",
+      "EMAIL_KHONG_HOP_LE": "Email không hợp lệ",
+      "GHI_NHO_DANG_NHAP": "Ghi nhớ đăng nhập",
+      "HOAC": "Hoặc",
+      "KHONG_DUOC_DE_TRONG": "Không được để trống",
+      "MAT_KHAU": "Mật khẩu",
+      "QUEN_MAT_KHAU": "Quên mật khẩu?",
+      "TAI_KHOAN_KHONG_CO_QUYEN": "Tài khoản không có quyền truy cập",
+      "VUI_LONG_NHAP_EMAIL": "Vui lòng nhập email",
+      "YEU_CAU_CAP_LAI_MAT_KHAU": "Gửi yêu cầu"
+    },
+    "REGISTER": {
+      "CHUA_NHAP_MAT_KHAU": "Vui lòng nhập Mật khẩu",
+      "CHUA_NHAP_TEN_DANG_NHAP": "Vui lòng nhập Tên đăng nhập",
+      "DANG_KY": "Đăng ký",
+      "DANG_KY_THANH_CONG": "Đăng ký thành công!",
+      "DANG_NHAP_GOOGLE": "Đăng nhập bằng Google",
+      "DA_CO_TAI_KHOAN": "Đã có tài khoản? Đăng nhập",
+      "EMAIL": "Email",
+      "HOAC": "Hoặc",
+      "MAT_KHAU": "Mật khẩu",
+      "MAT_KHAU_CHUA_KHOP": "Mật khẩu chưa trùng khớp",
+      "NHAP_LAI_MAT_KHAU": "Nhập lại mật khẩu",
+      "TAI_KHOAN_KHONG_HO_TRO": "Tài khoản không được hỗ trợ!"
+    },
+    "RESET_PASS": {
+      "CAP_NHAT": "Cập nhật",
+      "CAP_NHAT_THANH_CONG": "Cập nhật thành công!",
+      "CHUA_NHAP_MAT_KHAU": "Vui lòng nhập Mật khẩu",
+      "DAT_LAI_MAT_KHAU": "Đặt lại mật khẩu",
+      "MAT_KHAU": "Mật khẩu",
+      "MAT_KHAU_CHUA_KHOP": "Mật khẩu chưa trùng khớp",
+      "NHAP_LAI_MAT_KHAU": "Nhập lại mật khẩu"
+    }
+  },
+  "CORE": {
+    "AUTH": {
+      "PHAN_QUYEN_KHONG_TON_TAI": "Phân quyền không tồn tại!",
+      "TAI_KHOAN_KHONG_HO_TRO": "Tài khoản không được hỗ trợ!",
+      "THONG_TIN_DINH_DANH_KHONG_HOP_LE": "Thông tin định danh không hợp lệ, vui lòng đăng nhập lại!"
+    },
+    "GUARD": {
+      "TAI_KHOAN_KHONG_CO_QUYEN": "Tài khoản không có quyền truy cập"
+    },
+    "HANDLE_ERROR": {
+      "CO_LOI_XAY_RA": "Có lỗi xảy ra, vui lòng thử lại!",
+      "TAI_KHOAN_KHONG_CO_QUYEN": "Tài khoản không có quyền truy cập"
+    },
+    "UTILS": {
+      "BA": "ba",
+      "BAY": "bảy",
+      "BON": "bốn",
+      "CHIN": "chín",
+      "HAI": "hai",
+      "KHONG": "không",
+      "KHONG_LCAP": "Không",
+      "LE": "lẻ",
+      "MOT_J": "một",
+      "MOT_S": "mốt",
+      "MUOI": "mươi",
+      "MUOI_F": "mười",
+      "NAM": "năm",
+      "NAM_L": "lăm",
+      "NAM_N": "năm",
+      "NAM_TRUOC": "năm trước",
+      "NGAY": "ngày",
+      "NGAY_TRUOC": "ngày trước",
+      "NGHIN": "nghìn",
+      "SAU": "sáu",
+      "TAM": "tám",
+      "THANG": "tháng",
+      "THANG_TRUOC": "tháng trước",
+      "TRAM": "trăm",
+      "TRIEU": "triệu",
+      "TY": "tỷ"
+    }
+  },
+  "LAYOUT": {
+    "MAIN": {
+      "FOOTER": {
+        "BAO_CAO_SU_CO": "Báo cáo sự cố",
+        "DESIGN_BY_COST": "Thiết kế & Phát triển bởi COST - HCM-UTE",
+        "DIA_CHI_1": "01 Võ Văn Ngân, Thủ Đức",
+        "DIA_CHI_2": "Thành phố Hồ Chí Minh",
+        "EMAIL_LIEN_HE": "hcmute@hcmute.edu.vn",
+        "LIEN_HE_CHUNG_TOI": "Liên hệ với chúng tôi",
+        "PHONG_BAN": "Phòng ..., Khu ...",
+        "SO_DIEN_THOAI_LIEN_HE": "(+84) 28 3722 xxxx",
+        "THONG_TIN_KHOA": "Khoa ...",
+        "THONG_TIN_TRUONG_1": "Trường Đại Học Công Nghệ Kỹ Thuật",
+        "THONG_TIN_TRUONG_2": "Thành Phố Hồ Chí Minh"
+      },
+      "HEADER": {
+        "DANG_KY": "Đăng ký",
+        "DANG_NHAP": "Đăng nhập",
+        "DANG_XUAT": "Đăng xuất",
+        "FILE_HUONG_DAN": "File hướng dẫn",
+        "HUONG_DAN": "Hướng dẫn",
+        "QUAN_TRI": "Quản trị hệ thống",
+        "TAI_KHOAN": "Tài khoản",
+        "VIDEO_HUONG_DAN": "Video hướng dẫn"
+      }
+    },
+    "MNG": {
+      "FOOTER": {
+        "BAO_CAO_SU_CO": "Báo cáo sự cố"
+      },
+      "HEADER": {
+        "DANG_XUAT": "Đăng xuất",
+        "HE_THONG_QUAN_TRI": "Hệ thống quản trị",
+        "THONG_TIN_CA_NHAN": "Thông tin cá nhân"
+      },
+      "SIDEBAR": {
+        "CAU_HINH": "Cấu hình",
+        "CONG_VIEC": "Công việc",
+        "DANH_MUC": "Danh mục",
+        "SINH_VIEN": "Sinh viên",
+        "TONG_QUAN": "Tổng quan"
+      }
+    }
+  },
+  "MAIN": {
+    "HOMEPAGE": {
+      "A": "A"
+    }
+  },
+  "MNG": {
+    "CATEGORIES": {
+      "ACADEMIC_RANKS": {
+        "CAP_NHAT_THANH_CONG": "Cập nhật thành công!",
+        "CHINH_SUA": "Chỉnh sửa",
+        "DANH_MUC": "Danh mục",
+        "HOC_HAM": "Học hàm",
+        "HUY": "Huỷ",
+        "KHONG_DUOC_DE_TRONG": "Không được để trống",
+        "LUU": "Lưu",
+        "SO_THU_TU": "STT",
+        "TEN_HOC_HAM": "Tên học hàm",
+        "TEN_HOC_HAM_EN": "Tên học hàm (EN)",
+        "TEN_HOC_HAM_VN": "Tên học hàm (VN)",
+        "TEN_VIET_TAT": "Tên viết tắt",
+        "TEN_VIET_TAT_EN": "Viết tắt (EN)",
+        "TEN_VIET_TAT_VN": "Viết tắt (VN)",
+        "THAY_DOI_THANH_CONG": "Thay đổi thành công!",
+        "THEM_MOI": "Thêm mới",
+        "THEM_MOI_THANH_CONG": "Thêm mới thành công!",
+        "TIM_KIEM": "Tìm kiếm",
+        "TRANG_THAI": "Trạng thái",
+        "XAC_NHAN": "Xác nhận",
+        "XAC_NHAN_THAY_DOI_TRANG_THAI": "Xác nhận thay đổi trạng thái?"
+      }
+    },
+    "DASHBOARD": {
+      "DANH_MUC": "Danh mục",
+      "DASHBOARD": "Tổng quan"
+    }
+  },
+  "SENTRY": {
+    "SENTRY_DESCRIPTION_PLACEHOLDER": "Tôi bấm vào nút [X] và bấm [Xác nhận] thì bị lỗi",
+    "SENTRY_ERR_SUBTITLE": "Đội ngũ phát triển đã nhận được thông tin và rất mong bạn có thể mô tả chi tiết hơn về sự cố này.<br>Bạn có thể click [Đóng] để bỏ qua. Hộp thoại này sẽ xuất hiện lại nếu bạn gặp sự cố khác sau 24h.<br>Để chủ động báo cáo sự cố, hãy click [Báo cáo sự cố] ở chân website.",
+    "SENTRY_ERR_SUBTITLE_MANUAL": "Chúng tôi rất cảm ơn nếu bạn có thể mô tả điều gì đã xảy ra. Trong hầu hết các trường hợp, bạn hãy thử thao tác lại một vài lần, nếu hệ thống vẫn báo lỗi, hãy mô tả chi tiết bên dưới nhé!",
+    "SENTRY_ERR_TITLE": "Có vẻ như website vừa gặp một sự cố",
+    "SENTRY_ERR_TITLE_MANUAL": "Có vẻ như bạn muốn báo cáo một sự cố",
+    "SENTRY_FORM_CONTACT_INFO": "Email / Zalo (bỏ chặn người lạ) (trong trường hợp bạn muốn được liên hệ lại)",
+    "SENTRY_FORM_OTHER_INFO": "Thông tin mô tả lỗi",
+    "SENTRY_INPUT_INVALID": "Một số thông tin bạn điền chưa đúng, vui lòng kiểm tra lại.",
+    "SENTRY_LABEL_CLOSE": "Đóng",
+    "SENTRY_LABEL_COMMENT": "Bạn vui lòng mô tả các thao tác đã gây nên sự cố này",
+    "SENTRY_LABEL_NAME": "Họ tên",
+    "SENTRY_LABEL_SUBMIT": "Gửi báo cáo sự cố",
+    "SENTRY_SUBMIT_ERR": "Có lỗi khi gửi báo cáo, vui lòng thử gửi lại.",
+    "SENTRY_SUBMIT_OK": "Đội ngũ phát triển xin chân thành cảm ơn và sẽ sớm khắc phục sự cố này!"
+  },
+  "SHARED": {
+    "PAGINATE": {
+      "BAN_GHI": "bản ghi",
+      "SO_BAN_GHI": "Số bản ghi",
+      "TONG_SO": "Tổng số",
+      "TRANG": "Trang"
+    },
+    "UPLOAD_FILE": {
+      "CHON_TEP": "Chọn tệp",
+      "CHUA_CO_TEP_TIN": "Chưa có tệp tin",
+      "CO_LOI_XAY_RA": "Có lỗi xảy ra, vui lòng thử lại!",
+      "DANG_HOAN_TAT": "Đang hoàn tất",
+      "DANG_TAI_LEN": "Đang tải lên",
+      "HUY": "Huỷ",
+      "KHAC": "khác",
+      "LOI": "Lỗi!",
+      "TAI_VE": "Tải về",
+      "XEM_TRUOC": "Xem trước",
+      "XOA": "Xoá",
+      "XOA_TEP_TIN_NAY": "Xoá tệp tin này?"
+    },
+    "VIEW_FILE": {
+      "ANH": "Ảnh",
+      "CO_LOI_XAY_RA": "Có lỗi xảy ra, vui lòng thử lại!",
+      "DANG_TAI": "Đang tải, vui lòng chờ...",
+      "FILE_KHONG_HO_TRO_XEM": "Tệp tin không hỗ trợ xem trước",
+      "TAI_VE": "Tải về",
+      "XEM_TRUOC": "Xem trước"
+    }
+  }
+}

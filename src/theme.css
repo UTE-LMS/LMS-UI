@@ -1,0 +1,88 @@
+/* Custom Theming for NG-ZORRO */
+/* For more information: https://ng.ant.design/docs/customize-theme/en */
+@import "../node_modules/ng-zorro-antd/ng-zorro-antd.css";
+
+.ant-menu-vertical .ant-menu-item::after,
+.ant-menu-vertical-left .ant-menu-item::after,
+.ant-menu-vertical-right .ant-menu-item::after,
+.ant-menu-inline .ant-menu-item::after {
+  border-right-width: 3px;
+  border-style: solid;
+  border-color: var(--color-primary-light-1x);
+}
+
+.ant-menu-light .ant-menu-item:hover,
+.ant-menu-light .ant-menu-item-active,
+.ant-menu-light .ant-menu:not(.ant-menu-inline) .ant-menu-submenu-open,
+.ant-menu-light .ant-menu-submenu-active,
+.ant-menu-light .ant-menu-submenu-title:hover {
+  color: var(--color-primary-light-1x);
+}
+
+.ant-menu-item-selected {
+  color: var(--color-primary);
+}
+
+.ant-btn {
+  border-radius: 0.25rem;
+}
+
+.ant-btn:hover,
+.ant-btn:focus {
+  color: var(--color-primary);
+  border-color: var(--color-primary-dark);
+}
+
+.ant-btn-primary,
+.ant-checkbox-checked .ant-checkbox-inner {
+  background-color: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.ant-btn-primary:hover,
+.ant-btn-primary:focus {
+  background-color: var(--color-primary-dark);
+  border-color: var(--color-primary-dark);
+  color: #fff;
+}
+
+.ant-checkbox-checked::after,
+.ant-radio-checked::after {
+  border-width: 1px;
+  border-style: solid;
+  border-color: var(--color-primary-light-1x);
+}
+
+.ant-checkbox-wrapper:hover .ant-checkbox-inner,
+.ant-checkbox:hover .ant-checkbox-inner,
+.ant-checkbox-input:focus + .ant-checkbox-inner,
+.ant-radio-checked .ant-radio-inner,
+.ant-radio-wrapper:hover .ant-radio,
+.ant-radio:hover .ant-radio-inner,
+.ant-radio-input:focus + .ant-radio-inner,
+.ant-select-focused:not(.ant-select-disabled).ant-select:not(
+    .ant-select-customize-input
+  )
+  .ant-select-selector,
+.ant-select:not(.ant-select-disabled):hover .ant-select-selector {
+  border-color: var(--color-primary-dark);
+}
+
+.ant-radio-inner::after {
+  background-color: var(--color-primary);
+}
+
+.ant-select-item-option-selected:not(.ant-select-item-option-disabled) {
+  background-color: var(--color-primary-light-2x);
+}
+
+.ant-divider-horizontal.ant-divider-with-text {
+  border-top-color: var(--color-gray);
+}
+
+.nz-disable-td.ant-table-cell {
+  border-width: 1px;
+  border-style: solid;
+  border-color: var(--color-gray);
+  border-top-width: 0px;
+}

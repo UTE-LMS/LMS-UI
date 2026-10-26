@@ -1,0 +1,154 @@
+<div class="overflow-hidden">
+  <div
+    class="flex items-center justify-center flex-col font-extra-light p-1 bg-white border border-dashed border-primary-light-2x duration-200 ease-linear delay-0 transition-all">
+    <div class="file">
+
+      <!-- Thủ thuật chạy ngầm để lấy thông tin File cho trường hợp Single File -->
+      @if (!isUploadMultiFile() && listFiles().length && returnType() === 'id' &&
+      !listFiles()[0].filename) {
+      <span class="hidden" appGetFileInfo [idFile]="listFiles()[0].id"
+        (infoFile)="setFileName($event, 0)"></span>
+      }
+
+      <!-- Trạng thái: Nút Upload -->
+      @if (!isDisableUpload() && !isStartUpload()) {
+      <label
+        class="hover:bg-primary-opa hover:border hover:border-solid hover:border-primary hover:ease-linear hover:duration-200 hover:delay-0 hover:transition-all text-xs cursor-pointer mb-0 pl-1.5 pr-1.5 pt-1.5 pb-1.5 rounded-none border border-solid border-primary text-primary hover:text-white">
+        <input class="hidden" type="file" [accept]="acceptFilesExtension()"
+          (change)="onFileChange($event)" [multiple]="isUploadMultiFile()">
+        <span class="file-cta">
+          <span class="text-primary"><i class="fa-solid fa-upload"></i></span>
+          <span class="text-primary ml-1.25">
+            {{ langData['CHON_TEP'] }}
+            {{ listFiles().length > 0 ? langData['KHAC'] : ''}}...
+          </span>
+        </span>
+      </label>
+      }
+
+      <!-- Trạng thái: Đang Upload -->
+      @if (isStartUpload()) {
+      <label
+        class="hover:bg-primary-opa hover:border hover:border-solid hover:border-primary hover:ease-linear hover:duration-200 hover:delay-0 hover:transition-all text-xs cursor-pointer mb-0 pl-1.5 pr-1.5 pt-1.5 pb-1.5 rounded-none border border-solid border-primary text-primary hover:text-white">
+        <span class="file-cta">
+          <span class="text-primary">
+            <img alt="Uploading" src="assets/img/other/uploading.svg" class="w-5 h-5 inline">
+          </span>
+          <span class="text-primary ml-1.25">
+            <b class="text-blue">{{ uploadingProgress() }}%</b>
+            {{ uploadingProgress() === 100 ? langData['DANG_HOAN_TAT'] :
+            langData['DANG_TAI_LEN']}}...
+          </span>
+          <span class="text-primary" (click)="onTerminateUploading()">
+            <i class="fa-solid fa-times text-red ml-1"></i>
+          </span>
+        </span>
+      </label>
+      }
+
+      <!-- Nút View -->
+      @if (!isStartUpload() && !isUploadMultiFile() && !isDisableView() && listFiles().length) {
+      <label
+        class="hover:bg-primary-opa hover:border hover:border-solid hover:border-primary hover:ease-linear hover:duration-200 hover:delay-0 hover:transition-all text-xs cursor-pointer mb-0 pl-1.5 pr-1.5 pt-1.5 pb-1.5 rounded-none border border-solid border-primary text-primary hover:text-white ml-1"
+        (click)="listFiles()[0].filename ? openModalViewFile(viewFile, listFiles()[0].id) : null">
+        <span class="file-cta">
+          <span class="text-primary">
+            <i class="fa-solid" [class]="listFiles()[0].filename ? 'fa-eye' : 'fa-eye-slash'"></i>
+          </span>
+          <span class="text-primary ml-1.25">
+            {{ langData['XEM_TRUOC'] }} {{ listFiles()[0].filename }}
+          </span>
+        </span>
+      </label>
+      }
+
+      <!-- Nút Download -->
+      @if (!isStartUpload() && isDownloadable() && !isUploadMultiFile() && listFiles().length) {
+      <label
+        class="hover:bg-primary-opa hover:border hover:border-solid hover:border-primary hover:ease-linear hover:duration-200 hover:delay-0 hover:transition-all text-xs cursor-pointer mb-0 pl-1.5 pr-1.5 pt-1.5 pb-1.5 rounded-none border border-solid border-primary text-primary hover:text-white ml-1"
+        (click)="listFiles()[0].filename ? downloadFile(listFiles()[0].id) : null">
+        <span class="file-cta">
+          <span class="text-primary">
+            <i class="fa-solid"
+              [class]="listFiles()[0].filename ? 'fa-download' : 'fa-triangle-exclamation'"></i>
+          </span>
+          <span class="text-primary ml-1.25">
+            {{ langData['TAI_VE'] }} {{ listFiles()[0].filename }}
+          </span>
+        </span>
+      </label>
+      }
+
+      <!-- Trạng thái: Chưa có File -->
+      @if (!isUploadMultiFile() && isDisableUpload() && !listFiles().length) {
+      <label
+        class="hover:bg-primary-opa hover:border hover:border-solid hover:border-primary hover:ease-linear hover:duration-200 hover:delay-0 hover:transition-all text-xs cursor-pointer mb-0 pl-1.5 pr-1.5 pt-1.5 pb-1.5 rounded-none border border-solid border-primary text-primary hover:text-white ml-1">
+        <span class="file-cta">
+          <span class="text-primary"><i class="fa-solid fa-eye-slash"></i></span>
+          <span class="text-primary ml-1.25">{{ langData['CHUA_CO_TEP_TIN'] }}</span>
+        </span>
+      </label>
+      }
+
+      <!-- Nút Xóa File -->
+      @if (!isDisableDelete() && !isStartUpload() && !isUploadMultiFile() && listFiles().length) {
+      @if (deleteNoConfirm()) {
+      <label
+        class="hover:bg-red hover:border hover:border-solid hover:border-red hover:ease-linear hover:duration-200 hover:delay-0 hover:transition-all text-xs cursor-pointer mb-0 pl-1.5 pr-1.5 pt-1.5 pb-1.5 rounded-none border border-solid border-red **:text-red hover:**:text-white ml-1"
+        (click)="onRemove(0)">
+        <span class="file-cta"><i class="fa-solid fa-trash"></i></span>
+      </label>
+      } @else {
+      <label
+        class="hover:bg-red hover:border hover:border-solid hover:border-red hover:ease-linear hover:duration-200 hover:delay-0 hover:transition-all text-xs cursor-pointer mb-0 pl-1.5 pr-1.5 pt-1.5 pb-1.5 rounded-none border border-solid border-red **:text-red hover:**:text-white ml-1"
+        nz-popconfirm [nzPopconfirmTitle]="langData['XOA_TEP_TIN_NAY']" [nzOkText]="langData['XOA']"
+        [nzCancelText]="langData['HUY']" nzOkType="danger" (nzOnConfirm)="onRemove(0)">
+        <span class="file-cta"><i class="fa-solid fa-trash"></i></span>
+      </label>
+      }
+      }
+    </div>
+  </div>
+
+  <!-- Danh sách Multi File -->
+  @if (isUploadMultiFile() && listFiles().length) {
+  <div class="text-left pt-1.25 pb-2.5">
+    @for (item of listFiles(); track item.id; let i = $index) {
+    <div
+      class="text-primary bg-primary-light-2x border border-solid border-primary-light-1x font-light mt-0.75 pl-0.75 pr-0.75 pt-0 pb-0 rounded-sm cursor-pointer">
+
+      <!-- Thủ thuật chạy ngầm để lấy thông tin File cho danh sách Multi File -->
+      @if (returnType() === 'id' && !item.filename) {
+      <span class="hidden" appGetFileInfo [idFile]="item.id"
+        (infoFile)="setFileName($event, i)"></span>
+      }
+
+      <span
+        (click)="isDisableView() ? (isDownloadable() ? downloadFile(item.id) : null) : (item.filename ? openModalViewFile(viewFile, item.id) : null)">
+        <i class="fa-solid fa-paperclip mr-1 text-xs"></i>
+        <i class="fa-solid mr-1 text-xs" [class]="item.filename ? 'fa-eye' : 'fa-eye-slash'"></i>
+      </span>
+
+      @if (!isDisableDelete()) {
+      @if (deleteNoConfirm()) {
+      <i class="fa-solid fa-trash text-red cursor-pointer text-xs mr-1" (click)="onRemove(i)"></i>
+      } @else {
+      <i class="fa-solid fa-trash text-red cursor-pointer text-xs mr-1" nz-popconfirm
+        [nzPopconfirmTitle]="langData['XOA_TEP_TIN_NAY']" [nzOkText]="langData['XOA']"
+        [nzCancelText]="langData['HUY']" nzOkType="danger" (nzOnConfirm)="onRemove(i)"></i>
+      }
+      }
+
+      <span
+        (click)="isDisableView() ? (isDownloadable() ? downloadFile(item.id) : null) : (item.filename ? openModalViewFile(viewFile, item.id) : null)">
+        {{ item.filename }}
+      </span>
+    </div>
+    }
+  </div>
+  }
+</div>
+
+<ng-template #viewFile>
+  <app-view-file [fileId]="selectedFileIdForView()" (hideIframe)="hideModalViewFile()" />
+</ng-template>

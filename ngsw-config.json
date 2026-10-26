@@ -1,0 +1,60 @@
+{
+  "$schema": "./node_modules/@angular/service-worker/config/schema.json",
+  "index": "/index.html",
+  "appData": {
+    "forceUpdate": false
+  },
+  "assetGroups": [
+    {
+      "name": "app",
+      "installMode": "prefetch",
+      "resources": {
+        "files": [
+          "/favicon.ico",
+          "/manifest.json",
+          "/*.css",
+          "/*.js",
+          "/*.json",
+          "/*.txt",
+          "/*.xml"
+        ]
+      }
+    },
+    {
+      "name": "index",
+      "installMode": "lazy",
+      "updateMode": "prefetch",
+      "resources": {
+        "files": [
+          "/index.html"
+        ]
+      }
+    },
+    {
+      "name": "assets",
+      "installMode": "lazy",
+      "updateMode": "prefetch",
+      "resources": {
+        "files": [
+          "/assets/**",
+          "/media/**",
+          "/*.(svg|cur|jpg|jpeg|png|apng|webp|avif|gif|otf|ttf|woff|woff2)"
+        ]
+      }
+    }
+  ],
+  "dataGroups": [
+    {
+      "name": "api",
+      "urls": [
+        "https://api.hcmute.edu.vn:8443/**"
+      ],
+      "cacheConfig": {
+        "maxSize": 0,
+        "maxAge": "1u",
+        "strategy": "freshness",
+        "timeout": "1h"
+      }
+    }
+  ]
+}

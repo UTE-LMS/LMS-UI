@@ -59,65 +59,70 @@ Do not infer an endpoint from a conventional name such as `/all`, `/filter`, or 
 
 ---
 
-## PART 2 — FILE LOCATION AND NAMING
+## PART 2 — FILE LOCATION AND NAMING (STRICTLY IN ENGLISH)
+
+All domain folders, entity folders, file names, model interfaces, and service classes **must be named in English**. Do not use Vietnamese in technical identifiers (e.g., use `financial-year` instead of `nam-tai-chinh`, `scientific-paper` instead of `bai-bao-khoa-hoc`, `academic-rank` instead of `hoc-ham`). 
+
+> **BACKEND PAYLOAD PROPERTY NAMES:** Note that property names *inside* the DTO/Response interfaces must still preserve backend JSON schema field names exactly (e.g., if backend returns `trangThai` or `thuTu`, keep those property names intact for correct serialization). However, all code structural containers (folders, files, interfaces, and classes) must be strictly in English.
 
 ### 2.1 Model files
 
-Place a model in the domain folder that owns the data:
+Place a model in the domain folder that owns the data (all domain folders must be English):
 
 ```text
 src/app/core/models/
   auth/
-  cau-hinh/
   common/
-  danh-muc/
+  category/
+  configuration/
   hrm/
-  ke-khai/
+  declaration/
 ```
 
-Use kebab-case and the `.model.ts` suffix:
+Use English kebab-case and the `.model.ts` suffix:
 
 ```text
-<entity-kebab>.model.ts
+<entity-english-kebab>.model.ts
 ```
 
 Examples of valid shapes:
 
 ```text
-nam-tai-chinh.model.ts
-bang-tinh-gio-nckh.model.ts
-thong-ke-bao-cao.model.ts
+financial-year.model.ts
+scientific-research-hours.model.ts
+statistical-report.model.ts
+academic-rank.model.ts
 response-data.model.ts
 ```
 
 ### 2.2 Service files
 
-Mirror the owning model domain where practical:
+Mirror the owning model domain where practical (using English folder and file names):
 
 ```text
-src/app/core/services/<domain>/<entity-kebab>.service.ts
+src/app/core/services/<domain-english>/<entity-english-kebab>.service.ts
 ```
 
-Use a PascalCase class name ending in `Service`:
+Use a PascalCase English class name ending in `Service`:
 
 ```typescript
-export class EntityService {}
+export class EntityService {} // e.g., AcademicRankService, FinancialYearService, ScientificPaperService
 ```
 
 ### 2.3 Type names
 
-Repository interfaces use the `I` prefix:
+Repository interfaces use the `I` prefix with English PascalCase:
 
-| Purpose | Pattern |
-|---|---|
-| Create/update request | `IEntityDTO` |
-| Full API response | `IEntity` |
-| Structured search body | `IEntityFilter` |
-| Nested reusable shape | Descriptive `I...` name |
-| Report/projection response | Descriptive `I...` name |
-| Generic page response | `IPagedResults<T>` |
+| Purpose                    | Pattern                    | Example                          |
+| -------------------------- | -------------------------- | -------------------------------- |
+| Create/update request      | `I<EntityEnglish>DTO`      | `IAcademicRankDTO`               |
+| Full API response          | `I<EntityEnglish>`         | `IAcademicRank`                  |
+| Structured search body     | `I<EntityEnglish>Filter`   | `IAcademicRankFilter`            |
+| Nested reusable shape      | Descriptive `I...` (Eng)   | `IAuthorInfo`                    |
+| Report/projection response | Descriptive `I...` (Eng)   | `IStatisticalSummary`            |
+| Generic page response      | `IPagedResults<T>`         | `IPagedResults<IAcademicRank>`   |
 
-Do not use a `DTO` suffix for a server response unless the backend truly returns that request shape.
+Do not use Vietnamese words in interface or class names (e.g., avoid `IBaiBaoKhoaHoc`, `INamTaiChinhService`; use `IScientificPaper`, `FinancialYearService`). Do not use a `DTO` suffix for a server response unless the backend truly returns that request shape.
 
 ---
 
@@ -492,14 +497,14 @@ Do not add `catchError` merely to rethrow the same error. Application-wide error
 
 Choose the blueprint from the API:
 
-| API shape | Service pattern |
-|---|---|
-| `GET /filter` with `search`, page, size, sort, column | Scalar-search catalog CRUD |
-| `POST /filter` with filter body plus page, size, sort, column | Structured-filter CRUD |
-| Unpaged `GET` collection | `getAll(): Observable<IEntity[]>` |
-| Unpaged filtered `POST /all` | `getAll(filter: Partial<IFilter>)` |
-| Unpaged filtered `POST` at base path | Use the domain verb such as `search(...)` if that is the actual endpoint |
-| No CRUD endpoints | Create only the named operations present in the controller |
+| API shape                                                     | Service pattern                                                          |
+| ------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| `GET /filter` with `search`, page, size, sort, column         | Scalar-search catalog CRUD                                               |
+| `POST /filter` with filter body plus page, size, sort, column | Structured-filter CRUD                                                   |
+| Unpaged `GET` collection                                      | `getAll(): Observable<IEntity[]>`                                        |
+| Unpaged filtered `POST /all`                                  | `getAll(filter: Partial<IFilter>)`                                       |
+| Unpaged filtered `POST` at base path                          | Use the domain verb such as `search(...)` if that is the actual endpoint |
+| No CRUD endpoints                                             | Create only the named operations present in the controller               |
 
 ### 6.1 Scalar-search catalog CRUD
 
@@ -594,11 +599,7 @@ export class EntityService {
       .set('sort', sort ?? 'desc')
       .set('column', column ?? 'trangThai');
 
-    return this.http.post<IPagedResults<IEntity>>(
-      this.apiUrl + '/filter',
-      filter,
-      { params },
-    );
+    return this.http.post<IPagedResults<IEntity>>(this.apiUrl + '/filter', filter, { params });
   }
 
   create(model: IEntityDTO): Observable<IEntity> {
@@ -801,19 +802,19 @@ For such services:
 Use one style consistently within a service:
 
 ```typescript
-this.apiUrl + `/${id}`
+this.apiUrl + `/${id}`;
 ```
 
 or:
 
 ```typescript
-`${this.apiUrl}/${id}`
+`${this.apiUrl}/${id}`;
 ```
 
 Both exist in the repository. Prefer template literals when a path has multiple dynamic segments:
 
 ```typescript
-`${this.apiUrl}/year/${yearId}/lecturer/${email}`
+`${this.apiUrl}/year/${yearId}/lecturer/${email}`;
 ```
 
 Rules:
@@ -916,11 +917,7 @@ export class EntityService {
       .set('sort', sort ?? 'desc')
       .set('column', column ?? 'trangThai');
 
-    return this.http.post<IPagedResults<IEntity>>(
-      this.apiUrl + '/filter',
-      filter,
-      { params },
-    );
+    return this.http.post<IPagedResults<IEntity>>(this.apiUrl + '/filter', filter, { params });
   }
 
   create(model: IEntityDTO): Observable<IEntity> {
@@ -1027,8 +1024,9 @@ Before completing any model/service task:
 
 - [ ] I read the backend controller/schema rather than guessing.
 - [ ] I selected scalar-search, structured-filter, reporting, lookup, export, upload, or utility architecture intentionally.
-- [ ] The model filename and service filename use kebab-case.
-- [ ] Object contracts use `I`-prefixed interfaces.
+- [ ] Folder, file, interface, and class names are strictly in English (kebab-case for folders/files, PascalCase for classes/interfaces).
+- [ ] The model filename and service filename use English kebab-case with `.model.ts` and `.service.ts`.
+- [ ] Object contracts use `I`-prefixed English interfaces (`I<EntityEnglish>`, `I<EntityEnglish>DTO`).
 - [ ] Request DTOs contain the exact body fields.
 - [ ] Response interfaces contain the exact consumed response fields.
 - [ ] Scalar relationship fields are replaced with populated objects through `Omit`.
@@ -1044,4 +1042,3 @@ Before completing any model/service task:
 - [ ] Specialized endpoints have clear domain method names.
 - [ ] Targeted lint passes.
 - [ ] The Angular/TypeScript build was run, or any unrelated baseline failure was documented.
-

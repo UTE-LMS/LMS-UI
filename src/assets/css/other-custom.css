@@ -1,0 +1,10 @@
+hr {
+  border-top-style: solid;
+  border-top-color: var(--color-lightgray-dark);
+  border-top-width: 0.75px;
+  border-bottom-width: 0px;
+  border-left-width: 0px;
+  border-right-width: 0px;
+  margin-top: 5px;
+  margin-bottom: 5px;
+}

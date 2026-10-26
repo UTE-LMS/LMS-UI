@@ -1,0 +1,42 @@
+<div nz-row class="bg-primary text-white p-4">
+  <div nz-col nzSpan="24" class="text-center">
+    <img alt="HCM-UTE Logo" class="h-5 mr-1.25 inline-block"
+      src="assets/img/logo/ute-logo-white.png"><b>HCM-UTE</b>
+  </div>
+  <div nz-col nzSpan="24" class="text-center mb-2.5">
+    <img alt="User Avatar"
+      class="w-21.5 h-21.5 mt-5 mb-2.5 rounded-full border-solid border-2 border-white inline-block"
+      [attr.src]="avatarOfUser() ? avatarOfUser() : 'assets/img/other/user.png'"
+      onerror="this.src='assets/img/other/user.png'"><br>
+    <span class="text-1xs font-bold uppercase">{{nameOfUser()}}</span>
+  </div>
+</div>
+
+<ul nz-menu nzTheme="light" nzMode="inline" class="sub-menu">
+  @for (menu of listMenu; track menu.title) {
+  @if (menu.listChild.length && checkRole(menu.roles)) {
+  <li nz-submenu [nzTitle]="menu.title" [nzIcon]="menu.icon" (click)="autoHideMenu()" #subMenuItem>
+    <ul>
+      @for (subMenu of menu.listChild; track subMenu.title) {
+      @if (checkRole(subMenu.roles)) {
+      <li nz-menu-item [routerLink]="subMenu.routerLink" routerLinkActive="ant-menu-item-selected"
+        nzTooltipPlacement="right" nz-tooltip [nzTooltipTitle]="subMenu.title">
+        <i [class]="'mr-2 ' + subMenu.icon"></i>
+        <span>{{subMenu.title}}</span>
+      </li>
+      }
+      }
+    </ul>
+  </li>
+  }
+  @if (!menu.listChild.length && checkRole(menu.roles)) {
+  <li nz-menu-item class="menu-alone" [routerLink]="menu.routerLink"
+    routerLinkActive="ant-menu-item-selected" nzTooltipPlacement="right" nz-tooltip
+    [nzTooltipTitle]="menu.title">
+    <i [class]="'mr-2 ' + menu.icon"></i>
+    <span>{{menu.title}}</span>
+  </li>
+  }
+  }
+
+</ul>

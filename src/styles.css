@@ -1,3 +1,64 @@
-/* You can add global styles to this file, and also import other style files */
+@layer theme, base, ng-zorro, project-styles, components, utilities;
 
-@import 'tailwindcss';
+@import "./theme.css" layer(ng-zorro);
+
+/* TailwindCss */
+@import "./assets/css/tailwind.css";
+
+@layer project-styles {
+  /* Theme's font */
+  @import "./assets/css/font-face.css";
+
+  /* Nz-Btn Custom color */
+  @import "./assets/css/nz-btn-custom.css";
+
+  /* Nz-Modal custom */
+  @import "./assets/css/nz-modal-custom.css";
+
+  /* Nz-table custom */
+  @import "./assets/css/nz-table-custom.css";
+
+  /* Drag Drop */
+  @import "./assets/css/drag-drop.css";
+
+  /* Form field */
+  @import "./assets/css/form-field-css.css";
+
+  /* Other custom */
+  @import "./assets/css/other-custom.css";
+
+html {
+  scroll-behavior: smooth;
+  --antd-wave-shadow-color: #2e3192;
+  /* --antd-wave-shadow-color: #00796b; */
+  }
+
+* {
+  letter-spacing: -0.9px;
+  font-family: var(--default-font-family);
+  }
+
+  /* Hide spin up / down button of input number */
+  input[type="number"].hide-spin-up-down::-webkit-inner-spin-button,
+  input[type="number"].hide-spin-up-down::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  /* END Hide spin up / down button of input number */
+
+
+  la-tex {
+    letter-spacing: normal;
+  }
+
+  /* Toast custom */
+  .toast-top-center-fw {
+    top: 0;
+    width: 100%;
+  }
+
+  .toast-top-center-fw .ngx-toastr {
+    width: 100%;
+  }
+  /* End Toast custom */
+}
