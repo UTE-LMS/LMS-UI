@@ -1,0 +1,97 @@
+<app-breadcrumb [breadcrumb]="breadcrumbObj" />
+<div nz-row [nzGutter]="16">
+  <div nz-col nzSpan="12">
+    <span class="text-xl font-bold uppercase">{{breadcrumbObj.heading}}</span>
+  </div>
+  <div nz-col nzSpan="12" class="text-right">
+    <a nz-button class="nz-btn-green" [routerLink]="urlConst.ROUTE.MANAGEMENT.USERS_NEW">
+      <i class="fa-solid fa-plus mr-1.25"></i>Thêm người dùng</a>
+  </div>
+</div>
+<hr>
+<p class="users-note">
+  Tài khoản do quản trị viên cấp. Giảng viên chỉ thao tác trên học phần được phân công.
+  <span class="users-test-flag">DỮ LIỆU THỬ NGHIỆM</span>
+</p>
+
+<nz-table class="table-border table-cell-middle table-margin-bot" nzSize="middle"
+  nzShowPagination="false" [nzData]="manager.listData().data || []" [nzLoading]="manager.isLoading()"
+  [nzNoResult]="stateTpl" [nzScroll]="{x: '1450px'}">
+  <thead>
+    <tr>
+      <th nzAlign="center" nzWidth="50px">STT</th>
+      <th nzWidth="160px">Tên đăng nhập</th>
+      <th nzWidth="190px">Họ và tên</th>
+      <th nzWidth="230px">Email</th>
+      <th nzWidth="200px">Vai trò</th>
+      <th nzWidth="210px">Phạm vi</th>
+      <th nzAlign="center" nzWidth="130px">Cho phép đăng nhập</th>
+      <th nzAlign="center" nzWidth="130px">Ngày tạo</th>
+      <th nzAlign="center" nzWidth="130px">Cập nhật</th>
+      <th nzAlign="center" nzWidth="70px"><i class="fa-solid fa-cog"></i></th>
+    </tr>
+  </thead>
+  <tbody>
+    @for (item of manager.listData().data || []; track item.id; let i = $index) {
+    <tr>
+      <td nzAlign="center">
+        {{ i + 1 + (manager.listData().currentPage - 1) * manager.listData().limit }}
+      </td>
+      <td>
+        <b>{{ item.username }}</b>
+        @if (item.id === currentUserId) {
+        <span class="users-self">(bạn)</span>
+        }
+      </td>
+      <td>{{ item.fullName }}</td>
+      <td>{{ item.email }}</td>
+      <td>
+        @for (assignment of item.roleAssignments; track $index) {
+        <div class="users-line">{{ roleLabel(assignment.role) }}</div>
+        }
+      </td>
+      <td>
+        @for (assignment of item.roleAssignments; track $index) {
+        <div class="users-line" [class.users-muted]="describeScope(assignment) === 'Chưa gán'"
+          [attr.title]="scopeIdsTooltip(assignment.scope) || null">
+          {{ describeScope(assignment) }}
+        </div>
+        }
+      </td>
+      <td nzAlign="center">
+        <nz-switch class="switcher-on-green switcher-off-red" [ngModel]="item.status === 'ACTIVE'"
+          [nzLoading]="selectedSwitcherId() === item.id" [nzControl]="true"
+          [attr.aria-label]="(item.status === 'ACTIVE' ? 'Khóa ' : 'Mở khóa ') + item.username"
+          (click)="changeStatus(item)" nzCheckedChildren="ON" nzUnCheckedChildren="OFF"></nz-switch>
+        <div class="users-status-text" [class.users-status-locked]="item.status === 'LOCKED'">
+          {{ item.status === 'ACTIVE' ? 'Hoạt động' : 'Bị khóa' }}
+        </div>
+      </td>
+      <td nzAlign="center">{{ item.createdAt | date: 'dd/MM/yyyy HH:mm' }}</td>
+      <td nzAlign="center">{{ item.updatedAt | date: 'dd/MM/yyyy HH:mm' }}</td>
+      <td nzAlign="center">
+        <a nz-button nzType="primary" nzSize="small" aria-label="Sửa người dùng"
+          [routerLink]="[urlConst.ROUTE.MANAGEMENT.USERS, item.id]"><i class="fa-solid fa-edit"></i></a>
+      </td>
+    </tr>
+    }
+  </tbody>
+</nz-table>
+<app-table-paginate [pageConfig]="manager.listData()" (pageChange)="manager.pageChange($event)" />
+
+<ng-template #stateTpl>
+  @if (manager.isLoading()) {
+  <div class="users-state">Đang tải danh sách người dùng...</div>
+  } @else if (manager.hasError()) {
+  <div class="users-state" role="alert">
+    <p class="mb-2">Không tải được danh sách người dùng. Có thể bạn không đủ quyền hoặc máy chủ đang gặp sự cố.</p>
+    <button nz-button type="button" (click)="manager.triggerReload()">
+      <i class="fa-solid fa-rotate-right mr-1.25"></i>Thử lại</button>
+  </div>
+  } @else {
+  <div class="users-state">
+    <p class="mb-2">Chưa có người dùng nào.</p>
+    <a nz-button nzType="primary" [routerLink]="urlConst.ROUTE.MANAGEMENT.USERS_NEW">Thêm người dùng đầu tiên</a>
+  </div>
+  }
+</ng-template>

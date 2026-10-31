@@ -1,0 +1,44 @@
+.login-page { display: flex; flex-wrap: wrap; min-height: 100vh; width: 100%; }
+
+.login-hero {
+  flex: 1 1 560px;
+  display: flex; flex-direction: column; justify-content: space-between; gap: 48px;
+  padding: 56px 64px; color: #fff;
+  background:
+    radial-gradient(520px 420px at 85% 12%, rgba(47, 211, 193, .38), transparent 70%),
+    radial-gradient(520px 420px at 92% 100%, rgba(255, 134, 180, .30), transparent 70%),
+    radial-gradient(600px 460px at 8% 105%, rgba(139, 108, 255, .38), transparent 70%),
+    linear-gradient(150deg, #0a2f68, #1457b8);
+}
+.login-logo { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 18px; letter-spacing: .03em; }
+.login-logo i {
+  display: block; width: 22px; height: 22px; border-radius: 7px;
+  background: linear-gradient(135deg, #7db6ff 0%, #2fd3c1 100%);
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, .18);
+}
+.login-title { margin: 0; font-size: 38px; line-height: 1.25; font-weight: 600; letter-spacing: -.015em; color: #fff; }
+.login-lead { margin: 0; font-size: 16px; color: #c9d9f2; }
+.login-chain { margin: 0; font-size: 14px; color: #d5e3f8; }
+.login-chain b { font-weight: 600; color: #a9cbff; }
+
+.login-form-wrap {
+  flex: 1 1 440px; display: flex; align-items: center; justify-content: center;
+  padding: 48px 32px; background: linear-gradient(180deg, #f1f6fe, #fff);
+}
+.login-card { width: 100%; max-width: 360px; display: flex; flex-direction: column; gap: 20px; }
+.login-muted { color: #66727f; }
+.login-alert {
+  padding: 10px 12px; border-radius: 6px; font-size: 14px;
+  color: #b42318; background: #fef6f5; border: 1px solid #f3b8b2;
+}
+.login-test-note { display: flex; align-items: flex-start; gap: 10px; padding-top: 20px; border-top: 1px solid #e7eaee; }
+.login-test-flag {
+  flex: none; padding: 1px 8px; border-radius: 4px; white-space: nowrap;
+  font-size: 11.5px; font-weight: 700; letter-spacing: .04em;
+  color: #6b3a00; background: #fff3dc; border: 1px solid #e9c06a;
+}
+
+@media (max-width: 767px) {
+  .login-hero { padding: 32px 24px; gap: 24px; }
+  .login-title { font-size: 28px; }
+}

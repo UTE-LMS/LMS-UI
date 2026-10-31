@@ -1,0 +1,154 @@
+<form [formGroup]="form" (keydown.enter)="$event.preventDefault()" novalidate>
+  <div nz-row [nzGutter]="16">
+    <div nz-col class="pb-2" nzSpan="24" nzMd="12">
+      <label class="font-medium" for="user-username">Tên đăng nhập</label>
+      @if (formValidSvc.isFieldRequired(form, 'username')) {
+        <label class="field-required"><sup><i class="fa-solid fa-star-of-life"></i></sup></label>
+      }
+      <input id="user-username" nz-input formControlName="username" autocomplete="off"
+        [nzStatus]="serverFieldErrors().username ? 'error' : formValidSvc.displayFieldCssZorro(form, 'username')">
+      @if (isEdit) {
+        <small class="form-hint">Không đổi được sau khi tạo.</small>
+      } @else {
+        <small class="form-hint">Từ 3 ký tự, tự chuyển thành chữ thường.</small>
+      }
+      <app-field-error-display [displayError]="formValidSvc.isFieldValid(form, 'username', 'required')"
+        errorMsg="Không được để trống" />
+      <app-field-error-display [displayError]="formValidSvc.isFieldValid(form, 'username', 'minlength')"
+        errorMsg="Tên đăng nhập có ít nhất 3 ký tự" />
+      <app-field-error-display [displayError]="!!serverFieldErrors().username"
+        [errorMsg]="serverFieldErrors().username ?? ''" />
+    </div>
+
+    @if (!isEdit) {
+    <div nz-col class="pb-2" nzSpan="24" nzMd="12">
+      <label class="font-medium" for="user-password">Mật khẩu ban đầu</label>
+      @if (formValidSvc.isFieldRequired(form, 'password')) {
+        <label class="field-required"><sup><i class="fa-solid fa-star-of-life"></i></sup></label>
+      }
+      <input id="user-password" nz-input type="password" formControlName="password" autocomplete="new-password"
+        [nzStatus]="serverFieldErrors().password ? 'error' : formValidSvc.displayFieldCssZorro(form, 'password')">
+      <small class="form-hint">8 đến 72 byte UTF-8 (chữ có dấu chiếm nhiều byte hơn). Người dùng nên đổi sau lần đăng nhập đầu.</small>
+      <app-field-error-display [displayError]="formValidSvc.isFieldValid(form, 'password', 'required')"
+        errorMsg="Không được để trống" />
+      <app-field-error-display [displayError]="formValidSvc.isFieldValid(form, 'password', 'passwordTooShort')"
+        errorMsg="Mật khẩu phải dài ít nhất 8 byte" />
+      <app-field-error-display [displayError]="formValidSvc.isFieldValid(form, 'password', 'passwordTooLong')"
+        errorMsg="Mật khẩu không được dài quá 72 byte" />
+      <app-field-error-display [displayError]="!!serverFieldErrors().password"
+        [errorMsg]="serverFieldErrors().password ?? ''" />
+    </div>
+    }
+
+    <div nz-col class="pb-2" nzSpan="24" nzMd="12">
+      <label class="font-medium" for="user-fullname">Họ và tên</label>
+      @if (formValidSvc.isFieldRequired(form, 'fullName')) {
+        <label class="field-required"><sup><i class="fa-solid fa-star-of-life"></i></sup></label>
+      }
+      <input id="user-fullname" nz-input formControlName="fullName"
+        [nzStatus]="serverFieldErrors().fullName ? 'error' : formValidSvc.displayFieldCssZorro(form, 'fullName')">
+      <app-field-error-display [displayError]="formValidSvc.isFieldValid(form, 'fullName', 'required')"
+        errorMsg="Không được để trống" />
+      <app-field-error-display [displayError]="!!serverFieldErrors().fullName"
+        [errorMsg]="serverFieldErrors().fullName ?? ''" />
+    </div>
+
+    <div nz-col class="pb-2" nzSpan="24" nzMd="12">
+      <label class="font-medium" for="user-email">Email</label>
+      @if (formValidSvc.isFieldRequired(form, 'email')) {
+        <label class="field-required"><sup><i class="fa-solid fa-star-of-life"></i></sup></label>
+      }
+      <input id="user-email" nz-input type="email" formControlName="email" autocomplete="off"
+        [nzStatus]="serverFieldErrors().email ? 'error' : formValidSvc.displayFieldCssZorro(form, 'email')">
+      <app-field-error-display [displayError]="formValidSvc.isFieldValid(form, 'email', 'required')"
+        errorMsg="Không được để trống" />
+      <app-field-error-display [displayError]="formValidSvc.isFieldValid(form, 'email', 'invalidEmail')"
+        errorMsg="Email không hợp lệ" />
+      <app-field-error-display [displayError]="!!serverFieldErrors().email"
+        [errorMsg]="serverFieldErrors().email ?? ''" />
+    </div>
+  </div>
+
+  <h2 class="form-section-title">Vai trò và phạm vi</h2>
+  <nz-table class="table-border table-cell-middle" nzSize="small" nzShowPagination="false"
+    [nzData]="roleForms().length ? [{}] : []" [nzScroll]="{x: '760px'}">
+    <thead>
+      <tr>
+        <th nzWidth="240px">Vai trò</th>
+        <th>Phạm vi</th>
+        <th nzWidth="60px" nzAlign="center"><span class="sr-only">Bỏ vai trò</span></th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (roleForm of roleForms(); track roleForm; let i = $index) {
+      <tr [formGroup]="roleForm">
+        <td>
+          <nz-select class="w-full" formControlName="role" [nzAllowClear]="false"
+            [nzDropdownMatchSelectWidth]="false" [attr.aria-label]="'Vai trò ' + (i + 1)">
+            @for (option of roleOptions; track option.value) {
+            <nz-option [nzLabel]="option.label" [nzValue]="option.value" />
+            }
+          </nz-select>
+        </td>
+        <td>
+          @if (roleForm.controls.role.value === adminRole) {
+          <span class="form-hint">Quản trị viên có toàn quyền hệ thống, không cần phạm vi.</span>
+          } @else {
+          <div class="scope-grid">
+            <div>
+              <span class="scope-label">Chương trình đào tạo</span>
+              <nz-select class="w-full" nzMode="tags" formControlName="programIds"
+                nzPlaceHolder="Nhập mã rồi nhấn Enter" [nzTokenSeparators]="[',', ' ']"
+                [nzStatus]="roleForm.controls.programIds.invalid && roleForm.controls.programIds.touched ? 'error' : ''" />
+            </div>
+            <div>
+              <span class="scope-label">Học phần</span>
+              <nz-select class="w-full" nzMode="tags" formControlName="courseIds"
+                nzPlaceHolder="Nhập mã rồi nhấn Enter" [nzTokenSeparators]="[',', ' ']"
+                [nzStatus]="roleForm.controls.courseIds.invalid && roleForm.controls.courseIds.touched ? 'error' : ''" />
+            </div>
+            <div>
+              <span class="scope-label">Lớp học phần</span>
+              <nz-select class="w-full" nzMode="tags" formControlName="sectionIds"
+                nzPlaceHolder="Nhập mã rồi nhấn Enter" [nzTokenSeparators]="[',', ' ']"
+                [nzStatus]="roleForm.controls.sectionIds.invalid && roleForm.controls.sectionIds.touched ? 'error' : ''" />
+            </div>
+          </div>
+          @if (roleForm.invalid && roleForm.touched) {
+          <app-field-error-display [displayError]="true"
+            errorMsg="Mã phạm vi phải là chuỗi 24 ký tự hex." />
+          }
+          }
+        </td>
+        <td nzAlign="center">
+          <button nz-button type="button" nzSize="small" class="nz-btn-red"
+            [attr.aria-label]="'Bỏ vai trò ' + (i + 1)" (click)="removeRole(i)">
+            <i class="fa-solid fa-times"></i></button>
+        </td>
+      </tr>
+      }
+    </tbody>
+  </nz-table>
+  <div class="mt-2">
+    <button nz-button type="button" (click)="addRole()"><i class="fa-solid fa-plus mr-1.25"></i>Thêm vai trò</button>
+  </div>
+  <app-field-error-display [displayError]="!!rolesErrorMsg()" [errorMsg]="rolesErrorMsg()" />
+  <p class="form-hint mt-3">
+    Một người có thể giữ nhiều vai trò; quyền là hợp của tất cả. Phạm vi giới hạn nơi vai trò đó có hiệu lực.
+    Chưa có danh mục chương trình, học phần, lớp (F02, F03) nên nhập mã ObjectId 24 ký tự; backend kiểm tra mã có tồn tại.
+    Tài khoản chỉ có phạm vi chương trình sẽ bị từ chối khi truy cập lớp (hạn chế đã biết của F01).
+    Ma trận quyền theo vai trò đang chờ Khoa xác nhận (Q08).
+  </p>
+
+  <div class="form-dock">
+    <div class="form-dock-msg" role="alert" aria-live="polite">
+      @if (formErrorMsg()) {
+      <span class="form-dock-dot"></span><span class="form-dock-text">{{ formErrorMsg() }}</span>
+      }
+    </div>
+    <button nz-button nzType="default" type="button" class="nz-btn-red" [disabled]="isSubmitting()"
+      (click)="onCancel()"><i class="fa-solid fa-times mr-1.25"></i>Hủy</button>
+    <button nz-button nzType="primary" type="button" [nzLoading]="isSubmitting()" [disabled]="isSubmitting()"
+      (click)="onSubmit()"><i class="fa-solid fa-save mr-1.25"></i>{{ isEdit ? 'Lưu' : 'Tạo người dùng' }}</button>
+  </div>
+</form>

@@ -1,0 +1,32 @@
+<app-breadcrumb [breadcrumb]="breadcrumbObj()" />
+<div>
+  <span class="text-xl font-bold uppercase">{{ breadcrumbObj().heading }}</span>
+  <p class="mt-1 mb-0">
+    <a [routerLink]="urlConst.ROUTE.MANAGEMENT.USERS"><i class="fa-solid fa-arrow-left mr-1.25"></i>Về danh sách</a>
+  </p>
+</div>
+<hr>
+
+@switch (state()) {
+  @case ('loading') {
+  <p class="py-6 text-center">Đang tải thông tin người dùng...</p>
+  }
+  @case ('notFound') {
+  <div class="py-6 text-center">
+    <p class="mb-3">Không tìm thấy dữ liệu yêu cầu.</p>
+    <a nz-button nzType="primary" [routerLink]="urlConst.ROUTE.MANAGEMENT.USERS">Quay lại trang danh sách</a>
+  </div>
+  }
+  @case ('error') {
+  <div class="py-6 text-center" role="alert">
+    <p class="mb-3">Không tải được thông tin người dùng. Có thể bạn không đủ quyền hoặc máy chủ đang gặp sự cố.</p>
+    <button nz-button type="button" (click)="reload()">
+      <i class="fa-solid fa-rotate-right mr-1.25"></i>Thử lại</button>
+  </div>
+  }
+  @case ('ready') {
+    @if (modalData(); as data) {
+    <app-form-users [modalData]="data" (closeModal)="onFormClosed()" />
+    }
+  }
+}

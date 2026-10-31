@@ -1,0 +1,17 @@
+<div role="alert">
+  <p class="m-0 text-[13px] text-[#66727f]">Không có quyền</p>
+  <h1 class="m-0 text-2xl font-semibold">Bạn không có quyền xem trang này</h1>
+  <p class="mt-2 mb-0 text-[#46525f]">
+    @if (username) {
+    Tài khoản {{ username }}@if (roles) { ({{ roles }}) } không được phân công cho chức năng hoặc dữ liệu này.
+    } @else {
+    Tài khoản của bạn không được phân công cho chức năng hoặc dữ liệu này.
+    }
+  </p>
+  <div class="mt-6 flex flex-wrap gap-3">
+    <a nz-button nzType="primary" [routerLink]="urlConst.ROUTE.MANAGEMENT.DASHBOARD">Về tổng quan</a>
+  </div>
+  <p class="mt-5 mb-0 text-[13px] text-[#66727f]">
+    Cần thêm quyền thì liên hệ quản trị viên. Giảng viên chỉ thao tác trên học phần được phân công.
+  </p>
+</div>
