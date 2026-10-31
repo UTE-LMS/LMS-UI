@@ -3,7 +3,7 @@ import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { ModalData } from '@models/common/modal-data.model';
 import { IPagedResults } from '@models/common/response-data.model';
 import { Paginate } from '@widget/paginate/paginate.model';
-import { catchError, Observable, of, switchMap } from 'rxjs';
+import { catchError, Observable, of, switchMap, tap } from 'rxjs';
 
 /*
   Usage:
@@ -41,12 +41,25 @@ export function createListManagerFilter<T, FilterType>(
   });
 
   const modalData = signal(new ModalData<T>());
+  // Trạng thái tải/lỗi để màn hình phân biệt "đang tải", "lỗi" và "danh sách rỗng" (rule 02)
+  const isLoading = signal(true);
+  const hasError = signal(false);
 
   // Auto call API
   const listResponse = toSignal(
     toObservable(appliedQuery).pipe(
-      switchMap(query => fetchDataFn(query.filter, query.page, query.size, query.sort, query.column)
-        .pipe(catchError(() => of(null)))),
+      switchMap(query => {
+        isLoading.set(true);
+        hasError.set(false);
+        return fetchDataFn(query.filter, query.page, query.size, query.sort, query.column).pipe(
+          tap(() => isLoading.set(false)),
+          catchError(() => {
+            isLoading.set(false);
+            hasError.set(true);
+            return of(null);
+          }),
+        );
+      }),
     ),
     { initialValue: null },
   );
@@ -55,8 +68,8 @@ export function createListManagerFilter<T, FilterType>(
     const res = listResponse();
     const page = new Paginate<T>();
     if (res) {
-      page.currentPage = res.pageable.pageNumber + 1;
-      page.limit = res.pageable.pageSize;
+      page.currentPage = res.page + 1;
+      page.limit = res.size;
       page.totalPage = res.totalPages;
       page.totalItem = res.totalElements;
       page.data = res.content;
@@ -98,6 +111,8 @@ export function createListManagerFilter<T, FilterType>(
     filter,
     modalData,
     listData,
+    isLoading,
+    hasError,
     applySearch,
     resetFilter,
     pageChange,
