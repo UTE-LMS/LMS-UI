@@ -1,100 +1,59 @@
-<div>
-  <div>
-    <h2 class="w-full text-center">{{langData.DANG_NHAP}}</h2>
-    <!-- Toolbar here -->
-  </div>
-  <div class="flex justify-center">
-    <form nz-form [formGroup]="formLogin" class="w-full max-w-112.5">
-      <nz-form-item>
-        <nz-form-control [nzValidateStatus]="formValidSvc.displayFieldCssZorro(formLogin, 'email')">
-          <nz-input-wrapper nz-tooltip [nzTooltipTitle]="langData.EMAIL" nzTooltipPlacement="left">
-            <i class="fa-solid fa-user text-base mr-1.25 mt-1.25" nzInputPrefix></i>
-            <input id="frm-itm-email" type="text" class="text-[15px] h-8.75" nz-input
-              formControlName="email" nzSize="large" [attr.placeholder]="langData.EMAIL"
-              (keyup.enter)="onLoginWithForm()" />
-          </nz-input-wrapper>
-          <app-field-error-display id="err-frm-itm-email"
-            [displayError]="formValidSvc.isFieldValid(formLogin, 'email', 'required')"
-            [errorMsg]="langData.CHUA_NHAP_TEN_DANG_NHAP" />
-        </nz-form-control>
-      </nz-form-item>
-      <nz-form-item>
-        <nz-form-control
-          [nzValidateStatus]="formValidSvc.displayFieldCssZorro(formLogin, 'password')">
-          <nz-input-password nz-tooltip [nzTooltipTitle]="langData.MAT_KHAU"
-            nzTooltipPlacement="left">
-            <i class="fa-solid fa-lock text-base mr-1.25 mt-1.25" nzInputPrefix></i>
-            <input id="frm-itm-password" [attr.type]="showPassLogin() ? 'text' : 'password'"
-              class="text-[15px] h-8.75" nz-input formControlName="password"
-              [attr.placeholder]="langData.MAT_KHAU" nzSize="large"
-              (keyup.enter)="onLoginWithForm()" />
-            <ng-template nzInputPasswordIcon>
-              <i (click)="toggleShowPassLogin()"
-                [class]="showPassLogin() ? 'fa-solid fa-eye-slash text-base mt-1.25 cursor-pointer' : 'fa-solid fa-eye text-base mt-1.25 cursor-pointer'"></i>
-            </ng-template>
-          </nz-input-password>
-          <app-field-error-display id="err-frm-itm-password"
-            [displayError]="formValidSvc.isFieldValid(formLogin, 'password', 'required')"
-            [errorMsg]="langData.CHUA_NHAP_MAT_KHAU" />
-        </nz-form-control>
-      </nz-form-item>
-      <div nz-row>
-        <div nz-col nzSpan="12">
-          <label nzId="chkbox-remember-me" nz-checkbox formControlName="remember">
-            <span>{{ langData.GHI_NHO_DANG_NHAP}}</span>
-          </label>
-        </div>
-        <div class="text-right" nz-col nzSpan="12">
-          <a id="lnk-forgot-pass" (click)="isShowFogotPass.set(true)">{{
-            langData.QUEN_MAT_KHAU}}</a>
-        </div>
-      </div>
-      <div nz-row nzJustify="center" class="mt-2.5">
-        <div nz-col nzSpan="24" class="text-center">
-          <button id="btn-login" nz-button type="button" class="cursor-pointer" [nzType]="'primary'"
-            nzSize="large" (click)="onLoginWithForm()">
-            <span>{{ langData.DANG_NHAP}}</span></button>
-        </div>
-      </div>
-      <div nz-row nzJustify="center">
-        <nz-divider nzDashed [nzText]="text">
-          <ng-template #text><span>{{langData.HOAC}}</span></ng-template>
-        </nz-divider>
-        <div nz-col nzSpan="24" class="text-center">
-          <nz-spin nzSize="small" [nzSpinning]="isLoadingGoogle()">
-            <button id="btn-login-google" class="nz-btn-red mt-2.5" nz-button nzSize="large"
-              (click)="onLoginWithGoogle()" type="button">
-              <i class="fab fa-google mr-2.5"></i>
-              <span>{{ langData.DANG_NHAP_GOOGLE}}</span>
-            </button>
-          </nz-spin>
-        </div>
-      </div>
-    </form>
-  </div>
-</div>
+<div class="login-page">
+  <section class="login-hero">
+    <span class="login-logo"><i aria-hidden="true"></i>LOMS</span>
+    <div class="flex flex-col gap-4 max-w-130">
+      <h1 class="login-title">Đo lường chuẩn đầu ra, truy vết đến từng dòng điểm</h1>
+      <p class="login-lead">Hệ thống của Khoa Công nghệ thông tin, Trường HCM-UTE.</p>
+    </div>
+    <p class="login-chain">
+      Điểm <span class="opacity-60">→</span> <b>CLO</b> <span class="opacity-60">→</span> <b>PI</b>
+      <span class="opacity-60">→</span> <b>PLO</b> <span class="opacity-60">→</span> Báo cáo
+      <span class="opacity-60">→</span> <b>Cải tiến</b>
+    </p>
+  </section>
 
-<nz-modal [nzVisible]="isShowFogotPass()" [nzTitle]="langData.QUEN_MAT_KHAU"
-  (nzOnCancel)="isShowFogotPass.set(false)" (nzOnOk)="requestFogotPassword()"
-  [nzOkText]="langData.YEU_CAU_CAP_LAI_MAT_KHAU">
-  <ng-container *nzModalContent>
-    <form id="mdl-fogot-pass" [formGroup]="formResetPass">
-      <nz-form-item>
-        <nz-form-control
-          [nzValidateStatus]="formValidSvc.displayFieldCssZorro(formResetPass, 'email')">
-          <nz-input-wrapper [nzTooltipTitle]="langData.EMAIL" nzTooltipPlacement="left" nz-tooltip>
-            <i class="fa-solid fa-envelope" nzInputPrefix></i>
-            <input type="text" class="text-[15px] h-8.75" nz-input formControlName="email"
-              nzSize="large" [attr.placeholder]="langData.VUI_LONG_NHAP_EMAIL" />
-          </nz-input-wrapper>
-          <app-field-error-display id="err-fogot-pass-1"
-            [displayError]="formValidSvc.isFieldValid(formResetPass, 'email', 'required')"
-            [errorMsg]="langData.KHONG_DUOC_DE_TRONG" />
-          <app-field-error-display id="err-fogot-pass-2"
-            [displayError]="formValidSvc.isFieldValid(formResetPass, 'email', 'invalidEmail')"
-            [errorMsg]="langData.EMAIL_KHONG_HOP_LE" />
-        </nz-form-control>
-      </nz-form-item>
+  <section class="login-form-wrap">
+    @if (form) {
+    <form [formGroup]="form" class="login-card" (keydown.enter)="$event.preventDefault()" novalidate>
+      <div>
+        <h2 class="text-2xl font-semibold m-0">Đăng nhập</h2>
+        <p class="login-muted mt-1 mb-0">Dùng tài khoản do quản trị viên cấp.</p>
+      </div>
+
+      @if (loginErrorMsg()) {
+      <div role="alert" class="login-alert">{{ loginErrorMsg() }}</div>
+      }
+
+      <div>
+        <label for="login-username" class="font-medium">Tên đăng nhập</label>
+        <input id="login-username" nz-input nzSize="large" type="text" formControlName="username"
+          autocomplete="username" (keyup.enter)="onSubmit()"
+          [nzStatus]="formValidSvc.displayFieldCssZorro(form, 'username')" />
+        <app-field-error-display [displayError]="formValidSvc.isFieldValid(form, 'username', 'required')"
+          errorMsg="Không được để trống" />
+        <app-field-error-display [displayError]="formValidSvc.isFieldValid(form, 'username', 'minlength')"
+          errorMsg="Tên đăng nhập có ít nhất 3 ký tự" />
+      </div>
+
+      <div>
+        <label for="login-password" class="font-medium">Mật khẩu</label>
+        <nz-input-password nzSize="large">
+          <input id="login-password" nz-input type="password" formControlName="password"
+            autocomplete="current-password" (keyup.enter)="onSubmit()"
+            [nzStatus]="formValidSvc.displayFieldCssZorro(form, 'password')" />
+        </nz-input-password>
+        <app-field-error-display [displayError]="formValidSvc.isFieldValid(form, 'password', 'required')"
+          errorMsg="Không được để trống" />
+      </div>
+
+      <button nz-button nzType="primary" nzSize="large" type="button" class="w-full"
+        [nzLoading]="isSubmitting()" [disabled]="isSubmitting()" (click)="onSubmit()">
+        Đăng nhập
+      </button>
+      <p class="login-muted m-0 text-[13px]">
+        Tài khoản bị khóa không đăng nhập được. Liên hệ quản trị viên để mở khóa.
+      </p>
     </form>
-  </ng-container>
-</nz-modal>
+    }
+  </section>
+</div>

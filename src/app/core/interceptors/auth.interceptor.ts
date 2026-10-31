@@ -2,6 +2,7 @@ import { HttpErrorResponse, HttpEvent, HttpHandlerFn, HttpInterceptorFn, HttpReq
 import { inject } from '@angular/core';
 import { SystemConstant } from '@constants/system.constant';
 import { UrlConstant } from '@constants/url.constant';
+import { environment } from '@env';
 import langDataEn from '@languages/en.json';
 import langDataVi from '@languages/vi.json';
 import { AuthService } from '@services/auth/auth.service';
@@ -9,6 +10,7 @@ import { HandlerErrorService } from '@services/common/handler-error.service';
 import { NgxSpinnerService } from 'ngx-spinner';
 import { ToastrService } from 'ngx-toastr';
 import { Observable } from 'rxjs';
+import { INLINE_ERRORS } from './http-context.token';
 import { catchError, finalize } from 'rxjs/operators';
 
 export const authInterceptor: HttpInterceptorFn = (request: HttpRequest<unknown>, next: HttpHandlerFn) => {
@@ -61,6 +63,11 @@ export const authInterceptor: HttpInterceptorFn = (request: HttpRequest<unknown>
     addBugTrackerToken: true, addLanguage: true,
   });
 
+  // Mã truy vết gửi lên backend để đối chiếu log khi có lỗi 500 (API-CONTRACT.md §1.4)
+  if (request.url.startsWith(environment.serverUrl + 'api/')) {
+    newRequest = newRequest.clone({ setHeaders: { 'X-Correlation-Id': crypto.randomUUID() } });
+  }
+
   if (UrlConstant.GOOGLE_URL.some(
     x => x.method === request.method &&
       new RegExp(x.regex).test(request.url),
@@ -90,7 +97,7 @@ export const authInterceptor: HttpInterceptorFn = (request: HttpRequest<unknown>
       finalize(() => { spinner.hide(); }),
       catchError(
         (err: HttpErrorResponse) => new Observable<HttpEvent<unknown>>(observer => {
-          handleErrSvc.handleError(err);
+          handleErrSvc.handleError(err, { inline: request.context.get(INLINE_ERRORS) });
           observer.error(err);
           observer.complete();
         }),
