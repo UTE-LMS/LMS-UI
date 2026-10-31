@@ -81,7 +81,7 @@ describe('ListUsersComponent (F01 US-02)', () => {
     expect(userSvc.filter).toHaveBeenCalledWith(0, 10);
   });
 
-  it('hiển thị người dùng, nhãn vai trò tiếng Việt, "(bạn)" cho tài khoản hiện tại và nhãn dữ liệu thử nghiệm', async () => {
+  it('hiển thị người dùng, nhãn vai trò tiếng Việt, "(bạn)" cho tài khoản hiện tại', async () => {
     await setup();
     const content = text();
     expect(content).toContain('gv.oop01');
@@ -89,7 +89,6 @@ describe('ListUsersComponent (F01 US-02)', () => {
     expect(content).toContain('Cán bộ đảm bảo chất lượng');
     expect(content).toContain('(bạn)');
     expect(content).toContain('Bị khóa');
-    expect(content).toContain('DỮ LIỆU THỬ NGHIỆM');
     // Không hiển thị ô nào có thể chứa băm mật khẩu
     expect(content.toLowerCase()).not.toContain('passwordhash');
   });

@@ -31,12 +31,6 @@
   padding: 10px 12px; border-radius: 6px; font-size: 14px;
   color: #b42318; background: #fef6f5; border: 1px solid #f3b8b2;
 }
-.login-test-note { display: flex; align-items: flex-start; gap: 10px; padding-top: 20px; border-top: 1px solid #e7eaee; }
-.login-test-flag {
-  flex: none; padding: 1px 8px; border-radius: 4px; white-space: nowrap;
-  font-size: 11.5px; font-weight: 700; letter-spacing: .04em;
-  color: #6b3a00; background: #fff3dc; border: 1px solid #e9c06a;
-}
 
 @media (max-width: 767px) {
   .login-hero { padding: 32px 24px; gap: 24px; }
