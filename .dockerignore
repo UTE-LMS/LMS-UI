@@ -1,0 +1,17 @@
+# Giữ context nhỏ và không đưa dữ liệu cục bộ vào image
+.git
+.github
+.angular
+.vscode
+.claude
+node_modules
+dist
+coverage
+test-results
+playwright-report
+e2e
+logsAI
+doc
+*.md
+Dockerfile
+.dockerignore
