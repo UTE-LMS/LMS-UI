@@ -1,0 +1,76 @@
+/* Màu chữ/nền chọn để đạt tương phản tối thiểu 4,5:1; màu chỉ là tín hiệu bổ sung cho chữ, biểu tượng và kiểu viền. */
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  max-width: 100%;
+  padding: 0.0625rem 0.5rem;
+  border: 1px solid var(--chip-border);
+  border-radius: 0.25rem;
+  background: var(--chip-bg);
+  color: var(--chip-fg);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  vertical-align: middle;
+}
+
+.status-chip__label {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.status-chip[data-line="solid"] {
+  border-style: solid;
+}
+
+.status-chip[data-line="dashed"] {
+  border-style: dashed;
+}
+
+.status-chip[data-line="dotted"] {
+  border-style: dotted;
+  border-width: 2px;
+}
+
+.status-chip[data-emphasis="strong"] {
+  padding: 0.125rem 0.625rem;
+  border-width: 2px;
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+
+.status-chip[data-tone="success"] {
+  --chip-fg: #14532d;
+  --chip-bg: #dcfce7;
+  --chip-border: #15803d;
+}
+
+.status-chip[data-tone="info"] {
+  --chip-fg: #1e3a8a;
+  --chip-bg: #dbeafe;
+  --chip-border: #1d4ed8;
+}
+
+.status-chip[data-tone="warning"] {
+  --chip-fg: #713f12;
+  --chip-bg: #fef3c7;
+  --chip-border: #b45309;
+}
+
+.status-chip[data-tone="danger"] {
+  --chip-fg: #7f1d1d;
+  --chip-bg: #fee2e2;
+  --chip-border: #b91c1c;
+}
+
+.status-chip[data-tone="neutral"] {
+  --chip-fg: #374151;
+  --chip-bg: #f3f4f6;
+  --chip-border: #6b7280;
+}
+
+.status-chip[data-tone="accent"] {
+  --chip-fg: #581c87;
+  --chip-bg: #f3e8ff;
+  --chip-border: #7e22ce;
+}

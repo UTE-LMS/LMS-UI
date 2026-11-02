@@ -1,0 +1,10 @@
+<span class="status-chip" [attr.data-tone]="tone()" [attr.data-line]="lineStyle()" [attr.data-emphasis]="emphasis()"
+  nz-tooltip [nzTooltipTitle]="description() || null">
+  @if (icon()) {
+  <i class="fa-solid" [class]="icon()" aria-hidden="true"></i>
+  }
+  <span class="status-chip__label">{{ label() }}</span>
+  @if (description()) {
+  <span class="sr-only">. {{ description() }}</span>
+  }
+</span>

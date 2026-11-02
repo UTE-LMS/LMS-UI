@@ -1,16 +1,16 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { inject, Injectable, isDevMode } from '@angular/core';
 import { Router } from '@angular/router';
+import { CORRELATION_ID_LABEL, ERROR_MESSAGE } from '@constants/error-message.constant';
 import { UrlConstant } from '@constants/url.constant';
 import { environment } from '@env';
-import langDataEn from '@languages/en.json';
-import langDataVi from '@languages/vi.json';
 import { IBugsReportDTO } from '@models/common/bugs-report.model';
+import { IUserError } from '@models/common/user-error.model';
 import { AuthService } from '@services/auth/auth.service';
 import { NgxSpinnerService } from 'ngx-spinner';
 import { ToastrService } from 'ngx-toastr';
 import { Observable, of, throwError } from 'rxjs';
-import { toApiError } from './api-error.util';
+import { toApiError, toUserError } from './api-error.util';
 import { BugsReportService } from './bugs-report.service';
 
 export interface IHandleErrorOptions {
@@ -19,8 +19,9 @@ export interface IHandleErrorOptions {
 }
 
 /**
- * Xử lý lỗi HTTP tập trung theo bảng ánh xạ ở API-CONTRACT.md §3.
+ * Xử lý lỗi HTTP tập trung theo bảng ánh xạ ở API-CONTRACT.md §3, dùng toUserError để không lộ chi tiết nội bộ.
  * Quyền thật do backend kiểm tra: ở đây chỉ chọn cách báo lỗi cho người dùng.
+ * Nút "Thử lại"/"Tải lại" nằm ở màn hình (component app-error-state), vì toast không biết cách tải lại dữ liệu.
  */
 @Injectable({
   providedIn: 'root',
@@ -32,80 +33,96 @@ export class HandlerErrorService {
   private bugsReportSvc = inject(BugsReportService);
   private router = inject(Router);
 
-  // Ngon ngu hien thi //////////
-  private langData: Record<string, string> = (localStorage.getItem('language') === 'en' ? langDataEn : langDataVi).CORE.HANDLE_ERROR;
-  //////////////////////////////
+  /** Nhiều yêu cầu song song cùng nhận 401: chỉ xóa phiên và chuyển hướng một lần. */
+  private sessionExpiring = false;
 
   handleError(error: HttpErrorResponse, options: IHandleErrorOptions = {}): Observable<never> {
     // Tránh vòng lặp vô tận nếu chính API report bị lỗi
     if (error.url && (error.url.includes('script.google.com') || (environment.bugsReportUrl && error.url.includes(environment.bugsReportUrl)))) {
       this.spinner.hide();
-      return throwError(() => new Error(this.langData.CO_LOI_XAY_RA));
+      return throwError(() => new Error(ERROR_MESSAGE.UNKNOWN.message));
     }
 
     try {
       this.notify(error, options.inline ?? false);
     } catch {
-      this.alert.error(this.langData.CO_LOI_XAY_RA);
+      this.alert.error(ERROR_MESSAGE.UNKNOWN.message);
     }
 
     this.spinner.hide();
-    return throwError(() => new Error(this.langData.CO_LOI_XAY_RA));
+    return throwError(() => new Error(ERROR_MESSAGE.UNKNOWN.message));
   }
 
   private notify(error: HttpErrorResponse, inline: boolean): void {
-    const api = toApiError(error);
-    const message = api?.message ?? this.langData.CO_LOI_XAY_RA;
+    const userError = toUserError(error);
 
-    if (error.status === 0) { // Mất mạng hoặc hết thời gian: không đăng xuất người dùng vì một lần rớt mạng
-      this.alert.error('Không kết nối được máy chủ. Vui lòng kiểm tra mạng rồi thử lại.');
-      return;
-    }
-
-    if (error.status === 403) { // Đã đăng nhập nhưng không đủ quyền: KHÔNG chuyển về đăng nhập
-      this.alert.error('Bạn không có quyền truy cập chức năng này.');
-      return;
-    }
-
-    if (error.status >= 500) {
-      const correlationId = error.headers?.get('X-Correlation-Id');
-      this.alert.error(
-        correlationId ? `Mã truy vết: ${correlationId}` : '',
-        'Đã xảy ra lỗi nội bộ hệ thống. Vui lòng thử lại sau hoặc liên hệ quản trị viên.',
-      );
-      if (!isDevMode()) {
-        this.submitBugsReport(`[${error.status}] ${correlationId ?? ''} ${api?.path ?? ''}`);
-      }
-      return;
-    }
-
-    if (inline) { // Màn hình sẽ tự hiển thị 400/401/404/409/422 ngay tại form
-      return;
-    }
-
-    switch (error.status) {
-      case 401:
-        this.expireSession();
+    switch (userError.kind) {
+      case 'NETWORK':
+      case 'TIMEOUT': // Mất mạng hoặc hết thời gian: không đăng xuất người dùng vì một lần rớt mạng
+        this.alert.error(userError.hint ? `${userError.message} ${userError.hint}` : userError.message);
+        return;
+      case 'FORBIDDEN': // Đã đăng nhập nhưng không đủ quyền: KHÔNG chuyển về đăng nhập
+        this.alert.error(userError.message);
+        return;
+      case 'SERVER':
+        this.notifyServerError(error, userError);
+        return;
+      case 'UNKNOWN':
+        this.alert.error(userError.message);
+        return;
+      default:
         break;
-      case 404:
-        this.alert.warning('Không tìm thấy dữ liệu yêu cầu.');
+    }
+
+    // Đăng nhập sai (401 của chính endpoint đăng nhập) luôn do form đăng nhập hiển thị, không bao giờ hết phiên.
+    if (inline || this.isLoginRequest(error)) { // Màn hình sẽ tự hiển thị 400/401/404/409/422 ngay tại form
+      return;
+    }
+
+    switch (userError.kind) {
+      case 'UNAUTHORIZED':
+        this.expireSession(userError.message);
         break;
-      case 422:
-        this.alert.error(message);
+      case 'BUSINESS_RULE':
+        this.alert.error(userError.message);
         break;
-      default: // 400, 409 và các 4xx khác
-        this.alert.warning(message);
+      case 'CONFLICT': // Không ghi đè im lặng: báo và gợi ý tải lại
+        this.alert.warning(userError.hint ? `${userError.message} ${userError.hint}` : userError.message);
+        break;
+      default: // 400, 404 và các 4xx khác
+        this.alert.warning(userError.message);
         break;
     }
   }
 
-  private expireSession(): void {
+  private notifyServerError(error: HttpErrorResponse, userError: IUserError): void {
+    this.alert.error(
+      userError.correlationId ? `${CORRELATION_ID_LABEL}: ${userError.correlationId}` : '',
+      userError.message,
+    );
+    if (!isDevMode()) {
+      this.submitBugsReport(`[${error.status}] ${userError.correlationId ?? ''} ${toApiError(error)?.path ?? ''}`);
+    }
+  }
+
+  private isLoginRequest(error: HttpErrorResponse): boolean {
+    return !!error.url && error.url.startsWith(UrlConstant.API.AUTH_LOGIN);
+  }
+
+  private expireSession(message: string): void {
+    if (this.sessionExpiring) {
+      return;
+    }
+    this.sessionExpiring = true;
     const returnUrl = this.router.url;
     this.authSvc.clearSession();
-    this.alert.warning('Phiên làm việc đã hết hạn. Vui lòng đăng nhập lại.');
-    if (!returnUrl.startsWith(UrlConstant.ROUTE.AUTH.LOGIN)) {
-      this.router.navigate([UrlConstant.ROUTE.AUTH.LOGIN], { queryParams: { returnUrl } });
+    this.alert.warning(message);
+    if (returnUrl.startsWith(UrlConstant.ROUTE.AUTH.LOGIN)) {
+      this.sessionExpiring = false;
+      return;
     }
+    void Promise.resolve(this.router.navigate([UrlConstant.ROUTE.AUTH.LOGIN], { queryParams: { returnUrl } }))
+      .finally(() => { this.sessionExpiring = false; });
   }
 
   handleErrorForkJoin(): Observable<unknown> {

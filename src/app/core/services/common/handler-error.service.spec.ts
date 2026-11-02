@@ -2,6 +2,7 @@ import { HttpErrorResponse, HttpHeaders } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
 import { UrlConstant } from '@constants/url.constant';
+import { RequestTimeoutError } from '@interceptors/request-timeout.error';
 import { AuthService } from '@services/auth/auth.service';
 import { NgxSpinnerService } from 'ngx-spinner';
 import { ToastrService } from 'ngx-toastr';
@@ -81,9 +82,39 @@ describe('HandlerErrorService - bảng ánh xạ lỗi API-CONTRACT.md §3', () 
     expect(alert.error).not.toHaveBeenCalled();
   });
 
-  it('409 không inline: cảnh báo bằng thông điệp của backend', () => {
+  it('409 không inline: cảnh báo bằng thông điệp của backend kèm gợi ý tải lại', () => {
     handle(apiError(409, 'Tên đăng nhập đã tồn tại'));
-    expect(alert.warning).toHaveBeenCalledWith('Tên đăng nhập đã tồn tại');
+    expect(alert.warning).toHaveBeenCalledWith(expect.stringContaining('Tên đăng nhập đã tồn tại'));
+    expect(alert.warning).toHaveBeenCalledWith(expect.stringContaining('tải lại'));
+  });
+
+  it('401 của endpoint đăng nhập: không bao giờ hết phiên dù không đặt inline', () => {
+    const err = new HttpErrorResponse({
+      status: 401,
+      url: UrlConstant.API.AUTH_LOGIN,
+      error: { timestamp: '2026-10-27T05:00:00Z', status: 401, code: 'UNAUTHORIZED', message: 'Sai mật khẩu', path: '/api/v1/auth/login' },
+    });
+    handle(err);
+    expect(authSvc.clearSession).not.toHaveBeenCalled();
+    expect(router.navigate).not.toHaveBeenCalled();
+  });
+
+  it('lỗi không có body chuẩn (HTML của cổng, 502): thông báo chung, không lộ nội dung', () => {
+    handle(new HttpErrorResponse({ status: 502, url: 'http://localhost:8080/api/v1/users', error: '<html>proxy-1 internal</html>' }));
+    expect(JSON.stringify(alert.error.mock.calls)).not.toContain('proxy-1');
+    expect(alert.error).toHaveBeenCalledOnce();
+  });
+
+  it('hết thời gian khi đọc: thông báo và không đăng xuất', () => {
+    handle(new HttpErrorResponse({ status: 0, url: 'http://localhost:8080/api/v1/users', error: new RequestTimeoutError('GET', 30000) }));
+    expect(alert.error).toHaveBeenCalledWith(expect.stringContaining('phản hồi quá lâu'));
+    expect(authSvc.clearSession).not.toHaveBeenCalled();
+  });
+
+  it('handleError trả về lỗi chung, không chứa chi tiết nội bộ', () => {
+    const errors: unknown[] = [];
+    service.handleError(apiError(500, 'java.lang.NullPointerException at X.java:1')).subscribe({ error: (e: unknown) => errors.push(e) });
+    expect((errors[0] as Error).message).toBe('Có lỗi xảy ra, vui lòng thử lại!');
   });
 
   it('422 không inline: toast lỗi với thông điệp quy tắc nghiệp vụ', () => {

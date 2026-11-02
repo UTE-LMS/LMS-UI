@@ -1,0 +1,9 @@
+<span class="inline-flex flex-wrap items-center gap-2" [attr.data-status]="status() ?? null">
+  <app-status-chip [label]="resolved().display.label" [description]="resolved().display.description"
+    [icon]="resolved().display.icon" [tone]="resolved().display.tone" [lineStyle]="resolved().display.lineStyle" />
+  @if (scoreText(); as text) {
+  <span class="score-value font-semibold tabular-nums">{{ text }}</span>
+  } @else if (missingScoreValue()) {
+  <span class="score-missing text-[13px] text-[#66727f]">(thiếu giá trị điểm)</span>
+  }
+</span>

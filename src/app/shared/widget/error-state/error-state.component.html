@@ -1,0 +1,26 @@
+<div role="alert" class="flex flex-col items-center gap-2 px-4 py-10 text-center" [attr.data-kind]="error().kind">
+  <i [class]="iconClass()" class="text-3xl text-[#8c2f39]" aria-hidden="true"></i>
+  <h2 class="m-0 text-lg font-semibold">{{ error().title }}</h2>
+  <p class="m-0 max-w-xl wrap-break-word text-[#46525f]">{{ error().message }}</p>
+  @if (error().hint) {
+  <p class="m-0 max-w-xl wrap-break-word text-[#46525f]">{{ error().hint }}</p>
+  }
+  @if (error().correlationId) {
+  <p class="m-0 text-[13px] text-[#66727f]">
+    {{ correlationLabel }}: <code class="select-all wrap-break-word">{{ error().correlationId }}</code>
+    <span class="block">Gửi mã này cho quản trị viên khi báo lỗi.</span>
+  </p>
+  }
+  <div class="mt-3 flex flex-wrap justify-center gap-3">
+    @if (canRetry()) {
+    <button nz-button nzType="primary" type="button" [nzLoading]="retrying()" [disabled]="retrying()"
+      (click)="retry.emit()">Thử lại</button>
+    }
+    @if (error().suggestReload) {
+    <button nz-button nzType="primary" type="button" (click)="reload.emit()">Tải lại dữ liệu</button>
+    }
+    @if (backLink(); as link) {
+    <a nz-button [routerLink]="link">{{ backLabel() }}</a>
+    }
+  </div>
+</div>
