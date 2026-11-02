@@ -1,0 +1,13 @@
+/* Tiếp cận (WCAG AA, tỷ lệ tương phản tối thiểu 4.5:1): màu mặc định của liên kết ng-zorro (#1890ff) và nút
+   .nz-btn-red (#f44336) chỉ đạt khoảng 3.2 và 3.7 trên nền trắng. */
+#lnk-forgot-pass {
+  color: var(--color-primary);
+  cursor: pointer;
+}
+
+#btn-login-google.nz-btn-red,
+#btn-login-google.nz-btn-red:not([disabled]):hover,
+#btn-login-google.nz-btn-red:not([disabled]):focus {
+  background-color: #d32f2f;
+  border-color: #d32f2f;
+}
