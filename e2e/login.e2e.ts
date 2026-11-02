@@ -8,7 +8,7 @@ const LOGIN_URL = new RegExp(`${LOGIN_PATH}(\\?.*)?$`);
 const SESSION_DATA_KEY = 'CURRENT_INFO_DATA';
 
 /** Phản hồi lỗi chuẩn của backend (API-CONTRACT.md §2). */
-function apiError(status: number, code: string, message: string, fieldErrors?: { field: string; message: string }[]) {
+function apiError(status: number, code: string, message: string, fieldErrors?: { field: string; message: string; }[]) {
   return JSON.stringify({
     timestamp: '2026-11-02T00:00:00Z', status, code, message, path: '/api/v1/auth/login',
     ...(fieldErrors ? { fieldErrors } : {}),
