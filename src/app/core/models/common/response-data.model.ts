@@ -1,36 +1,29 @@
-export interface IResponseErrorData {
-  error: string;
+/**
+ * Chuẩn phản hồi lỗi thống nhất của backend (API-CONTRACT.md §2).
+ */
+export interface IApiFieldError {
+  field: string;
+  message: string;
+  rejectedValue?: unknown;
+}
+
+export interface IApiError {
+  timestamp: string;
+  status: number;
+  code: string;
   message: string;
   path: string;
-  status: number;
-  timestamp: Date;
+  fieldErrors?: IApiFieldError[];
 }
 
+/**
+ * Phong bì phân trang chuẩn, zero-indexed (API-CONTRACT.md §5.1.3).
+ */
 export interface IPagedResults<T> {
   content: T[];
+  page: number;
+  size: number;
   totalElements: number;
   totalPages: number;
-  pageable: IPageable;
   last: boolean;
-  first: boolean;
-  sort: ISort;
-  size: number;
-  number: number;
-  numberOfElements: number;
-  empty: boolean;
-}
-
-export interface IPageable {
-  offset: number;
-  pageNumber: number;
-  pageSize: number;
-  paged: boolean;
-  unpaged: boolean;
-  sort: ISort;
-}
-
-export interface ISort {
-  empty: boolean;
-  sorted: boolean;
-  unsorted: boolean;
 }

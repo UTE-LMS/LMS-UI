@@ -1,130 +1,144 @@
-import { HttpErrorResponse } from '@angular/common/http';
+import { HttpErrorResponse, HttpHeaders } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
-import { environment } from '@env';
+import { Router } from '@angular/router';
+import { UrlConstant } from '@constants/url.constant';
+import { RequestTimeoutError } from '@interceptors/request-timeout.error';
 import { AuthService } from '@services/auth/auth.service';
 import { NgxSpinnerService } from 'ngx-spinner';
 import { ToastrService } from 'ngx-toastr';
-import { firstValueFrom } from 'rxjs';
 import { BugsReportService } from './bugs-report.service';
 import { HandlerErrorService } from './handler-error.service';
 
-const MSG_NO_PERMISSION = 'Tài khoản không có quyền truy cập';
-const MSG_GENERIC = 'Có lỗi xảy ra, vui lòng thử lại!';
+const apiError = (status: number, message: string, headers?: HttpHeaders): HttpErrorResponse => new HttpErrorResponse({
+  status,
+  statusText: 'x',
+  headers,
+  url: 'http://localhost:8080/api/v1/users',
+  error: { timestamp: '2026-10-27T05:00:00Z', status, code: 'X', message, path: '/api/v1/users' },
+});
 
-function setup() {
-  const auth = { getAuthData: vi.fn(() => null), getToken: vi.fn(() => ''), doLogout: vi.fn() };
-  const toastr = { error: vi.fn() };
-  const spinner = { hide: vi.fn() };
-  const bugs = { submitBugsReport: vi.fn() };
-  TestBed.configureTestingModule({
-    providers: [
-      { provide: AuthService, useValue: auth },
-      { provide: ToastrService, useValue: toastr },
-      { provide: NgxSpinnerService, useValue: spinner },
-      { provide: BugsReportService, useValue: bugs },
-    ],
-  });
-  return { service: TestBed.inject(HandlerErrorService), auth, toastr, spinner, bugs };
-}
+describe('HandlerErrorService - bảng ánh xạ lỗi API-CONTRACT.md §3', () => {
+  let service: HandlerErrorService;
+  const alert = { error: vi.fn(), warning: vi.fn(), success: vi.fn() };
+  const router = { url: '/mng/users', navigate: vi.fn(), createUrlTree: vi.fn() };
+  const authSvc = { clearSession: vi.fn(), getAuthData: vi.fn(), getToken: vi.fn() };
 
-function httpError(status: number, error: unknown, url = 'rest/demo'): HttpErrorResponse {
-  return new HttpErrorResponse({ status, error, url });
-}
+  /** Gọi handleError và bỏ qua lỗi ném lại (observable throwError, không ai subscribe). */
+  const handle = (err: HttpErrorResponse, inline = false): void => {
+    service.handleError(err, { inline }).subscribe({ error: () => undefined });
+  };
 
-async function rejection(promise: Promise<unknown>): Promise<unknown> {
-  try {
-    await promise;
-    return undefined;
-  } catch (error) {
-    return error;
-  }
-}
-
-describe('US-40/AC-4: HandlerErrorService chuẩn hóa lỗi HTTP thành thông báo cho người dùng', () => {
   beforeEach(() => {
-    localStorage.clear();
-    vi.spyOn(console, 'log').mockImplementation(() => undefined);
-  });
-  afterEach(() => vi.restoreAllMocks());
-
-  it.each([401, 403])('mã %i: báo "không có quyền" và tắt spinner (ca âm/quyền)', async (status) => {
-    const { service, toastr, spinner } = setup();
-    const error = await rejection(firstValueFrom(service.handleError(httpError(status, { message: 'chi tiet noi bo' }))));
-    expect(error).toBeInstanceOf(Error);
-    expect(toastr.error).toHaveBeenCalledWith(MSG_NO_PERMISSION);
-    expect(toastr.error).not.toHaveBeenCalledWith('chi tiet noi bo');
-    expect(spinner.hide).toHaveBeenCalledTimes(1);
-  });
-
-  it('401/403 ở môi trường phát triển không tự đăng xuất (isDevMode)', async () => {
-    const { service, auth } = setup();
-    await rejection(firstValueFrom(service.handleError(httpError(401, null))));
-    expect(auth.doLogout).not.toHaveBeenCalled();
-  });
-
-  it('lỗi 500 hiển thị thông điệp của máy chủ nằm ở error.message', async () => {
-    const { service, toastr } = setup();
-    await rejection(firstValueFrom(service.handleError(httpError(500, { message: 'Máy chủ đang bận' }))));
-    expect(toastr.error).toHaveBeenCalledWith('Máy chủ đang bận');
-  });
-
-  it('lỗi của dịch vụ tệp nằm ở error.error.message được ưu tiên', async () => {
-    const { service, toastr } = setup();
-    await rejection(firstValueFrom(service.handleError(httpError(400, { error: { message: 'Tệp quá lớn' } }))));
-    expect(toastr.error).toHaveBeenCalledWith('Tệp quá lớn');
-  });
-
-  it('phản hồi lỗi không có message: dùng thông báo chung', async () => {
-    const { service, toastr } = setup();
-    await rejection(firstValueFrom(service.handleError(httpError(500, {}))));
-    expect(toastr.error).toHaveBeenCalledWith(MSG_GENERIC);
-  });
-
-  it('phản hồi lỗi rỗng (null) không làm văng ngoại lệ: dùng thông báo chung', async () => {
-    const { service, toastr } = setup();
-    await rejection(firstValueFrom(service.handleError(httpError(502, null))));
-    expect(toastr.error).toHaveBeenCalledWith(MSG_GENERIC);
-  });
-
-  it('lỗi dạng Blob (tải tệp thất bại): đọc JSON trong blob rồi hiển thị message', async () => {
-    const { service, toastr } = setup();
-    const blob = { text: () => Promise.resolve(JSON.stringify({ message: 'Không có tệp' })) };
-    Object.setPrototypeOf(blob, Blob.prototype);
-    await rejection(firstValueFrom(service.handleError(httpError(404, blob))));
-    await vi.waitFor(() => expect(toastr.error).toHaveBeenCalledWith('Không có tệp'));
-  });
-
-  it('mất kết nối (status 0): báo lỗi chung', async () => {
-    const { service, toastr } = setup();
-    await rejection(firstValueFrom(service.handleError(httpError(0, null))));
-    expect(toastr.error).toHaveBeenCalledWith(MSG_GENERIC);
-  });
-
-  it('lỗi từ chính API báo lỗi: không báo thêm, tránh vòng lặp vô tận (ca biên)', async () => {
-    const { service, toastr, spinner, bugs } = setup();
-    const error = await rejection(firstValueFrom(
-      service.handleError(httpError(500, 'x', 'https://script.google.com/macros/s/abc/exec')),
-    ));
-    expect(error).toBeInstanceOf(Error);
-    expect(toastr.error).not.toHaveBeenCalled();
-    expect(bugs.submitBugsReport).not.toHaveBeenCalled();
-    expect(spinner.hide).toHaveBeenCalledTimes(1);
-    expect(environment.bugsReportUrl).toContain('script.google.com');
-  });
-
-  it('submitBugsReport gửi thông tin trình duyệt và nuốt lỗi gửi báo cáo', () => {
-    const { service, bugs } = setup();
-    bugs.submitBugsReport.mockReturnValue({
-      subscribe: (observer: { error: () => void; }) => observer.error(),
+    vi.clearAllMocks();
+    TestBed.configureTestingModule({
+      providers: [
+        { provide: ToastrService, useValue: alert },
+        { provide: Router, useValue: router },
+        { provide: AuthService, useValue: authSvc },
+        { provide: NgxSpinnerService, useValue: { hide: vi.fn(), show: vi.fn() } },
+        { provide: BugsReportService, useValue: { submitBugsReport: vi.fn() } },
+      ],
     });
-    expect(() => service.submitBugsReport('[500] x')).not.toThrow();
-    const dto = bugs.submitBugsReport.mock.calls[0][0] as { errorInfo: string; errorDomain: string; };
-    expect(dto.errorInfo).toBe('[500] x');
-    expect(dto.errorDomain).toBe(window.location.hostname);
+    service = TestBed.inject(HandlerErrorService);
   });
 
-  it('handleErrorForkJoin trả về mảng rỗng để forkJoin không bị hủy', async () => {
-    const { service } = setup();
-    expect(await firstValueFrom(service.handleErrorForkJoin())).toEqual([]);
+  it('401 ở API thường: xóa phiên, báo hết hạn và về đăng nhập kèm returnUrl', () => {
+    handle(apiError(401, 'Hết hạn'));
+    expect(authSvc.clearSession).toHaveBeenCalledOnce();
+    expect(alert.warning).toHaveBeenCalledWith('Phiên làm việc đã hết hạn. Vui lòng đăng nhập lại.');
+    expect(router.navigate).toHaveBeenCalledWith([UrlConstant.ROUTE.AUTH.LOGIN], { queryParams: { returnUrl: '/mng/users' } });
+  });
+
+  it('401 của đăng nhập (inline): KHÔNG xóa phiên, KHÔNG chuyển hướng, KHÔNG toast', () => {
+    handle(apiError(401, 'Tên đăng nhập hoặc mật khẩu không chính xác'), true);
+    expect(authSvc.clearSession).not.toHaveBeenCalled();
+    expect(router.navigate).not.toHaveBeenCalled();
+    expect(alert.warning).not.toHaveBeenCalled();
+    expect(alert.error).not.toHaveBeenCalled();
+  });
+
+  it('401 khi đang ở trang đăng nhập không chuyển hướng lặp', () => {
+    router.url = '/auth/login?returnUrl=%2Fmng';
+    handle(apiError(401, 'x'));
+    expect(router.navigate).not.toHaveBeenCalled();
+    router.url = '/mng/users';
+  });
+
+  it('403: báo không đủ quyền, KHÔNG đăng xuất và KHÔNG chuyển về đăng nhập (kể cả inline)', () => {
+    handle(apiError(403, 'Forbidden'));
+    handle(apiError(403, 'Forbidden'), true);
+    expect(alert.error).toHaveBeenCalledTimes(2);
+    expect(alert.error).toHaveBeenCalledWith('Bạn không có quyền truy cập chức năng này.');
+    expect(authSvc.clearSession).not.toHaveBeenCalled();
+    expect(router.navigate).not.toHaveBeenCalled();
+  });
+
+  it('400/409/422 inline: để form tự hiển thị, không toast', () => {
+    handle(apiError(400, 'Dữ liệu yêu cầu không hợp lệ'), true);
+    handle(apiError(409, 'Trùng'), true);
+    handle(apiError(422, 'Quy tắc'), true);
+    handle(apiError(404, 'Không có'), true);
+    expect(alert.warning).not.toHaveBeenCalled();
+    expect(alert.error).not.toHaveBeenCalled();
+  });
+
+  it('409 không inline: cảnh báo bằng thông điệp của backend kèm gợi ý tải lại', () => {
+    handle(apiError(409, 'Tên đăng nhập đã tồn tại'));
+    expect(alert.warning).toHaveBeenCalledWith(expect.stringContaining('Tên đăng nhập đã tồn tại'));
+    expect(alert.warning).toHaveBeenCalledWith(expect.stringContaining('tải lại'));
+  });
+
+  it('401 của endpoint đăng nhập: không bao giờ hết phiên dù không đặt inline', () => {
+    const err = new HttpErrorResponse({
+      status: 401,
+      url: UrlConstant.API.AUTH_LOGIN,
+      error: { timestamp: '2026-10-27T05:00:00Z', status: 401, code: 'UNAUTHORIZED', message: 'Sai mật khẩu', path: '/api/v1/auth/login' },
+    });
+    handle(err);
+    expect(authSvc.clearSession).not.toHaveBeenCalled();
+    expect(router.navigate).not.toHaveBeenCalled();
+  });
+
+  it('lỗi không có body chuẩn (HTML của cổng, 502): thông báo chung, không lộ nội dung', () => {
+    handle(new HttpErrorResponse({ status: 502, url: 'http://localhost:8080/api/v1/users', error: '<html>proxy-1 internal</html>' }));
+    expect(JSON.stringify(alert.error.mock.calls)).not.toContain('proxy-1');
+    expect(alert.error).toHaveBeenCalledOnce();
+  });
+
+  it('hết thời gian khi đọc: thông báo và không đăng xuất', () => {
+    handle(new HttpErrorResponse({ status: 0, url: 'http://localhost:8080/api/v1/users', error: new RequestTimeoutError('GET', 30000) }));
+    expect(alert.error).toHaveBeenCalledWith(expect.stringContaining('phản hồi quá lâu'));
+    expect(authSvc.clearSession).not.toHaveBeenCalled();
+  });
+
+  it('handleError trả về lỗi chung, không chứa chi tiết nội bộ', () => {
+    const errors: unknown[] = [];
+    service.handleError(apiError(500, 'java.lang.NullPointerException at X.java:1')).subscribe({ error: (e: unknown) => errors.push(e) });
+    expect((errors[0] as Error).message).toBe('Có lỗi xảy ra, vui lòng thử lại!');
+  });
+
+  it('422 không inline: toast lỗi với thông điệp quy tắc nghiệp vụ', () => {
+    handle(apiError(422, 'Không thể khóa quản trị viên cuối cùng'));
+    expect(alert.error).toHaveBeenCalledWith('Không thể khóa quản trị viên cuối cùng');
+  });
+
+  it('404 không inline: cảnh báo không tìm thấy dữ liệu', () => {
+    handle(apiError(404, 'x'));
+    expect(alert.warning).toHaveBeenCalledWith('Không tìm thấy dữ liệu yêu cầu.');
+  });
+
+  it('500: toast lỗi nội bộ kèm mã truy vết X-Correlation-Id, kể cả khi inline', () => {
+    handle(apiError(500, 'Lỗi', new HttpHeaders({ 'X-Correlation-Id': 'abc-123' })), true);
+    expect(alert.error).toHaveBeenCalledWith(
+      'Mã truy vết: abc-123',
+      'Đã xảy ra lỗi nội bộ hệ thống. Vui lòng thử lại sau hoặc liên hệ quản trị viên.',
+    );
+  });
+
+  it('mất mạng (status 0): thông báo và KHÔNG đăng xuất người dùng', () => {
+    handle(new HttpErrorResponse({ status: 0, url: 'http://localhost:8080/api/v1/users' }));
+    expect(alert.error).toHaveBeenCalledWith('Không kết nối được máy chủ. Vui lòng kiểm tra mạng rồi thử lại.');
+    expect(authSvc.clearSession).not.toHaveBeenCalled();
+    expect(router.navigate).not.toHaveBeenCalled();
   });
 });

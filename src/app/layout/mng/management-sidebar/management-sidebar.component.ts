@@ -5,6 +5,7 @@ import { UrlConstant } from '@constants/url.constant';
 import langDataEn from '@languages/en.json';
 import langDataVi from '@languages/vi.json';
 import { ISiderMenu } from '@models/common/sider-menu.model';
+import { usersMngMenu } from '@mng/users/users.menu';
 import { AuthService } from '@services/auth/auth.service';
 import { NzDropdownModule } from 'ng-zorro-antd/dropdown';
 import { NzGridModule } from 'ng-zorro-antd/grid';
@@ -40,15 +41,17 @@ export class ManagementSidebarComponent implements OnInit {
 
   readonly listMenu: ISiderMenu[] = [
     {
-      roles: [SystemConstant.MNG_ROLE.ADMIN],
+      roles: Object.values(SystemConstant.MNG_ROLE),
       icon: 'fa-solid fa-solar-panel', // If have child, this icon must using from zorro
       title: this.langData.TONG_QUAN,
       routerLink: UrlConstant.ROUTE.MANAGEMENT.DASHBOARD,
       listChild: [],
     },
+    ...usersMngMenu,
   ];
 
-  readonly listRoleUser: string[] = []; // = this.authSvc.getRoles();
+  // Vai trò của người đang đăng nhập; mục menu không thuộc vai trò nào của họ thì không hiện (chỉ để tiện dùng)
+  readonly listRoleUser: string[] = this.authSvc.getRoles();
 
   ngOnInit(): void {
     // this.nhanVienSvc.getCurrentLogin()

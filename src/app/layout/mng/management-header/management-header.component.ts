@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { UrlConstant } from '@constants/url.constant';
 import langDataEn from '@languages/en.json';
 import langDataVi from '@languages/vi.json';
@@ -20,6 +20,7 @@ import { NzGridModule } from 'ng-zorro-antd/grid';
 })
 export class ManagementHeaderComponent implements OnInit {
   private authSvc = inject(AuthService);
+  private router = inject(Router);
 
   urlConst = UrlConstant;
   avatarOfUser = signal('');
@@ -32,8 +33,9 @@ export class ManagementHeaderComponent implements OnInit {
     this.avatarOfUser.set(this.authSvc.getAvatarOfLogin());
   }
 
+  /** Báo backend vô hiệu hóa token (tăng tokenVersion) rồi về trang đăng nhập. Lỗi mạng vẫn xóa phiên cục bộ. */
   doLogout(): void {
-    this.authSvc.doLogout(UrlConstant.ROUTE.MAIN.HOMEPAGE);
+    this.authSvc.logout().subscribe(() => void this.router.navigateByUrl(UrlConstant.ROUTE.AUTH.LOGIN));
   }
 
   switchLang(lang: 'en' | 'vi'): void {

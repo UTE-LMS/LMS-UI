@@ -5,6 +5,8 @@ export const UrlConstant = {
   // 'method' string need uppercase for improving perfomance
   GOOGLE_URL: [{ regex: '.*googleapis.*', method: 'GET' }],
   PUBLIC_URL: [
+    // Đăng nhập là endpoint công khai: không gắn Bearer token cũ vào (API-CONTRACT.md §5.2.1)
+    { regex: '.*/api/v1/auth/login$', method: 'POST' },
     { regex: 'https://api\\.hcmute\\.edu\\.vn:8443/.*', method: 'GET' },
     { regex: 'https://api\\.hcmute\\.edu\\.vn:8443/.*', method: 'POST' },
     { regex: 'https://api\\.hcmute\\.edu\\.vn:8443/.*', method: 'PUT' },
@@ -18,6 +20,12 @@ export const UrlConstant = {
 
     // Main - NOTE: Remember to add ALL login api link to interceptor
     LOGIN_ADMIN: environment.serverUrl + 'rest/login',
+
+    // F01 - Xác thực và người dùng (API-CONTRACT.md §5)
+    AUTH_LOGIN: environment.serverUrl + 'api/v1/auth/login',
+    AUTH_LOGOUT: environment.serverUrl + 'api/v1/auth/logout',
+    AUTH_ME: environment.serverUrl + 'api/v1/auth/me',
+    USERS: environment.serverUrl + 'api/v1/users',
 
     // Categories
     DEMO_API: environment.serverUrl + 'rest/demo',
@@ -37,6 +45,10 @@ export const UrlConstant = {
     MANAGEMENT: {
       ADMIN_PROFILE: '/mng/profile',
       DASHBOARD: '/mng/dashboard',
+      FORBIDDEN: '/mng/forbidden',
+
+      USERS: '/mng/users',
+      USERS_NEW: '/mng/users/new',
 
       CATEGORIES: '/mng/categories',
       ACADEMIC_RANKS: '/mng/categories/academic-ranks',

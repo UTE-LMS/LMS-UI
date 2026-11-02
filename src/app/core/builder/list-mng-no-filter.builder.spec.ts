@@ -10,19 +10,15 @@ interface Row {
 
 /** DỮ LIỆU THỬ NGHIỆM: trang kết quả giả, không phải dữ liệu thật. */
 function pagedResult(rows: Row[], pageNumber: number, pageSize: number, totalElements: number): IPagedResults<Row> {
-  const sort = { empty: true, sorted: false, unsorted: true };
+  const totalPages = Math.ceil(totalElements / pageSize);
+  // Hợp đồng phân trang zero-indexed (API-CONTRACT.md §5.1.3)
   return {
     content: rows,
-    totalElements,
-    totalPages: Math.ceil(totalElements / pageSize),
-    pageable: { offset: pageNumber * pageSize, pageNumber, pageSize, paged: true, unpaged: false, sort },
-    last: false,
-    first: pageNumber === 0,
-    sort,
+    page: pageNumber,
     size: pageSize,
-    number: pageNumber,
-    numberOfElements: rows.length,
-    empty: rows.length === 0,
+    totalElements,
+    totalPages,
+    last: pageNumber + 1 >= totalPages,
   };
 }
 

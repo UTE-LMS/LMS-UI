@@ -1,6 +1,7 @@
 export const environment = {
   production: false,
-  serverUrl: '',
+  // Backend chạy cục bộ (API-CONTRACT.md §1.1). Có dấu / ở cuối vì URL ghép thẳng với 'api/v1/...'
+  serverUrl: 'http://localhost:8080/',
   serverFileUrl: '',
 
   keyGoogle: '15443613184-c32g9kb3gf2no3krpr7mukc6n1k5oq9v.apps.googleusercontent.com',

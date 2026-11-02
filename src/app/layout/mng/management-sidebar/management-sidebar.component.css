@@ -17,7 +17,8 @@
   padding-left: 12px !important;
   padding-right: 20px !important;
   margin: 0 auto !important;
-  color: var(--color-primary);
+  /* Tiếp cận (WCAG AA): --color-primary trên nền --color-primary-light-2x chỉ đạt 4.18:1, cần tối thiểu 4.5:1 */
+  color: var(--color-primary-dark);
   background-color: var(--color-primary-light-2x) !important;
 }
 

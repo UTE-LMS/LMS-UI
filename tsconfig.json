@@ -8,6 +8,9 @@
     "resolveJsonModule": true,
     "outDir": "./dist/out-tsc",
     "paths": {
+      "@builder/*": [
+        "./src/app/core/builder/*"
+      ],
       "@constants/*": [
         "./src/app/core/constants/*"
       ],

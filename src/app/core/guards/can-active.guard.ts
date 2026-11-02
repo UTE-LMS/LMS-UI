@@ -1,55 +1,38 @@
 import { inject } from '@angular/core';
-import { ActivatedRouteSnapshot, CanActivateFn, Router, RouterStateSnapshot } from '@angular/router';
+import { ActivatedRouteSnapshot, CanActivateFn, Router, RouterStateSnapshot, UrlTree } from '@angular/router';
 import { UrlConstant } from '@constants/url.constant';
-import langDataEn from '@languages/en.json';
-import langDataVi from '@languages/vi.json';
 import { AuthService } from '@services/auth/auth.service';
-import { ToastrService } from 'ngx-toastr';
-import { of } from 'rxjs';
 
 /**
- * @link https://blog.angular.io/advancements-in-the-angular-router-5d69ec4c032
+ * Chặn route theo phiên đăng nhập và vai trò. Chỉ để tiện dùng: quyền thật do backend kiểm tra
+ * mỗi request, gõ thẳng đường dẫn vẫn bị API trả 403 (API-CONTRACT.md §3, rule 02).
+ *
+ * route.data:
+ * - listRoles: vai trò được vào. Bỏ trống thì chỉ cần đã đăng nhập.
+ * - rolesRelation: 'OR' (mặc định) cần một trong các vai trò, 'AND' cần đủ.
+ * - fallbackUrl: nơi đưa người dùng đã đăng nhập nhưng thiếu quyền (mặc định trang "Không có quyền").
+ *
+ * Chưa đăng nhập: về trang đăng nhập kèm returnUrl. Đã đăng nhập nhưng thiếu quyền: trang "Không có quyền",
+ * không đá về đăng nhập vì người dùng đã xác thực.
  */
-export const canActiveGuard: CanActivateFn = (_route: ActivatedRouteSnapshot, _state: RouterStateSnapshot) => {
-  // Ngon ngu hien thi //////////
-  const langData: Record<string, string> = (localStorage.getItem('language') === 'en' ? langDataEn : langDataVi).CORE.GUARD;
-  //////////////////////////////
+export const canActiveGuard: CanActivateFn = (route: ActivatedRouteSnapshot, state: RouterStateSnapshot): boolean | UrlTree => {
   const authSvc = inject(AuthService);
-  const routerSvc = inject(Router);
-  const alertSvc = inject(ToastrService);
-  const fallbackRedirectUrl: string = _route.data?.fallbackUrl ?? UrlConstant.ROUTE.AUTH.LOGIN;
-  const rolesRelation: 'AND' | 'OR' = _route.data?.rolesRelation ?? 'OR';
-  try {
-    if (!_route.data?.listRoles) { // Không có list role thì ra vào tự do
-      return of(true);
-    } else if (authSvc.getAuthData() && authSvc.getToken()) { // Có listRole và có user data + token
-      const allowedRoles: string[] = [_route.data.listRoles].flat();
-      if (rolesRelation === 'AND') {
-        if (allowedRoles.every(role => authSvc.checkRole(role))) {
-          return of(true);
-        } else {
-          alertSvc.error(langData.TAI_KHOAN_KHONG_CO_QUYEN);
-          routerSvc.navigateByUrl(fallbackRedirectUrl);
-          return of(false);
-        }
-      } else { // OR
-        if (allowedRoles.some(role => authSvc.checkRole(role))) {
-          return of(true);
-        } else {
-          alertSvc.error(langData.TAI_KHOAN_KHONG_CO_QUYEN);
-          routerSvc.navigateByUrl(fallbackRedirectUrl);
-          return of(false);
-        }
-      }
-    } else {
-      alertSvc.error(langData.TAI_KHOAN_KHONG_CO_QUYEN);
-      routerSvc.navigateByUrl(fallbackRedirectUrl);
-      return of(false);
-    }
-  } catch (error) {
-    console.log(error);
-    alertSvc.error(langData.TAI_KHOAN_KHONG_CO_QUYEN);
-    routerSvc.navigateByUrl(fallbackRedirectUrl);
-    return of(false);
+  const router = inject(Router);
+
+  if (!authSvc.isAuthenticated()) {
+    return router.createUrlTree([UrlConstant.ROUTE.AUTH.LOGIN], { queryParams: { returnUrl: state.url } });
   }
+
+  const allowedRoles: string[] = [(route.data?.listRoles ?? []) as string | string[]].flat();
+  const relation: 'AND' | 'OR' = route.data?.rolesRelation ?? 'OR';
+  const isAllowed = allowedRoles.length === 0
+    || (relation === 'AND'
+      ? allowedRoles.every(role => authSvc.checkRole(role))
+      : allowedRoles.some(role => authSvc.checkRole(role)));
+
+  if (isAllowed) {
+    return true;
+  }
+  const fallbackUrl: string = route.data?.fallbackUrl ?? UrlConstant.ROUTE.MANAGEMENT.FORBIDDEN;
+  return router.parseUrl(fallbackUrl);
 };
