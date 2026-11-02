@@ -9,7 +9,8 @@ không truy cập MongoDB và không tự tính công thức đo lường chính
 ## Công nghệ
 
 Angular 21, TypeScript (strict), Tailwind CSS 4, Vitest (qua `ng test`), ESLint (`angular-eslint`) và Prettier.
-Thư viện UI: chưa chọn. SSR (`@angular/ssr`) đang bật theo mặc định của khung, chờ quyết định giữ hay bỏ.
+UI là SPA tĩnh, **không dùng SSR** (`doc/adr/0001-spa-tinh-khong-ssr.md`, đề xuất chờ hai sinh viên xác nhận): `ng build`
+tạo tệp tĩnh, phục vụ bằng nginx với fallback `index.html`.
 
 ## Yêu cầu môi trường
 
