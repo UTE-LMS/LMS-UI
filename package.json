@@ -10,7 +10,10 @@
     "lint": "node node_modules/@angular/cli/bin/ng lint",
     "build:dev": "node node_modules/@angular/cli/bin/ng build --configuration development",
     "check": "npm run lint && npm run build:dev",
-    "check:tailwind": "node scripts/check-tailwind.mjs"
+    "check:tailwind": "node scripts/check-tailwind.mjs",
+    "test:ci": "node node_modules/@angular/cli/bin/ng test --no-watch --coverage",
+    "e2e": "playwright test -c e2e/playwright.config.ts",
+    "e2e:install": "playwright install chromium"
   },
   "private": true,
   "dependencies": {
@@ -40,24 +43,27 @@
     "@angular/build": "^21.2.28",
     "@angular/cli": "^21.2.28",
     "@angular/compiler-cli": "^21.2.25",
+    "@axe-core/playwright": "4.13.0",
     "@eslint/js": "^10.0.1",
+    "@playwright/test": "1.63.0",
     "@schematics/angular": "^21.2.16",
     "@stylistic/eslint-plugin": "^5.10.0",
     "@tailwindcss/postcss": "^4.3.3",
     "@types/node": "^22.20.5",
     "@types/tinymce": "^4.6.9",
+    "@vitest/coverage-v8": "4.1.12",
     "angular-eslint": "^21.4.0",
     "autoprefixer": "^10.6.1",
     "eslint": "^10.13.0",
     "globals": "^17.13.0",
     "jiti": "^2.7.0",
+    "jsdom": "^26.0.0",
+    "playwright-core": "1.63.0",
     "postcss": "^8.5.31",
     "tailwindcss": "^4.3.2",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.72.0",
-    "@vitest/coverage-v8": "^4.1.12",
-    "jsdom": "^26.0.0",
-    "vitest": "^4.1.12"
+    "vitest": "4.1.12"
   },
   "allowScripts": {
     "esbuild@0.28.1": true,

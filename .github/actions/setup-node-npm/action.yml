@@ -1,0 +1,20 @@
+name: Setup Node and install dependencies
+description: Ghim Node và npm khớp máy phát triển và "packageManager", rồi cài bằng npm ci.
+
+runs:
+  using: composite
+  steps:
+    # Node 24.13.0 là phiên bản đã dùng để phát triển (CLAUDE.md); npm khớp "packageManager" trong package.json.
+    - name: Setup Node.js
+      uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+      with:
+        node-version: 24.13.0
+        cache: npm
+
+    - name: Pin npm to the packageManager version
+      shell: bash
+      run: npm install --global npm@11.12.1
+
+    - name: Install dependencies (npm ci)
+      shell: bash
+      run: npm ci

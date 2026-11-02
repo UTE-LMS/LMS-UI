@@ -29,7 +29,8 @@
               [attr.placeholder]="langData.MAT_KHAU" nzSize="large"
               (keyup.enter)="onLoginWithForm()" />
             <ng-template nzInputPasswordIcon>
-              <i (click)="toggleShowPassLogin()"
+              <i (click)="toggleShowPassLogin()" role="img"
+                [attr.aria-label]="showPassLogin() ? langData.AN_MAT_KHAU : langData.HIEN_MAT_KHAU"
                 [class]="showPassLogin() ? 'fa-solid fa-eye-slash text-base mt-1.25 cursor-pointer' : 'fa-solid fa-eye text-base mt-1.25 cursor-pointer'"></i>
             </ng-template>
           </nz-input-password>

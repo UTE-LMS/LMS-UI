@@ -1,0 +1,18 @@
+# Khung triển khai staging cho UI (chờ quyết định nền tảng, xem doc/deploy/staging.md).
+# Các biến được đặt trong tệp .env cạnh tệp này (do deploy/deploy-staging.sh ghi), không commit giá trị thật.
+services:
+  lms-ui:
+    image: ${LMS_UI_IMAGE:?Cần LMS_UI_IMAGE, ví dụ ghcr.io/ute-lms/lms-ui:sha-abc1234}
+    restart: unless-stopped
+    ports:
+      - "${LMS_UI_PORT:-8080}:8080"
+    environment:
+      API_BASE_URL: ${API_BASE_URL:?Cần API_BASE_URL}
+      FILE_BASE_URL: ${FILE_BASE_URL:-}
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true

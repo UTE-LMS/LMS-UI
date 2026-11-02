@@ -59,6 +59,11 @@
                 "output": "/assets/tinymce/"
               },
               "src/manifest.json",
+              {
+                "glob": "config.js",
+                "input": "src",
+                "output": "/"
+              },
               "src/robots.txt",
               "src/sitemap.xml",
               "src/web.config"
@@ -125,14 +130,37 @@
           "defaultConfiguration": "development"
         },
         "test": {
-          "builder": "@angular/build:unit-test"
+          "builder": "@angular/build:unit-test",
+          "options": {
+            "coverageInclude": [
+              "src/app/core/builder/**/*.ts",
+              "src/app/core/guards/**/*.ts",
+              "src/app/core/interceptors/**/*.ts",
+              "src/app/core/services/**/*.ts",
+              "src/app/core/validators/**/*.ts"
+            ],
+            "coverageExclude": [
+              "**/*.spec.ts"
+            ],
+            "coverageReporters": [
+              "text",
+              "text-summary",
+              "lcovonly",
+              "json-summary",
+              "html"
+            ],
+            "coverageThresholds": {
+              "lines": 70
+            }
+          }
         },
         "lint": {
           "builder": "@angular-eslint/builder:lint",
           "options": {
             "lintFilePatterns": [
               "src/**/*.ts",
-              "src/**/*.html"
+              "src/**/*.html",
+              "e2e/**/*.ts"
             ]
           }
         }

@@ -1,0 +1,11 @@
+# Cấu hình quét secret (gitleaks). Dùng toàn bộ luật mặc định, chỉ thêm ngoại lệ hẹp cho ví dụ giả trong tài liệu.
+title = "LMS-UI gitleaks"
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Ví dụ JWT đã cắt ngắn ('...') trong tài liệu hợp đồng API; không phải token thật."
+paths = ['''doc/API-CONTRACT\.md''']
+regexes = ['''eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9\.\.\.''']
+condition = "AND"
