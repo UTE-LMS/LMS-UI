@@ -1,0 +1,66 @@
+<section class="report-context rounded border border-[#d9dee3] px-4 py-3" aria-label="Phạm vi, quy tắc, phiên bản và giới hạn của báo cáo">
+  <div class="flex flex-wrap items-start gap-3">
+    <h3 class="m-0 text-base font-semibold">Phạm vi và cơ sở tính</h3>
+    <app-unofficial-label [isOfficial]="context()?.isOfficial" [reasons]="unofficialReasons()" />
+  </div>
+
+  <div class="mt-2">
+    <app-stale-warning [isStale]="context()?.isStale" [reason]="context()?.staleReason" />
+  </div>
+
+  <dl class="m-0 mt-3 grid gap-x-6 gap-y-2 md:grid-cols-2">
+    <div>
+      <dt class="text-[13px] text-[#46525f]">Phạm vi</dt>
+      <dd class="m-0 wrap-break-word" data-field="scope">{{ scopeText() ?? none }}</dd>
+    </div>
+    <div>
+      <dt class="text-[13px] text-[#46525f]">Quy tắc đo lường</dt>
+      <dd class="m-0 flex flex-wrap items-center gap-2" data-field="rule">
+        <span class="wrap-break-word">{{ ruleText() ?? none }}</span>
+        @if (ruleStatus(); as status) {
+        <app-status-chip [label]="status.label" [description]="status.description" [icon]="status.icon"
+          [tone]="status.tone" [lineStyle]="status.lineStyle" />
+        }
+      </dd>
+    </div>
+    <div>
+      <dt class="text-[13px] text-[#46525f]">Phiên bản chương trình đào tạo</dt>
+      <dd class="m-0" data-field="programVersion">
+        @if (programVersionId(); as id) {
+        <code class="break-all">{{ id }}</code>
+        } @else {
+        {{ none }}
+        }
+      </dd>
+    </div>
+    <div>
+      <dt class="text-[13px] text-[#46525f]">Lần tính</dt>
+      <dd class="m-0" data-field="run">
+        @if (runId(); as id) {
+        <code class="break-all">{{ id }}</code>
+        } @else {
+        {{ none }}
+        }
+      </dd>
+    </div>
+    <div>
+      <dt class="text-[13px] text-[#46525f]">Thời điểm tính (giờ Việt Nam)</dt>
+      <dd class="m-0" data-field="calculatedAt">{{ calculatedAt() ?? none }}</dd>
+    </div>
+  </dl>
+
+  <div class="mt-3">
+    <h4 class="m-0 text-sm font-semibold">Giới hạn của báo cáo</h4>
+    @if (limitations().length) {
+    <ul class="limitations m-0 mt-1 list-disc pl-5">
+      @for (item of limitations(); track $index) {
+      <li class="wrap-break-word">{{ item }}</li>
+      }
+    </ul>
+    } @else {
+    <p class="limitations-empty m-0 mt-1 text-[#46525f]">
+      Hệ thống chưa trả về giới hạn nào cho báo cáo này. Điều đó không có nghĩa là kết quả không có giới hạn.
+    </p>
+    }
+  </div>
+</section>

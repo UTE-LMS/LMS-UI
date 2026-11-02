@@ -1,0 +1,30 @@
+<section class="denominator-block" [attr.aria-label]="heading()">
+  <h3 class="m-0 mb-2 text-base font-semibold">{{ heading() }}</h3>
+
+  <dl class="m-0 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+    @for (item of countItems(); track item.key) {
+    <div class="count-item rounded border border-[#d9dee3] px-3 py-2" [attr.data-key]="item.key">
+      <dt class="text-[13px] text-[#46525f]">{{ item.label }}</dt>
+      <dd class="m-0 text-xl font-semibold tabular-nums">{{ item.text }}</dd>
+    </div>
+    }
+  </dl>
+  <p class="m-0 mt-1 text-[13px] text-[#66727f]">
+    “Chưa đủ dữ liệu” là người chưa có đủ điểm để đánh giá, không phải “Chưa đạt”.
+  </p>
+
+  <dl class="m-0 mt-3 grid gap-2 md:grid-cols-3">
+    @for (rate of rateItems(); track rate.key) {
+    <div class="rate-item rounded border border-[#d9dee3] px-3 py-2" [attr.data-key]="rate.key" [attr.data-state]="rate.state">
+      <dt class="text-[13px] text-[#46525f]">{{ rate.label }}</dt>
+      <dd class="m-0">
+        <strong class="rate-text text-xl tabular-nums" [class]="rate.state === 'value' ? '' : 'text-[#66727f]'">{{ rate.text }}</strong>
+        <small class="rate-basis block text-[13px] text-[#66727f]">Mẫu số: {{ rate.basis }}</small>
+      </dd>
+    </div>
+    }
+  </dl>
+  <p class="m-0 mt-2 text-[13px] text-[#66727f]">
+    Các con số do hệ thống tính; giao diện chỉ hiển thị. Tỷ lệ cao trên số có đủ dữ liệu không thay thế cho tỷ lệ trên số ghi danh.
+  </p>
+</section>

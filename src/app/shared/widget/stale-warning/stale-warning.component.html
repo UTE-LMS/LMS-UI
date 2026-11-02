@@ -1,0 +1,11 @@
+@if (visible()) {
+<div role="status" class="stale-warning rounded border-2 border-dashed border-[#b45309] bg-[#fef3c7] px-3 py-2 text-[#713f12]">
+  <p class="m-0 font-semibold">
+    <i class="fa-solid fa-clock-rotate-left mr-2" aria-hidden="true"></i>{{ title }}
+  </p>
+  <p class="m-0 text-[13px]">{{ body }}</p>
+  @if (reasonText(); as text) {
+  <p class="stale-reason m-0 text-[13px] wrap-break-word">Lý do: {{ text }}</p>
+  }
+</div>
+}

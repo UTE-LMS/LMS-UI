@@ -1,0 +1,13 @@
+@if (visible()) {
+<span class="unofficial-label inline-flex flex-col items-start gap-1">
+  <app-status-chip [label]="label" [description]="description()" icon="fa-triangle-exclamation" tone="danger"
+    lineStyle="dashed" emphasis="strong" />
+  @if (reasonTexts().length) {
+  <ul class="unofficial-reasons m-0 list-disc pl-5 text-[13px] text-[#46525f]">
+    @for (reason of reasonTexts(); track reason) {
+    <li>{{ reason }}</li>
+    }
+  </ul>
+  }
+</span>
+}
