@@ -3,6 +3,8 @@ import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { EnvironmentProviders, inject, LOCALE_ID, Provider } from '@angular/core';
 import { environment } from '@env';
 import { authInterceptor } from '@interceptors/auth.interceptor';
+import { requestTimeoutInterceptor } from '@interceptors/request-timeout.interceptor';
+import { safeRetryInterceptor } from '@interceptors/safe-retry.interceptor';
 import { vi as viDate } from 'date-fns/locale';
 import { en_US, NZ_DATE_LOCALE, NZ_I18N, vi_VN } from 'ng-zorro-antd/i18n';
 import { provideSpinnerConfig } from 'ngx-spinner';
@@ -35,7 +37,8 @@ export const coreProviders: (Provider | EnvironmentProviders)[] = [
     preventDuplicates: true,
   }),
   provideHttpClient(
-    withInterceptors([authInterceptor]),
+    // Thứ tự = từ ngoài vào trong: auth (gắn token, báo lỗi cuối cùng) → thử lại GET → hết thời gian từng lần gọi
+    withInterceptors([authInterceptor, safeRetryInterceptor, requestTimeoutInterceptor]),
   ),
   {
     provide: SOCIAL_AUTH_CONFIG,

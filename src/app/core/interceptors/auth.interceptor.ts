@@ -1,5 +1,6 @@
 import { HttpErrorResponse, HttpEvent, HttpHandlerFn, HttpInterceptorFn, HttpRequest } from '@angular/common/http';
 import { inject } from '@angular/core';
+import { CORRELATION_ID_HEADER } from '@constants/error-message.constant';
 import { SystemConstant } from '@constants/system.constant';
 import { UrlConstant } from '@constants/url.constant';
 import { environment } from '@env';
@@ -65,7 +66,7 @@ export const authInterceptor: HttpInterceptorFn = (request: HttpRequest<unknown>
 
   // Mã truy vết gửi lên backend để đối chiếu log khi có lỗi 500 (API-CONTRACT.md §1.4)
   if (request.url.startsWith(environment.serverUrl + 'api/')) {
-    newRequest = newRequest.clone({ setHeaders: { 'X-Correlation-Id': crypto.randomUUID() } });
+    newRequest = newRequest.clone({ setHeaders: { [CORRELATION_ID_HEADER]: crypto.randomUUID() } });
   }
 
   if (UrlConstant.GOOGLE_URL.some(
