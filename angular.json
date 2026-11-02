@@ -59,6 +59,11 @@
                 "output": "/assets/tinymce/"
               },
               "src/manifest.json",
+              {
+                "glob": "config.js",
+                "input": "src",
+                "output": "/"
+              },
               "src/robots.txt",
               "src/sitemap.xml",
               "src/web.config"
@@ -154,7 +159,8 @@
           "options": {
             "lintFilePatterns": [
               "src/**/*.ts",
-              "src/**/*.html"
+              "src/**/*.html",
+              "e2e/**/*.ts"
             ]
           }
         }
