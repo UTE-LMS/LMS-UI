@@ -1,37 +1,309 @@
 name: CI
 
+# Chặng: build -> lint -> test (+ e2e) -> security -> docker -> deploy-staging. Giải thích từng công cụ: doc/adr/0002-ci-cd-ui.md.
 on:
   push:
     branches: [main]
+    tags: ['v*.*.*']
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
 
+# Commit mới lên cùng nhánh/PR thì hủy lần chạy cũ chưa xong (riêng main không hủy để mỗi lần merge đều có kết quả).
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+env:
+  # Phiên bản công cụ quét, ghim cùng mã băm SHA-256 của tệp tải về (xem bước "Install ..." của từng công cụ)
+  GITLEAKS_VERSION: 8.30.1
+  GITLEAKS_SHA256: 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
+  TRIVY_VERSION: 0.76.0
+  TRIVY_SHA256: e24b1c51293c1b15e4ba8d45bbc7891ba053f90278ec2698f3562c993e145fe7
+
 jobs:
-  build-test:
-    runs-on: ubuntu-latest
+  # Chặng 1: cài đặt + build production (kiểm cả budget trong angular.json)
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: npm
+      - name: Setup Node and install dependencies
+        uses: ./.github/actions/setup-node-npm
 
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Lint
-        run: npm run lint
-
-      - name: Unit tests with coverage
-        run: npx ng test --no-watch --coverage
-
-      - name: Build
+      - name: Build (production)
         run: npm run build
 
-      # Quét phụ thuộc. Các chặng còn lại (quét secret, Docker, deploy, giám sát) sẽ được bổ sung dần,
-      # xem LMS-API/doc/ke-hoach-xay-dung.md mục 7 và LMS-API/doc/tech-debt.md TD-09.
-      - name: Dependency audit
+  # Chặng 2: lint + định dạng. ESLint với @stylistic bắt buộc định dạng (thụt lề, dấu nháy, dấu chấm phẩy...).
+  lint:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup Node and install dependencies
+        uses: ./.github/actions/setup-node-npm
+
+      - name: Lint (ESLint, 0 lỗi)
+        run: npm run lint
+
+  # Chặng 3: test + cổng coverage >= 70% dòng lệnh mô-đun lõi (angular.json: coverageThresholds) + SonarCloud
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # SonarCloud cần lịch sử đầy đủ để gán lỗi cho commit
+
+      - name: Setup Node and install dependencies
+        uses: ./.github/actions/setup-node-npm
+
+      - name: Unit tests with coverage gate
+        run: npm run test:ci
+
+      - name: Upload coverage report
+        if: ${{ always() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: coverage-report
+          path: coverage/
+          if-no-files-found: error
+          retention-days: 14
+
+      # Chỉ chạy khi nhóm đã tạo dự án SonarCloud và đặt biến repository SONAR_ENABLED=true
+      # (cùng secret SONAR_TOKEN, biến SONAR_ORGANIZATION và SONAR_PROJECT_KEY). Xem doc/testing-and-quality.md.
+      - name: SonarCloud scan
+        if: ${{ vars.SONAR_ENABLED == 'true' }}
+        uses: SonarSource/sonarqube-scan-action@d209202bc7d53ff1cc128f7f907dac145c9d6ae9 # v8.3.0
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          args: >
+            -Dsonar.organization=${{ vars.SONAR_ORGANIZATION }}
+            -Dsonar.projectKey=${{ vars.SONAR_PROJECT_KEY }}
+
+  # E2E Playwright (ADR 0003): API giả lập bằng page.route nên không cần backend
+  e2e:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup Node and install dependencies
+        uses: ./.github/actions/setup-node-npm
+
+      - name: Install Chromium for Playwright
+        run: npx playwright install --with-deps chromium
+
+      - name: E2E smoke (Playwright + axe)
+        run: npm run e2e
+
+      - name: Upload Playwright report
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: ignore
+          retention-days: 14
+
+  # Chặng 4a: quét phụ thuộc và secret. Quét image bằng Trivy nằm ở job docker (cần image đã build).
+  security:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # quét cả lịch sử commit
+
+      - name: Setup Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24.13.0
+
+      - name: Pin npm to the packageManager version
+        run: npm install --global npm@11.12.1
+
+      # Chỉ đọc package-lock.json, không cần cài phụ thuộc
+      - name: Dependency audit (high and above)
         run: npm audit --audit-level=high
+
+      # Không dùng gitleaks-action vì tổ chức cần giấy phép; tải binary đã ghim phiên bản và kiểm mã băm.
+      - name: Install gitleaks (pinned, checksum verified)
+        run: |
+          curl -fsSL -o gitleaks.tar.gz \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          echo "${GITLEAKS_SHA256}  gitleaks.tar.gz" | sha256sum --check -
+          tar -xzf gitleaks.tar.gz gitleaks
+
+      - name: Secret scan (gitleaks, toàn bộ lịch sử)
+        run: ./gitleaks git --no-banner --redact --config .gitleaks.toml --verbose .
+
+  # Chặng 5: đóng gói Docker + gắn phiên bản; quét image (Trivy); chỉ push GHCR khi ở main hoặc tag phiên bản
+  docker:
+    needs: [build, lint, test, e2e, security]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      image: ${{ steps.meta.outputs.sha_image }}
+      version: ${{ steps.meta.outputs.version }}
+      pushed: ${{ steps.meta.outputs.push }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Compute image tags
+        id: meta
+        run: |
+          repo="ghcr.io/${GITHUB_REPOSITORY,,}"
+          short_sha="${GITHUB_SHA::7}"
+          version="sha-${short_sha}"
+          tags="${repo}:sha-${short_sha}"
+          push=false
+          if [ "${GITHUB_EVENT_NAME}" = "push" ] && [ "${GITHUB_REF}" = "refs/heads/main" ]; then
+            tags="${tags} ${repo}:main"
+            push=true
+          fi
+          if [ "${GITHUB_EVENT_NAME}" = "push" ] && [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
+            version="${GITHUB_REF_NAME#v}"
+            tags="${tags} ${repo}:${version}"
+            push=true
+          fi
+          {
+            echo "repo=${repo}"
+            echo "version=${version}"
+            echo "tags=${tags}"
+            echo "push=${push}"
+            echo "sha_image=${repo}:sha-${short_sha}"
+          } >> "${GITHUB_OUTPUT}"
+
+      - name: Build image
+        env:
+          SHA_IMAGE: ${{ steps.meta.outputs.sha_image }}
+          VERSION: ${{ steps.meta.outputs.version }}
+        run: docker build --build-arg "VERSION=${VERSION}" --build-arg "VCS_REF=${GITHUB_SHA}" --tag "${SHA_IMAGE}" .
+
+      - name: Smoke test image (non-root, read-only, healthcheck, SPA fallback, runtime config)
+        env:
+          SHA_IMAGE: ${{ steps.meta.outputs.sha_image }}
+        run: bash deploy/smoke-image.sh "${SHA_IMAGE}"
+
+      - name: Install Trivy (pinned, checksum verified)
+        run: |
+          curl -fsSL -o trivy.tar.gz \
+            "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz"
+          echo "${TRIVY_SHA256}  trivy.tar.gz" | sha256sum --check -
+          tar -xzf trivy.tar.gz trivy
+
+      # Fail khi có lỗ hổng HIGH/CRITICAL đã có bản vá (--ignore-unfixed bỏ qua lỗ hổng chưa có bản vá vì nhóm
+      # không sửa được; lý do ghi trong ADR 0002).
+      - name: Trivy image scan
+        env:
+          SHA_IMAGE: ${{ steps.meta.outputs.sha_image }}
+        run: ./trivy image --no-progress --exit-code 1 --severity HIGH,CRITICAL --ignore-unfixed "${SHA_IMAGE}"
+
+      - name: Log in to GHCR
+        if: ${{ steps.meta.outputs.push == 'true' }}
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: echo "${GHCR_TOKEN}" | docker login ghcr.io --username "${GITHUB_ACTOR}" --password-stdin
+
+      - name: Tag and push image
+        if: ${{ steps.meta.outputs.push == 'true' }}
+        env:
+          SHA_IMAGE: ${{ steps.meta.outputs.sha_image }}
+          TAGS: ${{ steps.meta.outputs.tags }}
+        run: |
+          for tag in ${TAGS}; do
+            if [ "${tag}" != "${SHA_IMAGE}" ]; then
+              docker tag "${SHA_IMAGE}" "${tag}"
+            fi
+            docker push "${tag}"
+          done
+
+  # Chặng 6: triển khai staging. KHUNG chờ nền tảng: chỉ chạy ở main và khi biến repository STAGING_ENABLED=true.
+  # Host, URL và khóa lấy từ GitHub Environment "staging" (variables và secrets); không có giá trị cố định trong mã.
+  deploy-staging:
+    needs: [docker]
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.STAGING_ENABLED == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    environment:
+      name: staging
+      url: ${{ vars.STAGING_URL }}
+    concurrency:
+      group: deploy-staging
+      cancel-in-progress: false
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup Node and install dependencies
+        uses: ./.github/actions/setup-node-npm
+
+      - name: Configure SSH
+        env:
+          SSH_KEY: ${{ secrets.STAGING_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.STAGING_SSH_KNOWN_HOSTS }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "${SSH_KEY}" > ~/.ssh/id_staging
+          chmod 600 ~/.ssh/id_staging
+          printf '%s\n' "${KNOWN_HOSTS}" > ~/.ssh/known_hosts
+          printf 'IdentityFile ~/.ssh/id_staging\n' >> ~/.ssh/config
+
+      - name: Deploy image to staging
+        env:
+          LMS_UI_IMAGE: ${{ needs.docker.outputs.image }}
+          STAGING_SSH_HOST: ${{ vars.STAGING_SSH_HOST }}
+          STAGING_SSH_USER: ${{ vars.STAGING_SSH_USER }}
+          STAGING_SSH_PORT: ${{ vars.STAGING_SSH_PORT }}
+          STAGING_DEPLOY_DIR: ${{ vars.STAGING_DEPLOY_DIR }}
+          API_BASE_URL: ${{ vars.STAGING_API_BASE_URL }}
+          FILE_BASE_URL: ${{ vars.STAGING_FILE_BASE_URL }}
+          GHCR_PULL_USER: ${{ vars.STAGING_GHCR_PULL_USER }}
+          GHCR_PULL_TOKEN: ${{ secrets.STAGING_GHCR_PULL_TOKEN }}
+        run: bash deploy/deploy-staging.sh
+
+      - name: Health check after deploy
+        env:
+          STAGING_URL: ${{ vars.STAGING_URL }}
+          EXPECTED_VERSION: ${{ github.sha }}
+          API_BASE_URL: ${{ vars.STAGING_API_BASE_URL }}
+          STAGING_API_HEALTH_URL: ${{ vars.STAGING_API_HEALTH_URL }}
+        run: bash deploy/health-check.sh
+
+      - name: Install Chromium for Playwright
+        run: npx playwright install --with-deps chromium
+
+      - name: E2E smoke against staging
+        env:
+          E2E_BASE_URL: ${{ vars.STAGING_URL }}
+        run: npm run e2e
+
+      - name: Upload Playwright report
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: playwright-report-staging
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: ignore
+          retention-days: 14
