@@ -1,0 +1,5 @@
+# Tệp chạy trong container/CI phải dùng LF (CRLF làm hỏng shebang và nginx.conf trên Linux)
+*.sh text eol=lf
+Dockerfile text eol=lf
+deploy/** text eol=lf
+.github/workflows/*.yml text eol=lf
