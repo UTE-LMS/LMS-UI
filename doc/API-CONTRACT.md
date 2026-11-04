@@ -658,7 +658,7 @@ Phản hồi `200`:
 
 ## 6. Khung Mục Lục Endpoint Cho Các Bước Tiếp Theo (F02 - F08)
 
-Các mục dưới đây giữ vai trò khung định hướng và sẽ được cập nhật chi tiết (Request/Response DTO, URL, query params) tương ứng qua từng bước phát triển của đề tài:
+Các mục dưới đây giữ vai trò khung định hướng và sẽ được cập nhật chi tiết (Request/Response DTO, URL, query params) tương ứng qua từng bước phát triển của đề tài. **Đã có đặc tả chi tiết:** §6.2 (F03: học phần, đề cương, CLO, liên kết CLO–PI) và §6.4.1 (học kỳ, US-18); các mục còn lại vẫn là khung chưa hiện thực:
 
 ### 6.1. F02: Quản Lý Chương Trình Đào Tạo & Chuẩn Đầu Ra (Curriculum & PLO/PI Management)
 - `GET /api/v1/programs` — Danh sách Chương trình đào tạo (CTĐT).
@@ -668,14 +668,437 @@ Các mục dưới đây giữ vai trò khung định hướng và sẽ được
 - `POST /api/v1/programs/{id}/plos` — Khởi tạo/cập nhật danh mục PLO và PI.
 - `PUT /api/v1/programs/{id}/matrix` — Cấu hình ma trận quan hệ giữa các học phần và PLO/PI.
 
-### 6.2. F03: Quản Lý Học Phần, Đề Cương & CLO (Course, Syllabus & CLO Management)
-- `GET /api/v1/courses` — Danh sách học phần trong hệ thống.
-- `POST /api/v1/courses` — Thêm mới thông tin học phần.
-- `GET /api/v1/courses/{id}/syllabus` — Xem đề cương chi tiết học phần.
-- `PUT /api/v1/courses/{id}/syllabus` — Cập nhật đề cương chi tiết.
-- `GET /api/v1/courses/{id}/clos` — Danh sách Chuẩn đầu ra học phần (CLO) và mức độ thang đo Bloom.
-- `POST /api/v1/courses/{id}/clos` — Thêm mới / cập nhật danh mục CLO.
-- `PUT /api/v1/courses/{id}/clo-pi-mapping` — Ánh xạ giữa CLO của học phần và PI của CTĐT.
+### 6.2. F03: Quản Lý Học Phần, Đề Cương & CLO (Course, Syllabus & CLO Management) — US-09, US-10, US-11, US-12
+
+> **Trạng thái:** Các endpoint dưới đây **đã hiện thực** ở backend (nguồn: `CourseController`, `ProgramCourseController`, `SyllabusController`, `CloController`, `CloPiLinkController`, `doc/plan/F03-hoc-phan-clo.md`). Các đường dẫn cũ trong bản khung (`/courses/{id}/syllabus`, `/courses/{id}/clos`, `PUT /courses/{id}/clo-pi-mapping`) **không tồn tại** và đã bị gỡ bỏ: đề cương là tài nguyên riêng theo phiên bản (`/syllabi/...`), CLO thuộc một đề cương (không thuộc trực tiếp học phần), liên kết CLO–PI là tài nguyên riêng (`/clo-pi-links/...`).
+>
+> Quản lý học kỳ (`/api/v1/terms`, US-18) được đặc tả ở **§6.4.1**; đề cương tham chiếu học kỳ qua `effectiveFromTermId` / `effectiveToTermId`.
+
+#### 6.2.1. Quy ước chung của nhóm F03
+
+**Bảng phân quyền theo endpoint.** Đọc = mọi vai trò đã xác thực (`isAuthenticated()`, kể cả `STUDENT`, `VIEWER`). Ghi = `ADMIN`, `PROGRAM_MANAGER`. Vai trò khác ghi → `403 FORBIDDEN`; chưa đăng nhập → `401`.
+
+| Endpoint | Vai trò được phép | Kiểm tra phạm vi (`scope`) cho `PROGRAM_MANAGER` |
+|---|---|---|
+| `GET` mọi endpoint ở §6.2 | Mọi vai trò đã xác thực | Không kiểm tra (không có `403` theo scope khi đọc) |
+| `POST /courses`, `PUT /courses/{id}` | `ADMIN`, `PROGRAM_MANAGER` | Không kiểm tra theo code hiện tại (cần xác nhận với backend) |
+| `DELETE /courses/{id}` | **Chỉ `ADMIN`** | Không áp dụng |
+| `POST/PUT/DELETE /program-versions/{pvId}/courses[...]` | `ADMIN`; `PROGRAM_MANAGER` nếu phiên bản `pvId` thuộc CTĐT nằm trong `scope.programIds` | **Đã có** (`canAccessProgramVersion`, WRITE). Ngoài phạm vi → `403` |
+| `POST /courses/{courseId}/syllabi` | `ADMIN`; `PROGRAM_MANAGER` | (ADR 0009 đề xuất; backend đã hiện thực trên nhánh F03, chờ merge) `canAccessCourse` |
+| `PUT /syllabi/{id}/status` | `ADMIN`; `PROGRAM_MANAGER` | (ADR 0009 đề xuất; backend đã hiện thực trên nhánh F03, chờ merge) `canAccessSyllabus` |
+| `POST /syllabi/{syllabusId}/clos` | `ADMIN`; `PROGRAM_MANAGER` | (ADR 0009 đề xuất; backend đã hiện thực trên nhánh F03, chờ merge) `canAccessSyllabus` |
+| `PUT/DELETE /clos/{id}` | `ADMIN`; `PROGRAM_MANAGER` | (ADR 0009 đề xuất; backend đã hiện thực trên nhánh F03, chờ merge) `canAccessClo` |
+| `POST /syllabi/{syllabusId}/clo-pi-links` | `ADMIN`; `PROGRAM_MANAGER` nếu `programVersionId` **trong body** thuộc CTĐT nằm trong `scope.programIds` | **Đã có** (`canAccessProgramVersion`, WRITE) |
+| `DELETE /clo-pi-links/{id}` | `ADMIN`; `PROGRAM_MANAGER` | (ADR 0009 đề xuất; backend đã hiện thực trên nhánh F03, chờ merge) `canAccessCloPiLink` (suy theo `programVersionId` của liên kết) |
+| `PUT /clo-pi-links/{id}/verification` | **Chỉ `QA_OFFICER`** (`ADMIN` **không** được phép, không có phân cấp vai trò) | **Đã có**: `scope.programIds` của QA phải chứa CTĐT của phiên bản chứa liên kết, ngược lại `403` |
+
+**Hành vi kiểm tra phạm vi của `PROGRAM_MANAGER` (ADR 0009 đề xuất; backend đã hiện thực trên nhánh F03, chờ merge).** Áp dụng cho các dòng ghi chú "(ADR 0009)" ở bảng trên. Học phần không có `programVersionId` riêng nên phạm vi được suy ra qua `program_courses`:
+- `ADMIN` luôn được phép.
+- `PROGRAM_MANAGER` chỉ được ghi khi học phần thuộc **ít nhất một** phiên bản CTĐT mà CTĐT đó nằm trong `scope.programIds` của mình (phép HỢP trên mọi `program_courses` chứa học phần). Chỉ `scope.programIds` được dùng; `scope.courseIds` / `scope.sectionIds` không có tác dụng ở nhóm endpoint này.
+- Học phần **chưa gán vào CTĐT nào** (hoặc không tồn tại) → chỉ `ADMIN` được ghi; `PROGRAM_MANAGER` nhận `403` (fail-closed), kể cả khi tài nguyên không tồn tại (khi đó `PROGRAM_MANAGER` nhận `403` thay vì `404`).
+- Vi phạm → `403 FORBIDDEN`, `message`: *"Bạn không có quyền thực hiện thao tác này"*.
+- Ghi nhận trạng thái: hàm `canAccessCourse` / `canAccessSyllabus` / `canAccessClo` / `canAccessCloPiLink` **đã có trong mã nguồn worktree backend F03 nhưng chưa commit/merge**; UI vẫn phải xử lý `403` này như một kết quả hợp lệ trước khi backend phát hành.
+
+**Gợi ý xử lý lỗi cho UI (bám bảng §3).**
+
+| Mã | Khi nào gặp ở F03 | Gợi ý xử lý UI |
+|---|---|---|
+| `400 VALIDATION_ERROR` | Sai định dạng body/ObjectId/query (`bloomLevel` ngoài 1–6, `code` CLO sai mẫu, `weight` ngoài (0, 1], `measurement.*` ngoài [0, 1], thiếu `programVersionId` ở query ma trận, giá trị enum không hợp lệ...) | Gán lỗi vào FormControl theo `fieldErrors[].field` (với trường lồng nhau là `measurement.defaultWeight`, `measurement.defaultPassThreshold`). Body sai JSON hoặc enum sai giá trị: **không có** `fieldErrors`, chỉ hiện Toast với `message` |
+| `403 FORBIDDEN` | Sai vai trò, hoặc `PROGRAM_MANAGER` / `QA_OFFICER` ngoài phạm vi CTĐT | Banner/Toast "Bạn không có quyền...", không điều hướng về `/login`; ẩn/vô hiệu nút ghi theo vai trò, nhưng **không thể suy ra trước** việc ngoài phạm vi nên vẫn phải xử lý `403` sau khi gọi |
+| `404 NOT_FOUND` | `courseId`, `syllabusId`, `cloId`, `piId`, `programVersionId` (ở body liên kết và query ma trận), link, term không tồn tại | Empty State / Toast; với tài nguyên vừa bị xóa thì tải lại danh sách |
+| `409 CONFLICT` | Trùng `code` học phần; trùng `(courseId, version)` đề cương; trùng `(syllabusId, code)` CLO; trùng `(cloId, piId)` liên kết; học phần đã gán vào phiên bản CTĐT; trùng `code` học kỳ | Đánh dấu lỗi ngay ô nhập tương ứng (`code`, `version`...) bằng `message`; giữ nguyên dữ liệu đã nhập |
+| `422 BUSINESS_RULE_VIOLATION` | Vi phạm quy tắc nghiệp vụ: đề cương `CONFIRMED` không sửa CLO; chuyển trạng thái sai chiều; xóa học phần/CLO/học kỳ đang được tham chiếu; PI không thuộc phiên bản CTĐT; ... | Modal/Toast hiển thị nguyên văn `message`; giữ dữ liệu form; với đề cương `CONFIRMED` nên vô hiệu hóa nút sửa/xóa/thêm CLO ngay từ trạng thái đã tải và gợi ý tạo phiên bản đề cương mới |
+
+> **Lưu ý về `message` 422:** một số lỗi 422 có tiền tố tên quy tắc trong `message` dưới dạng `[TÊN_QUY_TẮC] ...` (ví dụ `[COURSE_IN_USE]`, `[COURSE_NOT_FOUND]`, `[PROGRAM_VERSION_NOT_FOUND]`, `[PREREQUISITE_SELF_REFERENCE]`, `[PREREQUISITE_NOT_FOUND]`, `[PREVIOUS_COURSE_SELF_REFERENCE]`, `[PREVIOUS_COURSE_NOT_FOUND]`, `[PREREQUISITE_AND_PREVIOUS_CONFLICT]`). Đây chỉ là tiền tố trong chuỗi `message`; `code` luôn là `BUSINESS_RULE_VIOLATION` và **không có trường riêng** cho tên quy tắc. UI chỉ hiển thị `message`, không rẽ nhánh logic dựa trên chuỗi.
+
+**Quy ước dữ liệu chung.**
+- Danh sách học phần có phân trang theo §5.1. Các danh sách khác của F03 (`program-versions/{pvId}/courses`, `courses/{courseId}/syllabi`, `syllabi/{id}/clos`, `syllabi/{id}/clo-pi-links`, `terms`) trả **mảng JSON thuần**, không có envelope phân trang.
+- Mọi `*Id` là ObjectId 24 ký tự hex (§1.3). Sai định dạng ở path/query → `400` kèm `fieldErrors` theo tên tham số; sai định dạng ở body → `400` kèm `fieldErrors` theo tên trường.
+- Trường `null` luôn được trả về tường minh (không bị lược bỏ).
+- Đối tượng `verification` (xuất hiện ở đề cương, CLO, liên kết CLO–PI): `{ "status": "UNVERIFIED" | "VERIFIED" | "NEEDS_CLARIFICATION", "verifiedBy": ObjectId | null, "verifiedAt": ISO-8601 | null, "note": String | null }`. Khi tạo mới, `status = UNVERIFIED` và 3 trường còn lại là `null`.
+- Dữ liệu trong các ví dụ dưới đây là **minh họa định dạng**, không phải nội dung đề cương/CLO/PI thật và không phải số liệu đo lường. Nội dung CLO thật phải lấy từ đề cương gốc đã được Khoa duyệt.
+
+---
+
+#### 6.2.2. Học phần (US-09)
+
+**Đối tượng `CourseResponse`:**
+```json
+{
+  "id": "6728d100a1b2c3d4e5f60001",
+  "code": "DEMO101",
+  "name": "Học phần thử nghiệm [DỮ LIỆU THỬ NGHIỆM]",
+  "credits": 3,
+  "extra": null
+}
+```
+
+##### `GET /api/v1/courses`
+Danh sách học phần phân trang (§5.1), sắp xếp theo `code` tăng dần. Quyền: mọi vai trò đã xác thực.
+
+| Tham số | Kiểu | Mô tả |
+|---|---|---|
+| `page`, `size` | Integer | Như §5.1 (mặc định `0` / `20`, `size` 1..100). Ngoài biên → `400 VALIDATION_ERROR` |
+| `search` | String (tùy chọn) | Lọc theo `name` **hoặc** `code`, chứa chuỗi con, không phân biệt hoa thường. Chuỗi rỗng/chỉ khoảng trắng = không lọc |
+
+Phản hồi `200`: `PageResponse<CourseResponse>` (`content`, `page`, `size`, `totalElements`, `totalPages`, `last`).
+
+##### `GET /api/v1/courses/{id}`
+Chi tiết một học phần. Quyền: mọi vai trò đã xác thực. Phản hồi `200`: `CourseResponse`. Lỗi: `400` (ID sai định dạng), `404` (không tồn tại).
+
+##### `POST /api/v1/courses`
+Tạo học phần. Quyền: `ADMIN`, `PROGRAM_MANAGER`.
+```json
+{ "code": "DEMO101", "name": "Học phần thử nghiệm [DỮ LIỆU THỬ NGHIỆM]", "credits": 3, "extra": null }
+```
+| Trường | Kiểu | Bắt buộc | Ràng buộc |
+|---|---|---|---|
+| `code` | String | Có | Tối đa 64 ký tự; chỉ chữ cái, chữ số, `_`, `-`, `.` (`^[A-Za-z0-9_.-]+$`); được trim; duy nhất toàn hệ thống |
+| `name` | String | Có | Không rỗng, tối đa 255 ký tự; được trim |
+| `credits` | Integer | Không | `>= 0` |
+| `extra` | Object | Không | Dữ liệu mở rộng tự do |
+
+- `201 Created`: `CourseResponse`.
+- Lỗi: `400` (vi phạm ràng buộc trên), `403` (không đủ vai trò), `409 CONFLICT` (trùng `code`, `message`: *"Mã học phần đã tồn tại: DEMO101"*).
+
+##### `PUT /api/v1/courses/{id}`
+Cập nhật học phần (thay thế toàn bộ các trường cho phép sửa). `code` **bất biến** (không có trong body). Quyền: `ADMIN`, `PROGRAM_MANAGER`.
+```json
+{ "name": "Tên học phần cập nhật", "credits": 4, "extra": null }
+```
+- Ràng buộc: `name` bắt buộc (không rỗng, ≤ 255), `credits` `>= 0` hoặc `null`, `extra` tùy chọn. Trường không gửi/`null` sẽ **ghi đè thành `null`** (`credits`, `extra`) — UI luôn gửi đầy đủ giá trị hiện tại.
+- `200 OK`: `CourseResponse`. Lỗi: `400`, `403`, `404`.
+
+##### `DELETE /api/v1/courses/{id}`
+Xóa học phần. Quyền: **chỉ `ADMIN`**.
+- `204 No Content`.
+- Lỗi: `404`; `422 BUSINESS_RULE_VIOLATION` khi học phần đang được gán vào CTĐT (`[COURSE_IN_USE] Không thể xóa học phần đang được gán vào chương trình đào tạo: ...`) hoặc đang được tham chiếu trong ma trận đóng góp PI (`[COURSE_IN_USE] Không thể xóa học phần đang được tham chiếu trong ma trận đóng góp PI: ...`). UI gợi ý gỡ học phần khỏi CTĐT trước.
+
+---
+
+#### 6.2.3. Học phần trong phiên bản CTĐT — `program_courses` (US-09)
+
+Tài nguyên con của một phiên bản CTĐT: `/api/v1/program-versions/{programVersionId}/courses`. Một học phần chỉ được gán một lần vào mỗi phiên bản.
+
+**Enum:** `type` ∈ `COMPULSORY` | `ELECTIVE`; `category` ∈ `FOUNDATION` | `MAJOR_FOUNDATION` | `SPECIALIZED` | `CAPSTONE_PROJECT` | `THESIS`.
+
+**Đối tượng `ProgramCourseResponse`:**
+```json
+{
+  "id": "6728d200a1b2c3d4e5f60011",
+  "programVersionId": "6728d0b0a1b2c3d4e5f60101",
+  "courseId": "6728d100a1b2c3d4e5f60001",
+  "course": { "id": "6728d100a1b2c3d4e5f60001", "code": "DEMO101", "name": "Học phần thử nghiệm [DỮ LIỆU THỬ NGHIỆM]", "credits": 3, "extra": null },
+  "semester": 1,
+  "credits": 3,
+  "type": "COMPULSORY",
+  "category": "FOUNDATION",
+  "prerequisiteCourseIds": [],
+  "previousCourseIds": []
+}
+```
+`course` có thể là `null` nếu học phần tham chiếu không còn tồn tại (dữ liệu lệch); UI nên hiển thị fallback theo `courseId`.
+
+##### `GET /api/v1/program-versions/{programVersionId}/courses`
+Danh sách học phần của phiên bản, sắp xếp theo `semester` tăng dần rồi `courseId`. Quyền: mọi vai trò đã xác thực. Phản hồi `200`: mảng `ProgramCourseResponse` (không phân trang).
+- Lỗi: `400` (ID sai định dạng); **`422`** (không phải `404`) khi phiên bản không tồn tại: `[PROGRAM_VERSION_NOT_FOUND] Phiên bản chương trình đào tạo không tồn tại: ...`.
+
+##### `GET /api/v1/program-versions/{programVersionId}/courses/{courseId}`
+Một bản ghi gán. Phản hồi `200`: `ProgramCourseResponse`. Lỗi: `400`, `404` (học phần chưa được gán vào phiên bản này), `422` (phiên bản không tồn tại, như trên).
+
+##### `POST /api/v1/program-versions/{programVersionId}/courses`
+Gán học phần vào phiên bản. Quyền: `ADMIN`; `PROGRAM_MANAGER` có phiên bản trong `scope.programIds` (**đã có**).
+```json
+{
+  "courseId": "6728d100a1b2c3d4e5f60001",
+  "semester": 1,
+  "credits": 3,
+  "type": "COMPULSORY",
+  "category": "FOUNDATION",
+  "prerequisiteCourseIds": [],
+  "previousCourseIds": []
+}
+```
+| Trường | Kiểu | Bắt buộc | Ràng buộc |
+|---|---|---|---|
+| `courseId` | ObjectId | Có | Phải là học phần đã tồn tại |
+| `semester` | Integer | Không | `>= 1` (học kỳ dự kiến trong chương trình) |
+| `credits` | Integer | Không | `>= 0`; nếu bỏ trống, backend lấy `credits` của học phần |
+| `type` | Enum | **Có** | `COMPULSORY` hoặc `ELECTIVE` |
+| `category` | Enum | Không | Một trong 5 giá trị trên |
+| `prerequisiteCourseIds` | Array ObjectId | Không | Mặc định `[]`; mỗi phần tử là học phần tồn tại, không phải chính học phần; tự loại trùng |
+| `previousCourseIds` | Array ObjectId | Không | Như trên (học phần học trước) |
+
+- `201 Created`: `ProgramCourseResponse`.
+- Lỗi: `400`; `403` (ngoài phạm vi/không đủ vai trò); `409 CONFLICT` (*"Học phần đã được gán vào phiên bản chương trình đào tạo: ..."*); `422` khi: phiên bản không tồn tại (`[PROGRAM_VERSION_NOT_FOUND]`), học phần `courseId` không tồn tại (`[COURSE_NOT_FOUND]`), tiên quyết/học trước là chính nó (`[PREREQUISITE_SELF_REFERENCE]`, `[PREVIOUS_COURSE_SELF_REFERENCE]`), không tồn tại (`[PREREQUISITE_NOT_FOUND]`, `[PREVIOUS_COURSE_NOT_FOUND]`), hoặc cùng một học phần nằm đồng thời ở cả hai danh sách (`[PREREQUISITE_AND_PREVIOUS_CONFLICT]`).
+
+##### `PUT /api/v1/program-versions/{programVersionId}/courses/{courseId}`
+Cập nhật bản ghi gán (`courseId` và `programVersionId` bất biến). Body như `POST` nhưng **không có `courseId`**; `type` vẫn bắt buộc. Thay thế toàn bộ: trường không gửi sẽ thành `null` / `[]` (kể cả `credits`, không tự lấy lại từ học phần như khi `POST`) — UI luôn gửi đầy đủ.
+- `200 OK`: `ProgramCourseResponse`. Quyền như `POST`.
+- Lỗi: `400`, `403`, `404` (chưa được gán), `422` (các quy tắc tiên quyết/học trước như trên).
+
+##### `DELETE /api/v1/program-versions/{programVersionId}/courses/{courseId}`
+Gỡ học phần khỏi phiên bản. Quyền như `POST`. `204 No Content`. Lỗi: `403`, `404` (chưa được gán), `422` (phiên bản không tồn tại).
+
+---
+
+#### 6.2.4. Đề cương theo phiên bản — Syllabi (US-10)
+
+Mỗi học phần có nhiều đề cương, định danh bởi `(courseId, version)`. Đề cương mới luôn ở trạng thái `DRAFT`. **Không có endpoint sửa nội dung đề cương** (`version`, học kỳ hiệu lực) sau khi tạo; chỉ có chuyển trạng thái. Sửa đề cương đã `CONFIRMED` = tạo phiên bản mới (`version` mới).
+
+**Enum `SyllabusStatus`:** `DRAFT` → `CONFIRMED` → `ARCHIVED`.
+
+**Đối tượng `SyllabusResponse`:**
+```json
+{
+  "id": "6728d300a1b2c3d4e5f60021",
+  "courseId": "6728d100a1b2c3d4e5f60001",
+  "version": "2026.1",
+  "effectiveFromTermId": "6728d0a0a1b2c3d4e5f60201",
+  "effectiveToTermId": null,
+  "status": "DRAFT",
+  "verification": { "status": "UNVERIFIED", "verifiedBy": null, "verifiedAt": null, "note": null },
+  "extra": null
+}
+```
+
+##### `GET /api/v1/courses/{courseId}/syllabi`
+Danh sách đề cương của học phần, sắp xếp theo `version` tăng dần (so sánh chuỗi). Quyền: mọi vai trò đã xác thực. Phản hồi `200`: mảng `SyllabusResponse` (rỗng nếu chưa có). Lỗi: `400`, `404` (học phần không tồn tại).
+
+##### `POST /api/v1/courses/{courseId}/syllabi`
+Tạo đề cương mới ở trạng thái `DRAFT`. Quyền: `ADMIN`, `PROGRAM_MANAGER` (+ phạm vi — ADR 0009 đề xuất; backend đã hiện thực trên nhánh F03, chờ merge).
+```json
+{ "version": "2026.1", "effectiveFromTermId": "6728d0a0a1b2c3d4e5f60201", "effectiveToTermId": null, "extra": null }
+```
+| Trường | Kiểu | Bắt buộc | Ràng buộc |
+|---|---|---|---|
+| `version` | String | Có | Không rỗng; được trim; duy nhất trong cùng học phần |
+| `effectiveFromTermId` | ObjectId | Không | Phải là học kỳ tồn tại. Không gửi chuỗi rỗng — gửi `null` hoặc bỏ trường |
+| `effectiveToTermId` | ObjectId | Không | Như trên; `null` = chưa kết thúc hiệu lực |
+| `extra` | Object | Không | Dữ liệu mở rộng tự do |
+
+- `201 Created`: `SyllabusResponse` (`status = DRAFT`).
+- Lỗi: `400`; `403`; `404` (học phần hoặc học kỳ `effective*TermId` không tồn tại); `409 CONFLICT` (trùng `(courseId, version)`); `422` khi `effectiveToTermId` trước `effectiveFromTermId` (*"effectiveToTermId không được trước effectiveFromTermId"*; cùng một học kỳ là hợp lệ; so sánh theo `startDate`, nếu thiếu thì `endDate`, nếu thiếu nữa thì `academicYear`).
+
+##### `GET /api/v1/syllabi/{id}`
+Chi tiết đề cương. Quyền: mọi vai trò đã xác thực. Phản hồi `200`: `SyllabusResponse`. Lỗi: `400`, `404`.
+
+##### `PUT /api/v1/syllabi/{id}/status`
+Chuyển trạng thái đề cương, **một chiều**. Quyền: `ADMIN`, `PROGRAM_MANAGER` (+ phạm vi — ADR 0009 đề xuất; backend đã hiện thực trên nhánh F03, chờ merge).
+```json
+{ "status": "CONFIRMED" }
+```
+| Trạng thái hiện tại | Chuyển sang | Kết quả |
+|---|---|---|
+| `DRAFT` | `CONFIRMED` | `200` |
+| `CONFIRMED` | `ARCHIVED` | `200` |
+| Trùng trạng thái hiện tại | (không đổi) | `200`, trả về đề cương không thay đổi (idempotent) |
+| Mọi chuyển khác (`DRAFT→ARCHIVED`, quay lui như `CONFIRMED→DRAFT`, `ARCHIVED→...`) | | `422` *"Không thể chuyển trạng thái đề cương từ [X] sang [Y]"* |
+
+- `status` bắt buộc; giá trị ngoài enum → `400` (không có `fieldErrors`).
+- Lỗi khác: `403`, `404`. Phản hồi `200`: `SyllabusResponse`.
+- Hệ quả: đề cương `CONFIRMED` không cho thêm/sửa/xóa CLO (xem §6.2.5). Hiện **không có API** đổi `verification` của đề cương (chỉ đọc).
+
+---
+
+#### 6.2.5. CLO của đề cương (US-11)
+
+CLO thuộc đúng một đề cương. `code` chỉ duy nhất **trong một đề cương** (`CLO1` của hai đề cương khác nhau là hai CLO khác nhau); UI nhận diện CLO bằng `id`, không bằng `code`.
+
+**Đối tượng `CloResponse`:**
+```json
+{
+  "id": "6728d400a1b2c3d4e5f60031",
+  "syllabusId": "6728d300a1b2c3d4e5f60021",
+  "courseId": "6728d100a1b2c3d4e5f60001",
+  "code": "CLO1",
+  "contentOriginal": "",
+  "bloomLevel": 2,
+  "bloomNote": null,
+  "measurement": null,
+  "verification": { "status": "UNVERIFIED", "verifiedBy": null, "verifiedAt": null, "note": null },
+  "extra": null
+}
+```
+- `contentOriginal`: nội dung gốc theo đề cương; backend lưu chuỗi rỗng `""` khi không gửi. UI **không** tự điền nội dung CLO; để trống tới khi đối chiếu đề cương gốc.
+- `bloomLevel`: mức Bloom 1–6, **không phải điểm số**.
+- `measurement`: `null` cho tới khi Khoa xác nhận tỷ trọng/ngưỡng. Khi có: `{ "defaultWeight": Double | null, "defaultPassThreshold": Double | null }`, mỗi giá trị nằm trong **[0, 1]**. UI **không** tự đặt giá trị mặc định và hiển thị `null` là "chưa xác nhận" (không hiển thị như 0).
+
+##### `GET /api/v1/syllabi/{syllabusId}/clos`
+Danh sách CLO của đề cương, sắp xếp theo `code` tăng dần **theo chuỗi** (nên `CLO10` đứng trước `CLO2`; UI tự sắp xếp theo số nếu cần). Quyền: mọi vai trò đã xác thực. Phản hồi `200`: mảng `CloResponse`. Lỗi: `400`, `404` (đề cương không tồn tại).
+
+##### `POST /api/v1/syllabi/{syllabusId}/clos`
+Thêm CLO. Quyền: `ADMIN`, `PROGRAM_MANAGER` (+ phạm vi — ADR 0009 đề xuất; backend đã hiện thực trên nhánh F03, chờ merge).
+```json
+{
+  "code": "CLO1",
+  "contentOriginal": "",
+  "bloomLevel": 2,
+  "bloomNote": null,
+  "measurement": null,
+  "extra": null
+}
+```
+| Trường | Kiểu | Bắt buộc | Ràng buộc |
+|---|---|---|---|
+| `code` | String | Có | Khớp `^CLO[0-9]+$` (ví dụ `CLO1`, `CLO12`); được trim; duy nhất trong đề cương |
+| `contentOriginal` | String | Không | Tự do; được trim; `null` → lưu `""` |
+| `bloomLevel` | Integer | Có | 1..6 |
+| `bloomNote` | String | Không | Tự do; được trim |
+| `measurement` | Object | Không | `null` hợp lệ. Nếu có: `defaultWeight`, `defaultPassThreshold` mỗi trường `null` hoặc trong [0, 1] |
+| `extra` | Object | Không | Dữ liệu mở rộng tự do |
+
+- `201 Created`: `CloResponse` (`courseId` do backend suy từ đề cương).
+- Lỗi:
+  - `400 VALIDATION_ERROR`: `code` sai mẫu, `bloomLevel` = 0 hoặc 7, `measurement.*` ngoài [0, 1]. Ví dụ:
+    ```json
+    {
+      "timestamp": "2026-11-04T03:00:00Z", "status": 400, "code": "VALIDATION_ERROR",
+      "message": "Dữ liệu yêu cầu không hợp lệ", "path": "/api/v1/syllabi/6728d300a1b2c3d4e5f60021/clos",
+      "fieldErrors": [ { "field": "bloomLevel", "message": "bloomLevel phải từ 1 đến 6", "rejectedValue": 7 } ]
+    }
+    ```
+  - `403`; `404` (đề cương không tồn tại).
+  - `409 CONFLICT`: trùng `code` trong cùng đề cương (*"CLO với mã [CLO1] đã tồn tại trong đề cương id=[...]"*).
+  - `422 BUSINESS_RULE_VIOLATION`: đề cương đang `CONFIRMED` (*"Đề cương đã CONFIRMED không cho phép thêm CLO mới; phải tạo phiên bản đề cương mới"*). Backend chỉ chặn trạng thái `CONFIRMED`; việc thêm CLO vào đề cương `ARCHIVED` hiện **không bị chặn** (cần xác nhận với backend đây có phải chủ ý).
+
+##### `GET /api/v1/clos/{id}`
+Chi tiết CLO. Quyền: mọi vai trò đã xác thực. Phản hồi `200`: `CloResponse`. Lỗi: `400`, `404`.
+
+##### `PUT /api/v1/clos/{id}`
+Cập nhật CLO (thay thế toàn bộ). Quyền: `ADMIN`, `PROGRAM_MANAGER` (+ phạm vi — ADR 0009 đề xuất; backend đã hiện thực trên nhánh F03, chờ merge).
+- Body có cùng trường và ràng buộc như `POST` (`code`, `bloomLevel` bắt buộc). Trường không gửi sẽ bị ghi đè: `measurement` bỏ trống/`null` sẽ **xóa** `measurement` đã có; `contentOriginal` `null` → `""`; `bloomNote`, `extra` `null` → `null`. UI luôn gửi đầy đủ giá trị hiện tại.
+- `200 OK`: `CloResponse`.
+- Lỗi: `400`; `403`; `404`; `409` (đổi `code` sang mã đã có trong cùng đề cương; giữ nguyên `code` không gây xung đột); `422` khi đề cương đang `CONFIRMED` (*"Đề cương đã CONFIRMED không cho phép sửa nội dung CLO; phải tạo phiên bản đề cương mới"*).
+
+##### `DELETE /api/v1/clos/{id}`
+Xóa CLO. Quyền: `ADMIN`, `PROGRAM_MANAGER` (+ phạm vi — ADR 0009 đề xuất; backend đã hiện thực trên nhánh F03, chờ merge). `204 No Content`.
+- Lỗi: `403`; `404`; `422` khi đề cương đang `CONFIRMED` (*"...không cho phép xóa CLO..."*) hoặc CLO đã có liên kết CLO–PI (*"Không thể xóa CLO đã được liên kết với PI trong ma trận CLO-PI"*) — UI hướng dẫn xóa liên kết trước (§6.2.6).
+
+---
+
+#### 6.2.6. Liên kết CLO–PI & ma trận (US-12)
+
+Liên kết `(cloId, piId)` gắn một CLO của đề cương với một PI của một phiên bản CTĐT (`programVersionId`). Chỉ liên kết có `verification.status = VERIFIED` mới được dùng cho tính chính thức ở các bước đo lường sau (F06).
+
+**Đối tượng `CloPiLinkResponse`:**
+```json
+{
+  "id": "6728d500a1b2c3d4e5f60041",
+  "programVersionId": "6728d0b0a1b2c3d4e5f60101",
+  "syllabusId": "6728d300a1b2c3d4e5f60021",
+  "cloId": "6728d400a1b2c3d4e5f60031",
+  "piId": "6728d0c0a1b2c3d4e5f60301",
+  "weight": null,
+  "verification": { "status": "UNVERIFIED", "verifiedBy": null, "verifiedAt": null, "note": null }
+}
+```
+`weight` ∈ (0, 1] hoặc `null` (chưa có quy tắc trọng số). UI hiển thị `null` là "chưa xác định", không hiển thị như 0.
+
+##### `GET /api/v1/syllabi/{syllabusId}/clo-pi-links`
+Danh sách mọi liên kết của đề cương (mọi phiên bản CTĐT). Quyền: mọi vai trò đã xác thực. Phản hồi `200`: mảng `CloPiLinkResponse`. Lỗi: `400`, `404` (đề cương không tồn tại).
+
+##### `POST /api/v1/syllabi/{syllabusId}/clo-pi-links`
+Tạo liên kết. Quyền: `ADMIN`; `PROGRAM_MANAGER` nếu `programVersionId` **trong body** thuộc CTĐT nằm trong `scope.programIds` (**đã có**).
+```json
+{
+  "programVersionId": "6728d0b0a1b2c3d4e5f60101",
+  "cloId": "6728d400a1b2c3d4e5f60031",
+  "piId": "6728d0c0a1b2c3d4e5f60301",
+  "weight": null
+}
+```
+| Trường | Kiểu | Bắt buộc | Ràng buộc |
+|---|---|---|---|
+| `programVersionId` | ObjectId | Có | Phiên bản CTĐT tồn tại |
+| `cloId` | ObjectId | Có | CLO tồn tại **và thuộc đề cương `syllabusId`** |
+| `piId` | ObjectId | Có | PI tồn tại **và thuộc `programVersionId`** |
+| `weight` | Double | Không | `null` hợp lệ; nếu có thì `0 < weight <= 1` (`0` và `> 1` → `400`) |
+
+- `201 Created`: `CloPiLinkResponse` (`verification.status = UNVERIFIED`).
+- Lỗi:
+  - `400`: sai định dạng ID; `weight` ngoài (0, 1] (*"weight phải lớn hơn 0 và nhỏ hơn hoặc bằng 1"*).
+  - `403`: ngoài phạm vi / không đủ vai trò.
+  - `404`: đề cương, phiên bản CTĐT, CLO hoặc PI không tồn tại.
+  - `409 CONFLICT`: đã có liên kết `(cloId, piId)` (*"Liên kết giữa CLO id=[...] và PI id=[...] đã tồn tại"*).
+  - `422 BUSINESS_RULE_VIOLATION`: CLO không thuộc đề cương `syllabusId` (*"CLO id=[...] không thuộc về đề cương id=[...]"*); PI không thuộc phiên bản CTĐT (*"PI id=[...] không thuộc về phiên bản CTĐT id=[...]"*).
+- Backend **không** chặn tạo liên kết khi đề cương `CONFIRMED` (khác với CLO).
+
+##### `DELETE /api/v1/clo-pi-links/{id}`
+Xóa liên kết. Quyền: `ADMIN`, `PROGRAM_MANAGER` (+ phạm vi — ADR 0009 đề xuất; backend đã hiện thực trên nhánh F03, chờ merge, suy theo `programVersionId` của liên kết). `204 No Content`. Lỗi: `400`, `403`, `404`. Ghi chú: ở thời điểm tài liệu này, backend chưa chặn xóa liên kết đã `VERIFIED` hoặc đã được tham chiếu bởi dữ liệu đo lường (F06 chưa hiện thực) — cần xác nhận với backend khi F06 có.
+
+##### `GET /api/v1/syllabi/{syllabusId}/clo-pi-matrix?programVersionId={programVersionId}`
+Ma trận CLO × PI của đề cương trên một phiên bản CTĐT. Quyền: mọi vai trò đã xác thực.
+
+| Tham số | Kiểu | Bắt buộc | Mô tả |
+|---|---|---|---|
+| `programVersionId` | ObjectId (query) | **Có** | Thiếu → `400` (*"Thiếu tham số bắt buộc: 'programVersionId'"*); sai định dạng → `400` |
+
+Phản hồi `200` (`CloPiMatrixResponse`):
+```json
+{
+  "syllabusId": "6728d300a1b2c3d4e5f60021",
+  "programVersionId": "6728d0b0a1b2c3d4e5f60101",
+  "clos": [
+    {
+      "id": "6728d400a1b2c3d4e5f60031",
+      "syllabusId": "6728d300a1b2c3d4e5f60021",
+      "courseId": "6728d100a1b2c3d4e5f60001",
+      "code": "CLO1",
+      "contentOriginal": "",
+      "bloomLevel": 2,
+      "bloomNote": null,
+      "measurement": null,
+      "verification": { "status": "UNVERIFIED", "verifiedBy": null, "verifiedAt": null, "note": null },
+      "extra": null
+    }
+  ],
+  "pis": [
+    {
+      "id": "6728d0c0a1b2c3d4e5f60301",
+      "programVersionId": "6728d0b0a1b2c3d4e5f60101",
+      "ploId": "6728d0d0a1b2c3d4e5f60401",
+      "code": "PI1.1",
+      "displayOrder": 1,
+      "nameOriginalTerm": null,
+      "contentOriginal": "",
+      "contentShort": null,
+      "capabilityLevelRaw": null,
+      "targetPassRate": null,
+      "verification": { "status": "UNVERIFIED", "verifiedBy": null, "verifiedAt": null, "note": null },
+      "reviewNote": null
+    }
+  ],
+  "links": [
+    {
+      "cloId": "6728d400a1b2c3d4e5f60031",
+      "piId": "6728d0c0a1b2c3d4e5f60301",
+      "linkId": "6728d500a1b2c3d4e5f60041",
+      "weight": null,
+      "verification": { "status": "UNVERIFIED", "verifiedBy": null, "verifiedAt": null, "note": null }
+    }
+  ]
+}
+```
+- `clos`: toàn bộ CLO của đề cương, sắp xếp `code` tăng dần theo chuỗi. `pis`: toàn bộ PI của phiên bản CTĐT, sắp xếp theo `displayOrder`. `links`: chỉ các ô **đã có liên kết** (thưa); ô không có phần tử trong `links` nghĩa là chưa liên kết. Mảng có thể rỗng (đề cương chưa có CLO, phiên bản chưa có PI, hoặc chưa liên kết).
+- Mỗi ô mang `verification` riêng; UI phải phân biệt hiển thị `UNVERIFIED` / `VERIFIED` / `NEEDS_CLARIFICATION`.
+- Lỗi: `400` (thiếu/sai `programVersionId`, sai `syllabusId`), `404` (đề cương hoặc phiên bản CTĐT không tồn tại).
+
+##### `PUT /api/v1/clo-pi-links/{id}/verification`
+Thẩm định (xác nhận) một liên kết CLO–PI. Quyền: **chỉ `QA_OFFICER`** (`ADMIN` nhận `403`), **và** `scope.programIds` của người dùng phải chứa CTĐT của phiên bản chứa liên kết (**đã có**).
+```json
+{ "status": "VERIFIED", "note": "Đã đối chiếu với ma trận chuẩn của Khoa" }
+```
+| Trường | Kiểu | Bắt buộc | Ràng buộc |
+|---|---|---|---|
+| `status` | Enum | Có | `UNVERIFIED` \| `VERIFIED` \| `NEEDS_CLARIFICATION` |
+| `note` | String | Không | Tối đa 2000 ký tự |
+
+- `200 OK`: `CloPiLinkResponse` với `verification` được ghi `verifiedBy` (ID người dùng hiện tại), `verifiedAt` (thời điểm xử lý, UTC) và `note`. Gọi lại sẽ ghi đè bản xác nhận trước.
+- Lỗi: `400` (thiếu/sai `status`, `note` > 2000), `403` (không phải `QA_OFFICER`, hoặc ngoài phạm vi: *"Chuyên viên QA không có quyền thẩm định trong phạm vi phiên bản CTĐT này"*), `404` (liên kết không tồn tại).
+- Gợi ý UI: chỉ hiện nút thẩm định cho người dùng có vai trò `QA_OFFICER`; xử lý `403` do ngoài phạm vi bằng thông báo, không điều hướng.
+
+---
 
 ### 6.3. F04: Đề Thi, Ma Trận Đánh Giá & Rubric (Assessment, Question Matrix & Rubrics)
 - `GET /api/v1/assessments` — Danh sách bài đánh giá (giữa kỳ, cuối kỳ, đồ án).
@@ -688,13 +1111,91 @@ Các mục dưới đây giữ vai trò khung định hướng và sẽ được
 - `GET /api/v1/rubrics` — Danh mục tiêu chí Rubric đánh giá năng lực.
 
 ### 6.4. F05: Quản Lý Học Kỳ, Lớp Học Phần & Nhập Điểm (Terms, Course Sections & Score Import)
-- `GET /api/v1/terms` — Danh sách học kỳ năm học.
+
+#### 6.4.1. Học kỳ — Terms (US-18, thuộc F05a, **đã hiện thực**)
+
+Học kỳ được hiện thực trước các phần còn lại của F05 vì đề cương (§6.2.4) tham chiếu `effectiveFromTermId` / `effectiveToTermId`. Nguồn: `TermController`, `doc/plan/F05a-hoc-ky-lop-sinh-vien.md` (US-18).
+
+**Quyền:** đọc (`GET`) = mọi vai trò đã xác thực. Ghi (`POST`, `PUT`, `PUT .../status`) = `ADMIN`, `PROGRAM_MANAGER`, **không** kiểm tra phạm vi `scope` (học kỳ là dữ liệu dùng chung). `DELETE` = **chỉ `ADMIN`**. Vai trò khác ghi → `403`.
+
+**Enum `TermStatus`:** `OPEN` (đang mở, mặc định khi tạo), `SCORE_LOCKED` (khóa sổ điểm), `CLOSED` (đã đóng).
+
+> **Phạm vi hiện tại của khóa sổ điểm:** Giá trị `SCORE_LOCKED` / `CLOSED` hiện **chỉ được lưu và trả về**. Việc **từ chối nhập/sửa điểm** khi học kỳ ở `SCORE_LOCKED` hoặc `CLOSED` thuộc **F05b (nhập điểm), chưa hiện thực** — chưa có endpoint nhập điểm nào kiểm tra trạng thái này. UI chưa được phép coi `SCORE_LOCKED` là đã chặn ghi ở backend; khi F05b có sẽ trả lỗi qua `422`/`403` (mã cụ thể cần xác nhận với backend lúc đó).
+
+**Đối tượng `TermResponse`:**
+```json
+{
+  "id": "6728d0a0a1b2c3d4e5f60201",
+  "code": "2026-HK1",
+  "academicYear": "2026-2027",
+  "startDate": "2026-09-01T00:00:00Z",
+  "endDate": "2027-01-15T00:00:00Z",
+  "status": "OPEN"
+}
+```
+`academicYear`, `startDate`, `endDate` có thể `null`. Thời gian theo §1.2.
+
+##### `GET /api/v1/terms`
+Danh sách học kỳ, sắp xếp `startDate` **giảm dần** (mới nhất trước). Quyền: mọi vai trò đã xác thực. Phản hồi `200`: mảng `TermResponse`, **không phân trang**.
+
+##### `GET /api/v1/terms/{id}`
+Phản hồi `200`: `TermResponse`. Lỗi: `400` (ID sai định dạng), `404`.
+
+##### `POST /api/v1/terms`
+Tạo học kỳ (`status = OPEN`). Quyền: `ADMIN`, `PROGRAM_MANAGER`.
+```json
+{ "code": "2026-HK1", "academicYear": "2026-2027", "startDate": "2026-09-01T00:00:00Z", "endDate": "2027-01-15T00:00:00Z" }
+```
+| Trường | Kiểu | Bắt buộc | Ràng buộc |
+|---|---|---|---|
+| `code` | String | Có | `^[A-Za-z0-9_-]{2,30}$`; được trim; duy nhất; bất biến sau khi tạo |
+| `academicYear` | String | Không | Tự do; được trim |
+| `startDate`, `endDate` | ISO-8601 UTC | Không | Nếu cả hai có thì `startDate <= endDate` |
+
+- `201 Created`: `TermResponse`.
+- Lỗi: `400` (`code` sai mẫu/thiếu, ngày sai định dạng), `403`, `409 CONFLICT` (trùng `code`: *"Mã học kỳ [...] đã tồn tại trong hệ thống"*), `422 BUSINESS_RULE_VIOLATION` khi `startDate` sau `endDate` (*"Thời điểm bắt đầu học kỳ (startDate) không được sau thời điểm kết thúc (endDate)"*). Lưu ý: `startDate > endDate` trả **`422`**, không phải `400`.
+
+##### `PUT /api/v1/terms/{id}`
+Cập nhật thông tin học kỳ (không đổi `code`, không đổi `status`). Quyền: `ADMIN`, `PROGRAM_MANAGER`.
+```json
+{ "academicYear": "2026-2027", "startDate": "2026-09-01T00:00:00Z", "endDate": "2027-01-15T00:00:00Z" }
+```
+- `academicYear` không gửi/`null` thì giữ nguyên; **`startDate` và `endDate` không gửi/`null` thì bị ghi đè thành `null`** — UI luôn gửi đủ giá trị hiện tại.
+- Kiểm tra `startDate <= endDate` áp dụng trên giá trị hiệu lực (giá trị mới, nếu thiếu thì giá trị cũ).
+- `200 OK`: `TermResponse`. Lỗi: `400`, `403`, `404`, `422` (`startDate` sau `endDate`).
+
+##### `PUT /api/v1/terms/{id}/status`
+Đổi trạng thái học kỳ. Quyền: `ADMIN`, `PROGRAM_MANAGER`.
+```json
+{ "status": "OPEN", "reason": "Cần chỉnh sửa điểm sau phúc khảo" }
+```
+| Trường | Kiểu | Bắt buộc | Ràng buộc |
+|---|---|---|---|
+| `status` | Enum `TermStatus` | Có | `OPEN` \| `SCORE_LOCKED` \| `CLOSED` |
+| `reason` | String | **Có điều kiện** | Bắt buộc, không rỗng/không chỉ khoảng trắng **khi mở lại `SCORE_LOCKED → OPEN`**; các chuyển khác bỏ qua |
+
+Quy tắc theo code hiện tại:
+- Trùng trạng thái hiện tại → `200`, trả về không đổi (idempotent).
+- `SCORE_LOCKED → OPEN` mà thiếu `reason` → `422` (*"Cần nêu rõ lý do giải trình khi mở lại học kỳ đã khóa sổ điểm"*).
+- Mọi chuyển trạng thái khác (`OPEN → SCORE_LOCKED`, `OPEN → CLOSED`, `SCORE_LOCKED → CLOSED`, `CLOSED → ...`) hiện **không bị ràng buộc thêm** ở backend (kể cả `CLOSED → OPEN` không đòi `reason`). Quy tắc chiều chuyển hợp lệ (ví dụ có cho phép mở lại `CLOSED` không) **cần xác nhận với backend**; UI nên chỉ đề xuất luồng `OPEN → SCORE_LOCKED → CLOSED` và `SCORE_LOCKED → OPEN` (kèm lý do).
+- `reason` hiện chỉ được ghi vào log máy chủ cùng người thao tác; **không** được lưu trong bản ghi học kỳ và **không** có trong `TermResponse` (việc ghi vào `audit_logs` chưa thấy trong code — cần xác nhận với backend).
+
+- `200 OK`: `TermResponse`. Lỗi: `400` (thiếu/sai `status`; không có `fieldErrors` nếu giá trị enum sai), `403`, `404`, `422` (thiếu `reason` như trên).
+- Gợi ý UI: khi người dùng chọn mở lại học kỳ `SCORE_LOCKED`, hiển thị ô nhập lý do bắt buộc trước khi gửi; nếu nhận `422` vẫn giữ nội dung đã nhập.
+
+##### `DELETE /api/v1/terms/{id}`
+Xóa học kỳ. Quyền: **chỉ `ADMIN`**. `204 No Content`.
+- Lỗi: `404`; `422` khi học kỳ đang được đề cương áp dụng (*"Không thể xóa học kỳ mã [...] vì đang được áp dụng trong đề cương môn học"*) hoặc đã có lớp học phần (*"... vì đang có lớp học phần"*).
+
+#### 6.4.2. Phần còn lại của F05 (chưa hiện thực — khung định hướng)
 - `GET /api/v1/course-sections` — Danh sách lớp học phần theo học kỳ.
 - `GET /api/v1/course-sections/{id}/roster` — Danh sách sinh viên thuộc lớp học phần.
 - `POST /api/v1/course-sections/{id}/scores/import-preview` — Tải file Excel điểm sinh viên lên để xem trước kết quả parse và kiểm tra lỗi.
 - `POST /api/v1/course-sections/{id}/scores/confirm` — Xác nhận lưu điểm sinh viên vào CSDL (yêu cầu transaction và ghi `audit_logs`).
 - `PUT /api/v1/course-sections/{id}/scores/{studentId}` — Cập nhật điểm từng phần của sinh viên (bắt buộc nhập `reason`).
 - `POST /api/v1/course-sections/{id}/scores/lock` — Khóa bảng điểm học phần sau khi hoàn tất.
+
+> Lưu ý: kế hoạch backend `doc/plan/F05a-hoc-ky-lop-sinh-vien.md` đề xuất đường dẫn lớp học phần là `/api/v1/sections/...` (khác `/course-sections/...` ở trên). Đường dẫn cuối cùng **cần xác nhận với backend** khi F05a/F05b được hiện thực.
 
 ### 6.5. F06: Tính Toán & Đo Lường Chuẩn Đầu Ra (Calculation & Outcome Measurement Engine)
 - `POST /api/v1/calculations/run` — Khởi chạy tiến trình tính toán đo lường kết quả chuẩn đầu ra theo phạm vi (lớp học phần / toàn khóa).
