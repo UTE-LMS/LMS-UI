@@ -615,6 +615,47 @@ Backend kiểm tra quyền hạn của người dùng trên từng tài nguyên 
 
 ---
 
+### 5.5. Nhóm API Nhật Ký Thao Tác (US-04: Audit Logs)
+
+Chỉ đọc. Quyền: **`ADMIN`** (vai trò khác → 403, chưa đăng nhập → 401).
+
+#### `GET /api/v1/audit-logs`
+
+Danh sách nhật ký có phân trang chuẩn (§5.1), **mới nhất trước**. Mọi tham số đều tùy chọn và kết hợp bằng AND.
+
+| Tham số | Kiểu | Mô tả |
+|---|---|---|
+| `action` | Enum `AuditAction` | `SCORE_UPDATE`, `IMPORT_CONFIRM`, `ASSESSMENT_APPROVE`, `ASSESSMENT_REJECT`, `RUN_CALCULATION`, `RULE_CONFIRM`, `LOGIN` |
+| `entity` | String (≤ 64) | Tên collection của thực thể bị tác động, ví dụ `users`, `scores` |
+| `entityId` | String (≤ 64) | ID thực thể bị tác động |
+| `userId` | ObjectId (24 hex) | Người thực hiện |
+| `from`, `to` | ISO-8601 UTC, ví dụ `2026-11-01T00:00:00Z` | Khoảng thời gian, **bao gồm** hai đầu mút; `from` không được sau `to` |
+| `page`, `size` | Integer | Như §5.1 (mặc định `0`/`20`, `size` 1..100) |
+
+Phản hồi `200`:
+```json
+{
+  "content": [
+    {
+      "id": "6728c0f2a1b2c3d4e5f60718",
+      "at": "2026-11-03T08:15:30Z",
+      "userId": "6728b9e1a1b2c3d4e5f60001",
+      "action": "LOGIN",
+      "entity": { "collection": "users", "id": "6728b9e1a1b2c3d4e5f60001" },
+      "before": null,
+      "after": null,
+      "reason": null,
+      "ip": "203.0.113.7"
+    }
+  ],
+  "page": 0, "size": 20, "totalElements": 1, "totalPages": 1, "last": true
+}
+```
+- `userId` có thể `null` nếu hành động không gắn với người dùng đã xác thực. `before`/`after` là object hoặc `null`; trường nhạy cảm (mật khẩu, token, secret...) luôn hiển thị là `"[PROTECTED]"`. `reason` bắt buộc có với `SCORE_UPDATE`.
+- Lỗi `400 VALIDATION_ERROR`: `page`/`size` ngoài biên, `action` không thuộc danh sách, `userId` sai định dạng, `from`/`to` sai định dạng ISO-8601, hoặc `from` sau `to`.
+
+---
+
 ## 6. Khung Mục Lục Endpoint Cho Các Bước Tiếp Theo (F02 - F08)
 
 Các mục dưới đây giữ vai trò khung định hướng và sẽ được cập nhật chi tiết (Request/Response DTO, URL, query params) tương ứng qua từng bước phát triển của đề tài:
