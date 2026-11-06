@@ -15,7 +15,7 @@
         [routerLinkActiveOptions]="{ exact: item.routerLink === urlConst.ROUTE.MANAGEMENT.DASHBOARD }"
         class="nav-link"
       >
-        <span class="nav-dot">•</span>
+        <span class="nav-dot" aria-hidden="true">•</span>
         <span class="nav-text">{{ item.title }}</span>
       </a>
       }
