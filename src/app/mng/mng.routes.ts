@@ -31,6 +31,24 @@ export const mngRoutes: Routes = [
         loadChildren: () => import('./users/users.routes').then(m => m.usersRoutes),
       },
       {
+        path: 'programs',
+        canActivate: [canActiveGuard],
+        data: {
+          listRoles: [SystemConstant.MNG_ROLE.ADMIN],
+          rolesRelation: 'OR',
+        },
+        loadChildren: () => import('./programs/programs.routes').then(m => m.programsRoutes),
+      },
+      {
+        path: 'curriculum',
+        canActivate: [canActiveGuard],
+        data: {
+          listRoles: ALL_MNG_ROLES,
+          rolesRelation: 'OR',
+        },
+        loadChildren: () => import('./curriculum/curriculum.routes').then(m => m.curriculumRoutes),
+      },
+      {
         // Không đặt listRoles: ai đã đăng nhập cũng xem được trang giải thích này
         path: 'forbidden',
         loadComponent: () => import('./forbidden/forbidden.component').then(m => m.ForbiddenComponent),

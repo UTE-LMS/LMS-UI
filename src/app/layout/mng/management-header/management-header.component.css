@@ -1,0 +1,145 @@
+.header-navbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 56px;
+  padding: 0 24px;
+  background-color: #0b1f33;
+  color: #ffffff;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+}
+
+.header-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.header-logo {
+  height: 34px;
+  width: auto;
+  object-fit: contain;
+}
+
+.brand-title {
+  color: #ffffff;
+  font-size: 1.125rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.header-nav {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.nav-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 9999px;
+  color: #b0c4de;
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition: all 0.15s ease-in-out;
+}
+
+.nav-link:hover {
+  color: #ffffff;
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+.nav-link.nav-active {
+  color: #ffffff;
+  background-color: rgba(255, 255, 255, 0.16);
+  font-weight: 600;
+}
+
+.nav-dot {
+  font-size: 1rem;
+  line-height: 1;
+  color: #38bdf8;
+}
+
+.nav-link:not(.nav-active) .nav-dot {
+  color: #7dd3fc;
+  opacity: 0.6;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.test-data-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border: 1px solid rgba(251, 191, 36, 0.8);
+  border-radius: 4px;
+  background-color: rgba(245, 158, 11, 0.12);
+  color: #fef3c7;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.user-profile-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  background-color: rgba(255, 255, 255, 0.06);
+  color: #ffffff;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+  user-select: none;
+}
+
+.user-profile-trigger:hover {
+  background-color: rgba(255, 255, 255, 0.14);
+}
+
+.role-avatar-circle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 9999px;
+  background-color: #d97706;
+  color: #ffffff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  border: 1.5px solid rgba(254, 243, 199, 0.4);
+}
+
+.user-name-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #f1f5f9;
+}
+
+.logout-menu-item {
+  color: #dc2626 !important;
+}
+
+.logout-menu-item:hover {
+  background-color: #fef2f2 !important;
+  color: #b91c1c !important;
+}

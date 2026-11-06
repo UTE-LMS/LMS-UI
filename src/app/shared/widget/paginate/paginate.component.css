@@ -1,0 +1,130 @@
+.pagination-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.pagination-info {
+  font-size: 13px;
+  color: #64748b;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.pagination-highlight {
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.pagination-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.page-size-wrapper {
+  display: inline-flex;
+  align-items: center;
+}
+
+:host ::ng-deep .page-size-select .ant-select-selector {
+  border-radius: 6px !important;
+  border-color: #cbd5e1 !important;
+  font-size: 12px !important;
+  height: 28px !important;
+  padding: 0 8px !important;
+  color: #475569 !important;
+  background-color: #f8fafc !important;
+  display: flex !important;
+  align-items: center !important;
+}
+
+:host ::ng-deep .page-size-select .ant-select-selector:hover {
+  border-color: #2563eb !important;
+}
+
+/* Kiểu dáng các nút số trang của nz-pagination */
+:host ::ng-deep .ant-pagination {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+:host ::ng-deep .ant-pagination-item {
+  border-radius: 6px !important;
+  border-color: #e2e8f0 !important;
+  background-color: #ffffff !important;
+  font-size: 12.5px !important;
+  min-width: 28px !important;
+  height: 28px !important;
+  line-height: 26px !important;
+  transition: all 0.15s ease-in-out;
+}
+
+:host ::ng-deep .ant-pagination-item a {
+  color: #475569 !important;
+  padding: 0 4px !important;
+}
+
+:host ::ng-deep .ant-pagination-item:hover {
+  border-color: #2563eb !important;
+}
+
+:host ::ng-deep .ant-pagination-item:hover a {
+  color: #2563eb !important;
+}
+
+:host ::ng-deep .ant-pagination-item-active {
+  background-color: #2563eb !important;
+  border-color: #2563eb !important;
+  box-shadow: 0 1px 2px rgba(37, 99, 235, 0.2);
+}
+
+:host ::ng-deep .ant-pagination-item-active a {
+  color: #ffffff !important;
+  font-weight: 600 !important;
+}
+
+:host ::ng-deep .ant-pagination-prev,
+:host ::ng-deep .ant-pagination-next {
+  min-width: 28px !important;
+  height: 28px !important;
+  line-height: 26px !important;
+  border-radius: 6px !important;
+}
+
+:host ::ng-deep .ant-pagination-prev .ant-pagination-item-link,
+:host ::ng-deep .ant-pagination-next .ant-pagination-item-link {
+  border-radius: 6px !important;
+  border-color: #e2e8f0 !important;
+  background-color: #ffffff !important;
+  color: #64748b !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: all 0.15s ease-in-out;
+}
+
+:host ::ng-deep .ant-pagination-prev:hover .ant-pagination-item-link,
+:host ::ng-deep .ant-pagination-next:hover .ant-pagination-item-link {
+  border-color: #2563eb !important;
+  color: #2563eb !important;
+}
+
+:host ::ng-deep .ant-pagination-disabled .ant-pagination-item-link {
+  border-color: #f1f5f9 !important;
+  color: #cbd5e1 !important;
+  background-color: #f8fafc !important;
+}
+
+:host ::ng-deep .ant-pagination-jump-prev,
+:host ::ng-deep .ant-pagination-jump-next {
+  min-width: 28px !important;
+  height: 28px !important;
+  line-height: 26px !important;
+}

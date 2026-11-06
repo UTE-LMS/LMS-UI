@@ -1,0 +1,140 @@
+/* list-curriculum-versions.component.css - Khớp chuẩn UI.pdf Trang 3 */
+
+.program-header-banner {
+  background: transparent;
+  padding: 0 0 20px 0;
+}
+
+.program-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: #0f172a;
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+
+.program-subtitle {
+  font-size: 13.5px;
+  color: #64748b;
+  margin-top: 4px;
+}
+
+.ui-alert-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background-color: #edf4ff;
+  border-left: 4px solid #0d4292;
+  border-radius: 4px;
+  padding: 12px 16px;
+  margin-bottom: 24px;
+}
+
+.ui-alert-icon {
+  color: #0d4292;
+  font-size: 16px;
+  margin-top: 2px;
+}
+
+.ui-alert-text {
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: #1e3a8a;
+  margin: 0;
+}
+
+/* Chuẩn bảng dữ liệu UI.pdf */
+.ui-pdf-table-wrapper {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+:host ::ng-deep .ui-pdf-table-wrapper .ant-table {
+  background: transparent;
+}
+
+:host ::ng-deep .ui-pdf-table-wrapper .ant-table-thead > tr > th {
+  background: transparent !important;
+  color: #0d4292 !important;
+  font-weight: 600 !important;
+  font-size: 13px !important;
+  border-bottom: 1.5px solid #bfdbfe !important;
+  padding: 14px 16px !important;
+}
+
+:host ::ng-deep .ui-pdf-table-wrapper .ant-table-tbody > tr > td {
+  border-bottom: 1px solid #f1f5f9 !important;
+  padding: 16px 16px !important;
+  font-size: 13.5px;
+  color: #334155;
+}
+
+:host ::ng-deep .ui-pdf-table-wrapper .ant-table-tbody > tr:hover > td {
+  background: #f8fafc !important;
+}
+
+:host ::ng-deep .ui-pdf-table-wrapper .ant-table-tbody > tr {
+  position: relative;
+  transition: all 0.15s ease;
+}
+
+:host ::ng-deep .ui-pdf-table-wrapper .ant-table-tbody > tr:hover td:first-child {
+  box-shadow: inset 3px 0 0 #2563eb;
+}
+
+.version-code-text {
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.version-code-link {
+  display: inline-flex;
+  align-items: center;
+  font-weight: 600;
+  color: #0f172a;
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.version-code-link:hover {
+  color: #2563eb;
+  text-decoration: underline;
+}
+
+.current-view-badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 500;
+  color: #475569;
+  background-color: #f1f5f9;
+  border-radius: 4px;
+  padding: 2px 6px;
+  margin-left: 8px;
+}
+
+.table-action-link {
+  color: #2563eb;
+  font-weight: 500;
+  font-size: 13.5px;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.table-action-link:hover {
+  color: #1d4ed8;
+  text-decoration: underline;
+}
+
+.table-action-link.danger {
+  color: #dc2626;
+}
+
+.table-action-link.danger:hover {
+  color: #b91c1c;
+}

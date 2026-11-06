@@ -1,7 +1,253 @@
-.users-note { margin: 8px 0 16px; color: #66727f; }
-.users-line { line-height: 1.6; }
-.users-muted { color: #66727f; }
-.users-self { margin-left: 4px; font-size: 12px; color: #66727f; }
-.users-status-text { margin-top: 2px; font-size: 12px; color: #17703f; }
-.users-status-locked { color: #b42318; }
-.users-state { padding: 24px 0; text-align: center; color: #46525f; }
+/* Header */
+.title-underline {
+  width: 44px;
+  height: 3px;
+  background-color: #2563eb;
+  border-radius: 9999px;
+  margin-top: 8px;
+}
+
+/* Nút thêm người dùng chuẩn UI.pdf */
+.add-user-btn {
+  background-color: #2563eb !important;
+  border-color: #2563eb !important;
+  color: #ffffff !important;
+  font-weight: 500;
+  border-radius: 8px;
+  height: 38px;
+  padding: 0 16px;
+  display: inline-flex;
+  align-items: center;
+  box-shadow: 0 1px 2px rgba(37, 99, 235, 0.2);
+  transition: all 0.15s ease-in-out;
+}
+
+.add-user-btn:hover {
+  background-color: #1d4ed8 !important;
+  border-color: #1d4ed8 !important;
+}
+
+/* Ô tìm kiếm */
+.search-box {
+  width: 260px;
+}
+
+.search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #94a3b8;
+  font-size: 13px;
+  pointer-events: none;
+}
+
+.search-input {
+  height: 38px;
+  padding-left: 36px;
+  padding-right: 32px;
+  border-radius: 8px;
+  border-color: #cbd5e1;
+  font-size: 13.5px;
+  transition: all 0.15s ease-in-out;
+}
+
+.search-input:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+}
+
+.search-clear-btn {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  font-size: 13px;
+  cursor: pointer;
+  padding: 2px;
+}
+
+.search-clear-btn:hover {
+  color: #64748b;
+}
+
+/* Khung card bảng phẳng, tối giản theo UI.pdf */
+.table-card {
+  background-color: #ffffff;
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  padding: 20px 24px;
+}
+
+/* ========================================================
+   BẢNG CHUẨN UI.PDF (Áp dụng đè Ant Design / Ng-Zorro)
+   ======================================================== */
+:host ::ng-deep .custom-admin-table .ant-table {
+  background: transparent !important;
+  font-family: inherit;
+}
+
+:host ::ng-deep .custom-admin-table .ant-table-container {
+  border: none !important;
+}
+
+:host ::ng-deep .custom-admin-table .ant-table-content {
+  border: none !important;
+}
+
+/* Tiêu đề cột thead: Màu xanh đặc trưng UI.pdf (#0d4292 / #1e40af), nền trong suốt, gạch đáy thanh mảnh */
+:host ::ng-deep .custom-admin-table .ant-table-thead > tr > th {
+  background: transparent !important;
+  color: #0d4292 !important;
+  font-size: 13.5px !important;
+  font-weight: 600 !important;
+  text-transform: none !important;
+  letter-spacing: normal !important;
+  padding: 14px 18px !important;
+  border: none !important;
+  border-bottom: 1.5px solid #bfdbfe !important;
+  white-space: nowrap;
+}
+
+/* Ẩn đường chia dọc mặc định của ng-zorro */
+:host ::ng-deep .custom-admin-table .ant-table-thead > tr > th::before {
+  display: none !important;
+}
+
+/* Dòng dữ liệu tbody: Nền trong suốt, padding thoáng đãng, gạch ngăn cách siêu mờ */
+:host ::ng-deep .custom-admin-table .ant-table-tbody > tr > td {
+  padding: 16px 18px !important;
+  border: none !important;
+  border-bottom: 1px solid #f1f5f9 !important;
+  font-size: 13.5px !important;
+  vertical-align: middle !important;
+  color: #334155;
+  background: transparent;
+  transition: background-color 0.15s ease-in-out;
+}
+
+/* Hover dòng và đường chỉ xanh bên trái (giống dòng gv.oop01 ở UI.pdf trang 33) */
+:host ::ng-deep .custom-admin-table .ant-table-tbody > tr.ui-pdf-row:hover > td {
+  background-color: #f8fafc !important;
+}
+
+:host ::ng-deep .custom-admin-table .ant-table-tbody > tr.ui-pdf-row:hover > td:first-child {
+  box-shadow: inset 3px 0 0 #2563eb;
+}
+
+/* Typography chi tiết người dùng */
+.user-identity {
+  display: flex;
+  flex-direction: column;
+}
+
+.user-username {
+  font-weight: 700;
+  color: #0f172a;
+  font-size: 14px;
+  letter-spacing: -0.01em;
+}
+
+.user-subtext {
+  font-size: 12px;
+  color: #64748b;
+  margin-top: 2px;
+}
+
+.user-self-pill {
+  font-size: 11.5px;
+  color: #1d4ed8;
+  background-color: #eff6ff;
+  border: 1px solid #bfdbfe;
+  font-weight: 500;
+  padding: 1px 6px;
+  border-radius: 9999px;
+  line-height: 1.2;
+}
+
+/* Vai trò theo UI.pdf (chữ thường, rõ ràng, không dùng badge màu lòe loẹt) */
+.user-role-text {
+  font-size: 13.5px;
+  color: #1e293b;
+  font-weight: 400;
+  line-height: 1.4;
+}
+
+/* Phạm vi theo UI.pdf */
+.user-scope-text {
+  font-size: 13.5px;
+  line-height: 1.4;
+  color: #334155;
+}
+
+/* Trạng thái: Chấm tròn màu + Chữ theo UI.pdf trang 33 */
+.status-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: transparent;
+  border: none;
+  padding: 4px 8px;
+  margin: -4px -8px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13.5px;
+  color: #1e293b;
+  transition: background-color 0.15s ease-in-out;
+  text-align: left;
+}
+
+.status-btn:hover {
+  background-color: #f1f5f9;
+}
+
+.status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: inline-block;
+}
+
+.status-dot-active {
+  background-color: #16a34a; /* Xanh lá chuẩn UI.pdf */
+}
+
+.status-dot-locked {
+  background-color: #dc2626; /* Đỏ chuẩn UI.pdf */
+}
+
+.status-label {
+  font-size: 13.5px;
+  color: #1e293b;
+  font-weight: 400;
+}
+
+.user-date-text {
+  font-size: 13.5px;
+  color: #475569;
+}
+
+/* Nút hành động Sửa kiểu text link chuẩn UI.pdf */
+.table-action-link {
+  color: #2563eb;
+  font-weight: 500;
+  font-size: 13.5px;
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-decoration: none;
+  transition: color 0.15s ease-in-out;
+  display: inline-flex;
+  align-items: center;
+}
+
+.table-action-link:hover {
+  color: #1d4ed8;
+  text-decoration: underline;
+}

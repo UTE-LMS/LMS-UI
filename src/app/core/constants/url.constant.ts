@@ -27,9 +27,24 @@ export const UrlConstant = {
     AUTH_ME: environment.serverUrl + 'api/v1/auth/me',
     USERS: environment.serverUrl + 'api/v1/users',
 
+    // F02 - Chương trình đào tạo và phiên bản (API-CONTRACT.md §6.1)
+    PROGRAMS: environment.serverUrl + 'api/v1/programs',
+    PROGRAM_VERSIONS: environment.serverUrl + 'api/v1/program-versions',
+    PROGRAM_VERSION_DETAIL: (id: string) => `${environment.serverUrl}api/v1/program-versions/${id}`,
+    PROGRAM_VERSION_STATUS: (id: string) => `${environment.serverUrl}api/v1/program-versions/${id}/status`,
+    PROGRAM_VERSION_VERIFY: (id: string) => `${environment.serverUrl}api/v1/program-versions/${id}/verification`,
+    PLOS: (pvId: string) => `${environment.serverUrl}api/v1/program-versions/${pvId}/plos`,
+    PLO_DETAIL: (pvId: string, id: string) => `${environment.serverUrl}api/v1/program-versions/${pvId}/plos/${id}`,
+    PLO_VERIFY: (pvId: string, id: string) => `${environment.serverUrl}api/v1/program-versions/${pvId}/plos/${id}/verification`,
+    PIS: (pvId: string) => `${environment.serverUrl}api/v1/program-versions/${pvId}/pis`,
+    PI_DETAIL: (pvId: string, id: string) => `${environment.serverUrl}api/v1/program-versions/${pvId}/pis/${id}`,
+    PI_VERIFY: (pvId: string, id: string) => `${environment.serverUrl}api/v1/program-versions/${pvId}/pis/${id}/verification`,
+    PI_CONTRIBUTIONS: (pvId: string) => `${environment.serverUrl}api/v1/program-versions/${pvId}/pi-contributions`,
+    PI_CONTRIBUTION_DETAIL: (pvId: string, id: string) => `${environment.serverUrl}api/v1/program-versions/${pvId}/pi-contributions/${id}`,
+    PROGRAM_COURSES: (pvId: string) => `${environment.serverUrl}api/v1/program-versions/${pvId}/courses`,
+
     // Categories
     DEMO_API: environment.serverUrl + 'rest/demo',
-
   },
 
   ROUTE: {
@@ -49,6 +64,11 @@ export const UrlConstant = {
 
       USERS: '/mng/users',
       USERS_NEW: '/mng/users/new',
+
+      PROGRAMS: '/mng/programs',
+      CURRICULUM: '/mng/curriculum',
+      CURRICULUM_DETAIL: (versionId: string) => `/mng/curriculum/versions/${versionId}`,
+      CURRICULUM_EDIT: (versionId: string) => `/mng/curriculum/versions/${versionId}/edit`,
 
       CATEGORIES: '/mng/categories',
       ACADEMIC_RANKS: '/mng/categories/academic-ranks',
