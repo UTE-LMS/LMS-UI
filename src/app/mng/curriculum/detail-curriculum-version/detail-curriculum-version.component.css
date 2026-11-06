@@ -1,0 +1,204 @@
+/* detail-curriculum-version.component.css - Khớp mẫu UI.pdf Trang 4 */
+
+.version-detail-header {
+  margin-bottom: 24px;
+}
+
+.version-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: #0f172a;
+  letter-spacing: -0.02em;
+}
+
+.version-subtitle {
+  font-size: 14px;
+  color: #475569;
+  margin-top: 4px;
+}
+
+.section-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  margin-bottom: 24px;
+  overflow: hidden;
+}
+
+.section-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid #f1f5f9;
+  background-color: #fafbfd;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.section-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #0f172a;
+  margin: 0;
+}
+
+.section-description {
+  font-size: 13px;
+  color: #64748b;
+  margin-top: 2px;
+}
+
+.section-footer-note {
+  padding: 12px 20px;
+  background-color: #f8fafc;
+  border-top: 1px solid #f1f5f9;
+  font-size: 12.5px;
+  color: #64748b;
+  font-style: italic;
+}
+
+/* Chuẩn bảng Tree PLO & PI */
+:host ::ng-deep .plo-tree-table .ant-table-thead > tr > th {
+  background: transparent !important;
+  color: #0d4292 !important;
+  font-weight: 600 !important;
+  font-size: 13px !important;
+  border-bottom: 1.5px solid #bfdbfe !important;
+  padding: 14px 16px !important;
+}
+
+:host ::ng-deep .plo-tree-table .ant-table-tbody > tr > td {
+  border-bottom: 1px solid #f1f5f9 !important;
+  padding: 14px 16px !important;
+  font-size: 13.5px;
+}
+
+.plo-row {
+  background-color: #f8fafc;
+  font-weight: 500;
+}
+
+.pi-row {
+  background-color: #ffffff;
+}
+
+.plo-code-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  border-radius: 4px;
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.pi-code-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 7px;
+  background: #f1f5f9;
+  color: #334155;
+  border-radius: 4px;
+  font-weight: 600;
+  font-size: 12.5px;
+}
+
+.level-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  background-color: #e0f2fe;
+  color: #0369a1;
+}
+
+/* Ma trận I/R/M Table */
+.irm-matrix-wrapper {
+  overflow-x: auto;
+  max-width: 100%;
+}
+
+.irm-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.irm-table th {
+  background-color: #f8fafc;
+  color: #0d4292;
+  font-weight: 600;
+  padding: 10px 8px;
+  border: 1px solid #e2e8f0;
+  text-align: center;
+}
+
+.irm-table td {
+  padding: 10px 8px;
+  border: 1px solid #f1f5f9;
+  text-align: center;
+  color: #334155;
+}
+
+.irm-table td.course-cell {
+  text-align: left;
+  font-weight: 500;
+  padding-left: 14px;
+  white-space: nowrap;
+}
+
+.irm-cell {
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+  min-width: 44px;
+}
+
+.irm-cell:hover {
+  background-color: #f1f5f9;
+}
+
+.irm-cell.readonly {
+  cursor: default;
+}
+
+.irm-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.irm-chip-i {
+  background-color: #dbeafe;
+  color: #1e40af;
+  border: 1px solid #bfdbfe;
+}
+
+.irm-chip-r {
+  background-color: #ede9fe;
+  color: #6b21a8;
+  border: 1px solid #ddd6fe;
+}
+
+.irm-chip-m {
+  background-color: #ffedd5;
+  color: #c2410c;
+  border: 1px solid #fed7aa;
+}
+
+.irm-legend {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 20px;
+  background-color: #fafbfd;
+  border-top: 1px solid #f1f5f9;
+  font-size: 12.5px;
+}

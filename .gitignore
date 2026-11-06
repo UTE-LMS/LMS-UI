@@ -59,3 +59,4 @@ Thumbs.db
 # Kết quả E2E (Playwright)
 /test-results
 /playwright-report
+/doc/UI.pdf

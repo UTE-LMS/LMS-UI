@@ -1,0 +1,253 @@
+<div class="page-header mb-6">
+  <div class="text-xs uppercase tracking-wider font-semibold text-blue-600 mb-1">Hệ thống</div>
+  <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+    <div>
+      <h1 class="text-2xl font-bold text-slate-900 tracking-tight m-0">Chương trình đào tạo</h1>
+      <div class="title-underline"></div>
+    </div>
+    <div class="flex flex-wrap items-center gap-3">
+      <!-- Ô tìm kiếm chương trình -->
+      <div class="search-box relative">
+        <i class="fa-solid fa-magnifying-glass search-icon"></i>
+        <input
+          nz-input
+          type="text"
+          class="search-input"
+          placeholder="Tìm chương trình..."
+          [ngModel]="searchKeyword()"
+          (ngModelChange)="searchKeyword.set($event)"
+        />
+        @if (searchKeyword()) {
+        <button
+          type="button"
+          class="search-clear-btn"
+          (click)="clearSearch()"
+          aria-label="Xóa tìm kiếm"
+        >
+          <i class="fa-solid fa-circle-xmark"></i>
+        </button>
+        }
+      </div>
+
+      @if (isAdmin()) {
+      <button nz-button nzType="primary" class="add-program-btn" (click)="openCreateModal()">
+        <i class="fa-solid fa-plus mr-1.5"></i>Thêm chương trình đào tạo
+      </button>
+      }
+    </div>
+  </div>
+</div>
+
+<!-- Banner nhắc nhở quy tắc phiên bản khớp thiết kế UI.pdf trang 3 -->
+<div class="alert-banner mb-6">
+  <div class="alert-icon-box">
+    <i class="fa-solid fa-circle-info text-base"></i>
+  </div>
+  <div class="alert-text">
+    Chương trình đang áp dụng không sửa trực tiếp được. Sửa bản đang áp dụng sẽ tạo phiên bản nháp mới, bản cũ vẫn giữ để đọc lại báo cáo.
+  </div>
+</div>
+
+<div class="table-card">
+  <nz-table
+    class="custom-admin-table"
+    nzSize="middle"
+    nzShowPagination="false"
+    [nzData]="displayPrograms()"
+    [nzLoading]="manager.isLoading()"
+    [nzNoResult]="stateTpl"
+    [nzScroll]="{ x: '800px' }"
+  >
+    <thead>
+      <tr>
+        <th nzWidth="180px">Mã CTĐT</th>
+        <th nzWidth="360px">Tên chương trình đào tạo</th>
+        <th nzWidth="180px">Bậc đào tạo</th>
+        <th nzWidth="180px">Loại văn bằng</th>
+        @if (isAdmin()) {
+        <th nzAlign="right" nzWidth="100px">Thao tác</th>
+        }
+      </tr>
+    </thead>
+    <tbody>
+      @for (item of displayPrograms(); track item.id) {
+      <tr class="ui-pdf-row">
+        <td>
+          <span class="program-code-text">{{ item.code }}</span>
+        </td>
+        <td>
+          <span class="program-name-text">{{ item.name }}</span>
+        </td>
+        <td>
+          <span class="program-detail-text">{{ item.level }}</span>
+        </td>
+        <td>
+          <span class="program-detail-text">{{ item.degree }}</span>
+        </td>
+        <td nzAlign="right">
+          <a
+            class="table-action-link mr-3"
+            [routerLink]="['/mng/curriculum']"
+            [queryParams]="{ programId: item.id }"
+          >
+            Xem phiên bản
+          </a>
+          @if (isAdmin()) {
+          <button
+            type="button"
+            class="table-action-link"
+            aria-label="Sửa chương trình đào tạo"
+            (click)="openEditModal(item)"
+          >
+            Sửa
+          </button>
+          }
+        </td>
+      </tr>
+      }
+    </tbody>
+  </nz-table>
+
+  <div class="table-footer-pagination pt-4 mt-3 border-t border-slate-100">
+    <app-table-paginate
+      class="w-full block"
+      [pageConfig]="manager.listData()"
+      (pageChange)="manager.pageChange($event)"
+    />
+  </div>
+</div>
+
+<ng-template #stateTpl>
+  @if (manager.isLoading()) {
+  <div class="py-10 text-center text-slate-500">
+    <i class="fa-solid fa-spinner fa-spin text-xl mb-2 text-blue-600"></i>
+    <p class="m-0 text-sm">Đang tải danh sách chương trình đào tạo...</p>
+  </div>
+  } @else if (manager.hasError()) {
+  <div class="py-10 text-center" role="alert">
+    <div class="inline-flex items-center justify-center w-10 h-10 rounded-full bg-rose-50 text-rose-500 mb-2">
+      <i class="fa-solid fa-circle-exclamation text-lg"></i>
+    </div>
+    <p class="mb-3 text-rose-600 font-medium">Không tải được danh sách chương trình đào tạo.</p>
+    <button nz-button type="button" (click)="manager.triggerReload()">
+      <i class="fa-solid fa-rotate-right mr-1.5"></i>Thử lại
+    </button>
+  </div>
+  } @else if (searchKeyword() && (!displayPrograms() || displayPrograms().length === 0)) {
+  <div class="py-10 text-center text-slate-500">
+    <i class="fa-solid fa-magnifying-glass text-xl mb-2 text-slate-400"></i>
+    <p class="m-0 text-sm">Không tìm thấy chương trình phù hợp với từ khóa "{{ searchKeyword() }}".</p>
+    <button nz-button nzType="link" (click)="clearSearch()" class="mt-1">Xóa bộ lọc</button>
+  </div>
+  } @else {
+  <div class="py-10 text-center text-slate-500">
+    <p class="mb-3">Chưa có chương trình đào tạo nào trong hệ thống.</p>
+    @if (isAdmin()) {
+    <button nz-button nzType="primary" (click)="openCreateModal()">
+      <i class="fa-solid fa-plus mr-1.5"></i>Thêm chương trình đầu tiên
+    </button>
+    }
+  </div>
+  }
+</ng-template>
+
+<!-- Modal Thêm/Sửa Chương trình đào tạo chuẩn UI.pdf -->
+<nz-modal
+  [nzVisible]="isModalVisible()"
+  [nzTitle]="modalTitleTpl"
+  [nzContent]="modalContentTpl"
+  [nzFooter]="modalFooterTpl"
+  [nzWidth]="540"
+  (nzOnCancel)="closeModal()"
+>
+  <ng-template #modalTitleTpl>
+    <div class="font-bold text-slate-900 text-lg">
+      {{ editingProgramId() ? 'Sửa chương trình đào tạo' : 'Thêm chương trình đào tạo' }}
+    </div>
+  </ng-template>
+
+  <ng-template #modalContentTpl>
+    <form [formGroup]="programForm" class="py-1">
+      <div class="mb-4">
+        <label class="font-medium text-slate-800 text-sm mb-1.5 block">
+          Mã chương trình (Mã CTĐT) <span class="text-rose-500 font-bold">*</span>
+        </label>
+        <input
+          nz-input
+          formControlName="code"
+          placeholder="Ví dụ: CNTT, FINTECH, IS..."
+          class="custom-modal-input"
+        />
+        <small class="form-hint">
+          {{ editingProgramId() ? 'Không đổi được sau khi tạo.' : 'Từ 2-20 ký tự (chữ in hoa, số, gạch nối).' }}
+        </small>
+        @if (programForm.get('code')?.dirty && programForm.get('code')?.hasError('required')) {
+        <div class="text-rose-600 text-xs mt-1">Mã chương trình không được để trống.</div>
+        }
+        @if (programForm.get('code')?.dirty && programForm.get('code')?.hasError('pattern')) {
+        <div class="text-rose-600 text-xs mt-1">Mã chỉ gồm chữ, số, dấu gạch nối (2-20 ký tự).</div>
+        }
+      </div>
+
+      <div class="mb-4">
+        <label class="font-medium text-slate-800 text-sm mb-1.5 block">
+          Tên chương trình đào tạo <span class="text-rose-500 font-bold">*</span>
+        </label>
+        <input
+          nz-input
+          formControlName="name"
+          placeholder="Ví dụ: Công nghệ thông tin..."
+          class="custom-modal-input"
+        />
+        @if (programForm.get('name')?.dirty && programForm.get('name')?.hasError('required')) {
+        <div class="text-rose-600 text-xs mt-1">Tên chương trình không được để trống.</div>
+        }
+      </div>
+
+      <div nz-row [nzGutter]="16" class="mb-2">
+        <div nz-col nzSpan="12">
+          <label class="font-medium text-slate-800 text-sm mb-1.5 block">Bậc đào tạo</label>
+          <nz-select formControlName="level" class="w-full custom-select">
+            <nz-option nzValue="Đại học" nzLabel="Đại học"></nz-option>
+            <nz-option nzValue="Thạc sĩ" nzLabel="Thạc sĩ"></nz-option>
+            <nz-option nzValue="Tiến sĩ" nzLabel="Tiến sĩ"></nz-option>
+            <nz-option nzValue="Cao đẳng" nzLabel="Cao đẳng"></nz-option>
+          </nz-select>
+        </div>
+        <div nz-col nzSpan="12">
+          <label class="font-medium text-slate-800 text-sm mb-1.5 block">Loại văn bằng</label>
+          <nz-select formControlName="degree" class="w-full custom-select">
+            <nz-option nzValue="Kỹ sư" nzLabel="Kỹ sư"></nz-option>
+            <nz-option nzValue="Cử nhân" nzLabel="Cử nhân"></nz-option>
+            <nz-option nzValue="Thạc sĩ" nzLabel="Thạc sĩ"></nz-option>
+            <nz-option nzValue="Tiến sĩ" nzLabel="Tiến sĩ"></nz-option>
+          </nz-select>
+        </div>
+      </div>
+
+      <div class="mt-4 p-3 rounded-lg bg-slate-50 border border-slate-200/80 text-xs text-slate-500 leading-relaxed">
+        <i class="fa-solid fa-circle-info text-blue-500 mr-1.5"></i>
+        Khởi tạo danh mục chương trình cấp trường. Sau khi tạo, Quản lý CTĐT có thể khởi tạo các phiên bản để thiết lập chuẩn đầu ra và ma trận đóng góp (F02).
+      </div>
+    </form>
+  </ng-template>
+
+  <ng-template #modalFooterTpl>
+    <div class="flex items-center justify-end gap-2.5">
+      <button nz-button nzType="default" (click)="closeModal()" [disabled]="isSubmitting()" class="modal-cancel-btn">
+        Hủy
+      </button>
+      <button
+        nz-button
+        nzType="primary"
+        [nzLoading]="isSubmitting()"
+        [disabled]="isSubmitting()"
+        (click)="submitProgram()"
+        class="modal-submit-btn"
+      >
+        <i class="fa-solid fa-check mr-1.5"></i>
+        {{ editingProgramId() ? 'Lưu thay đổi' : 'Thêm mới' }}
+      </button>
+    </div>
+  </ng-template>
+</nz-modal>

@@ -1,39 +1,68 @@
-<div nz-row class="pt-3.75 pb-3.5 leading-[100%]">
-  <div nz-col nzSpan="16" class="mt-auto mb-auto">
-    <b class="uppercase hidden sm:block"><span
-        class="hidden xl:[display:unset] text-transparent">__</span>
-      {{langData.HE_THONG_QUAN_TRI}}</b>
+<header class="header-navbar">
+  <!-- Bên trái: Logo trường + Tên hệ thống + Menu điều hướng -->
+  <div class="header-left">
+    <a [routerLink]="urlConst.ROUTE.MANAGEMENT.DASHBOARD" class="header-brand">
+      <img src="assets/img/logo/ute_logo.png" alt="HCMUTE" class="header-logo" />
+      <span class="brand-title">OBE</span>
+    </a>
+
+    <!-- Menu điều hướng các chức năng đang có (khớp bố cục UI.pdf) -->
+    <nav class="header-nav" aria-label="Main Navigation">
+      @for (item of visibleNavItems(); track item.routerLink) {
+      <a
+        [routerLink]="item.routerLink"
+        routerLinkActive="nav-active"
+        [routerLinkActiveOptions]="{ exact: item.routerLink === urlConst.ROUTE.MANAGEMENT.DASHBOARD }"
+        class="nav-link"
+      >
+        <span class="nav-dot" aria-hidden="true">•</span>
+        <span class="nav-text">{{ item.title }}</span>
+      </a>
+      }
+    </nav>
   </div>
-  <div nz-col nzSpan="8" class="inline-flex justify-end gap-1.25">
-    @if (langCode === 'vi') {
-    <button nz-button nzType="default" type="button"
-      class="ml-1.25 p-1.25 mt-auto mb-auto cursor-pointer" (click)="switchLang('en')">
-      <div class="inline-flex items-center gap-1">
-        <img class="w-4.5 object-cover" src="assets/img/lang/vi.svg" alt="Vietnamese">
-        <span class="uppercase">{{langCode}}</span>
+
+  <!-- Bên phải: Nhãn thử nghiệm + Thông tin người dùng đăng nhập & Đăng xuất -->
+  <div class="header-right">
+    <!-- Người dùng đăng nhập: Bấm vào hiển thị dropdown menu chứa nút Đăng xuất -->
+    <div
+      class="user-profile-trigger"
+      nz-dropdown
+      [nzDropdownMenu]="menuUser"
+      [nzTrigger]="'click'"
+      [nzPlacement]="'bottomRight'"
+      role="button"
+      tabindex="0"
+      [attr.aria-label]="'Tài khoản ' + username()"
+    >
+      <div class="role-avatar-circle" [title]="roleTitle()">
+        {{ roleBadgeText() }}
       </div>
-    </button>
-    } @else {
-    <button nz-button nzType="default" type="button"
-      class="ml-1.25 p-1.25 mt-auto mb-auto cursor-pointer" (click)="switchLang('vi')">
-      <div class="inline-flex items-center gap-1">
-        <img class="w-4.5 object-cover" src="assets/img/lang/en.svg" alt="English">
-        <span class="uppercase">{{langCode}}</span>
-      </div>
-    </button>
-    }
-    <img alt="User Avatar" [attr.src]="avatarOfUser() ? avatarOfUser() : 'assets/img/other/user.png'"
-      onerror="this.src='assets/img/other/user.png'"
-      class="w-8.5 h-8.5 border border-solid border-white rounded-full cursor-pointer mt-auto mb-auto"
-      nz-dropdown [nzDropdownMenu]="menuUser">
+      <span class="user-name-label">{{ username() || 'user' }}</span>
+      <i class="fa-solid fa-chevron-down text-xs text-sky-200/70 ml-1"></i>
+    </div>
+
+    <!-- Dropdown Menu tài khoản -->
     <nz-dropdown-menu #menuUser="nzDropdownMenu">
-      <ul nz-menu>
-        <li nz-menu-item [routerLink]="[urlConst.ROUTE.MANAGEMENT.ADMIN_PROFILE]"><i
-            class="fa-solid fa-user mr-1"></i>{{langData.THONG_TIN_CA_NHAN}}</li>
+      <ul nz-menu class="user-menu-dropdown shadow-lg rounded-md border border-gray-100 min-w-56">
+        <li class="px-4 py-2.5 bg-gray-50/80 border-b border-gray-100">
+          <div class="font-semibold text-gray-900 leading-tight">
+            {{ fullName() || username() }}
+          </div>
+          <div class="text-xs text-gray-500 mt-0.5">
+            {{ roleTitle() }} · {{ username() }}
+          </div>
+        </li>
         <li nz-menu-divider></li>
-        <li nz-menu-item class="text-red" (click)="doLogout()"><i
-            class="fa-solid fa-power-off mr-1"></i>{{langData.DANG_XUAT}}</li>
+        <li
+          nz-menu-item
+          class="logout-menu-item px-4 py-2 text-sm text-red-600 hover:bg-red-50 cursor-pointer flex items-center gap-2"
+          (click)="doLogout()"
+        >
+          <i class="fa-solid fa-arrow-right-from-bracket"></i>
+          <span>Đăng xuất</span>
+        </li>
       </ul>
     </nz-dropdown-menu>
   </div>
-</div>
+</header>

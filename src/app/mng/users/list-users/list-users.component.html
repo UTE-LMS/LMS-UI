@@ -1,96 +1,203 @@
-<app-breadcrumb [breadcrumb]="breadcrumbObj" />
-<div nz-row [nzGutter]="16">
-  <div nz-col nzSpan="12">
-    <span class="text-xl font-bold uppercase">{{breadcrumbObj.heading}}</span>
-  </div>
-  <div nz-col nzSpan="12" class="text-right">
-    <a nz-button class="nz-btn-green" [routerLink]="urlConst.ROUTE.MANAGEMENT.USERS_NEW">
-      <i class="fa-solid fa-plus mr-1.25"></i>Thêm người dùng</a>
+<div class="page-header mb-6">
+  <div class="text-xs uppercase tracking-wider font-semibold text-blue-600 mb-1">Hệ thống</div>
+  <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+    <div>
+      <h1 class="text-2xl font-bold text-slate-900 tracking-tight m-0">Người dùng và phân quyền</h1>
+      <div class="title-underline"></div>
+    </div>
+    <div class="flex flex-wrap items-center gap-3">
+      <!-- Ô tìm kiếm tên đăng nhập theo UI.pdf trang 33 -->
+      <div class="search-box relative">
+        <i class="fa-solid fa-magnifying-glass search-icon"></i>
+        <input
+          nz-input
+          type="text"
+          class="search-input"
+          placeholder="Tìm tên đăng nhập"
+          [ngModel]="searchKeyword()"
+          (ngModelChange)="searchKeyword.set($event)"
+        />
+        @if (searchKeyword()) {
+        <button
+          type="button"
+          class="search-clear-btn"
+          (click)="clearSearch()"
+          aria-label="Xóa tìm kiếm"
+        >
+          <i class="fa-solid fa-circle-xmark"></i>
+        </button>
+        }
+      </div>
+
+      <!-- Nút Thêm người dùng -->
+      <a
+        nz-button
+        nzType="primary"
+        class="add-user-btn"
+        [routerLink]="urlConst.ROUTE.MANAGEMENT.USERS_NEW"
+      >
+        <i class="fa-solid fa-plus mr-1.5"></i>Thêm người dùng
+      </a>
+    </div>
   </div>
 </div>
-<hr>
-<p class="users-note">
-  Tài khoản do quản trị viên cấp. Giảng viên chỉ thao tác trên học phần được phân công.
-</p>
 
-<nz-table class="table-border table-cell-middle table-margin-bot" nzSize="middle"
-  nzShowPagination="false" [nzData]="manager.listData().data || []" [nzLoading]="manager.isLoading()"
-  [nzNoResult]="stateTpl" [nzScroll]="{x: '1450px'}">
-  <thead>
-    <tr>
-      <th nzAlign="center" nzWidth="50px">STT</th>
-      <th nzWidth="160px">Tên đăng nhập</th>
-      <th nzWidth="190px">Họ và tên</th>
-      <th nzWidth="230px">Email</th>
-      <th nzWidth="200px">Vai trò</th>
-      <th nzWidth="210px">Phạm vi</th>
-      <th nzAlign="center" nzWidth="130px">Cho phép đăng nhập</th>
-      <th nzAlign="center" nzWidth="130px">Ngày tạo</th>
-      <th nzAlign="center" nzWidth="130px">Cập nhật</th>
-      <th nzAlign="center" nzWidth="70px"><i class="fa-solid fa-cog"></i></th>
-    </tr>
-  </thead>
-  <tbody>
-    @for (item of manager.listData().data || []; track item.id; let i = $index) {
-    <tr>
-      <td nzAlign="center">
-        {{ i + 1 + (manager.listData().currentPage - 1) * manager.listData().limit }}
-      </td>
-      <td>
-        <b>{{ item.username }}</b>
-        @if (item.id === currentUserId) {
-        <span class="users-self">(bạn)</span>
-        }
-      </td>
-      <td>{{ item.fullName }}</td>
-      <td>{{ item.email }}</td>
-      <td>
-        @for (assignment of item.roleAssignments; track $index) {
-        <div class="users-line">{{ roleLabel(assignment.role) }}</div>
-        }
-      </td>
-      <td>
-        @for (assignment of item.roleAssignments; track $index) {
-        <div class="users-line" [class.users-muted]="describeScope(assignment) === 'Chưa gán'"
-          [attr.title]="scopeIdsTooltip(assignment.scope) || null">
-          {{ describeScope(assignment) }}
-        </div>
-        }
-      </td>
-      <td nzAlign="center">
-        <nz-switch class="switcher-on-green switcher-off-red" [ngModel]="item.status === 'ACTIVE'"
-          [nzLoading]="selectedSwitcherId() === item.id" [nzControl]="true"
-          [attr.aria-label]="(item.status === 'ACTIVE' ? 'Khóa ' : 'Mở khóa ') + item.username"
-          (click)="changeStatus(item)" nzCheckedChildren="ON" nzUnCheckedChildren="OFF"></nz-switch>
-        <div class="users-status-text" [class.users-status-locked]="item.status === 'LOCKED'">
-          {{ item.status === 'ACTIVE' ? 'Hoạt động' : 'Bị khóa' }}
-        </div>
-      </td>
-      <td nzAlign="center">{{ item.createdAt | date: 'dd/MM/yyyy HH:mm' }}</td>
-      <td nzAlign="center">{{ item.updatedAt | date: 'dd/MM/yyyy HH:mm' }}</td>
-      <td nzAlign="center">
-        <a nz-button nzType="primary" nzSize="small" aria-label="Sửa người dùng"
-          [routerLink]="[urlConst.ROUTE.MANAGEMENT.USERS, item.id]"><i class="fa-solid fa-edit"></i></a>
-      </td>
-    </tr>
-    }
-  </tbody>
-</nz-table>
-<app-table-paginate [pageConfig]="manager.listData()" (pageChange)="manager.pageChange($event)" />
+<div class="table-card">
+  <nz-table
+    class="custom-admin-table"
+    nzSize="middle"
+    nzShowPagination="false"
+    [nzData]="displayUsers()"
+    [nzLoading]="manager.isLoading()"
+    [nzNoResult]="stateTpl"
+    [nzScroll]="{ x: '960px' }"
+  >
+    <thead>
+      <tr>
+        <th nzWidth="260px">Tên đăng nhập</th>
+        <th nzWidth="220px">Vai trò</th>
+        <th nzWidth="240px">Phạm vi</th>
+        <th nzWidth="150px">Trạng thái</th>
+        <th nzWidth="180px">Ngày tạo</th>
+        <th nzAlign="right" nzWidth="90px">Thao tác</th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (item of displayUsers(); track item.id) {
+      <tr class="ui-pdf-row">
+        <!-- Tên đăng nhập: Chữ đậm theo UI.pdf trang 33, kèm họ tên và email phụ bên dưới -->
+        <td>
+          <div class="user-identity">
+            <div class="flex items-center gap-1.5">
+              <span class="user-username">{{ item.username }}</span>
+              @if (item.id === currentUserId) {
+              <span class="user-self-pill">
+                (bạn)
+              </span>
+              }
+            </div>
+            @if (item.fullName) {
+            <div class="user-subtext">
+              <span>{{ item.fullName }}</span>
+              <span class="text-slate-300 mx-1">·</span>
+              <span class="font-mono text-slate-400">{{ item.email }}</span>
+            </div>
+            }
+          </div>
+        </td>
+
+        <!-- Vai trò: Chữ thường trang nhã theo UI.pdf trang 33 -->
+        <td>
+          <div class="flex flex-col gap-0.5">
+            @for (assignment of item.roleAssignments; track $index) {
+            <span class="user-role-text">
+              {{ roleLabel(assignment.role) }}
+            </span>
+            }
+          </div>
+        </td>
+
+        <!-- Phạm vi theo UI.pdf -->
+        <td>
+          @for (assignment of item.roleAssignments; track $index) {
+          <div
+            class="user-scope-text"
+            [attr.title]="scopeIdsTooltip(assignment.scope) || null"
+          >
+            @if (describeScope(assignment) === 'Toàn hệ thống') {
+              <span class="text-slate-600">Toàn hệ thống</span>
+            } @else if (describeScope(assignment) === 'Chưa gán') {
+              <span class="text-slate-400 italic">Chưa gán</span>
+            } @else {
+              <span class="text-slate-800 font-medium">{{ describeScope(assignment) }}</span>
+            }
+          </div>
+          }
+        </td>
+
+        <!-- Trạng thái: Chấm màu (xanh lá / đỏ) + Chữ "Hoạt động" / "Bị khóa" theo UI.pdf trang 33 -->
+        <td>
+          <button
+            type="button"
+            class="status-btn"
+            [attr.aria-label]="(item.status === 'ACTIVE' ? 'Khóa ' : 'Mở khóa ') + item.username"
+            [title]="item.status === 'ACTIVE' ? 'Bấm để khóa tài khoản' : 'Bấm để mở khóa tài khoản'"
+            (click)="changeStatus(item)"
+          >
+            @if (selectedSwitcherId() === item.id) {
+              <i class="fa-solid fa-spinner fa-spin text-xs text-blue-600"></i>
+            } @else {
+              <span
+                class="status-dot"
+                [class.status-dot-active]="item.status === 'ACTIVE'"
+                [class.status-dot-locked]="item.status !== 'ACTIVE'"
+              ></span>
+            }
+            <span class="status-label">
+              {{ item.status === 'ACTIVE' ? 'Hoạt động' : 'Bị khóa' }}
+            </span>
+          </button>
+        </td>
+
+        <!-- Đăng nhập gần nhất (hoặc ngày tạo) -->
+        <td>
+          <span class="user-date-text">
+            {{ (item.updatedAt || item.createdAt) | date: 'dd/MM/yyyy HH:mm' }}
+          </span>
+        </td>
+
+        <!-- Thao tác: Liên kết Sửa chữ xanh theo UI.pdf -->
+        <td nzAlign="right">
+          <a
+            class="table-action-link"
+            aria-label="Sửa người dùng"
+            [routerLink]="[urlConst.ROUTE.MANAGEMENT.USERS, item.id]"
+          >
+            Sửa
+          </a>
+        </td>
+      </tr>
+      }
+    </tbody>
+  </nz-table>
+
+  <div class="table-footer-pagination pt-4 mt-3 border-t border-slate-100">
+    <app-table-paginate
+      class="w-full block"
+      [pageConfig]="manager.listData()"
+      (pageChange)="manager.pageChange($event)"
+    />
+  </div>
+</div>
 
 <ng-template #stateTpl>
   @if (manager.isLoading()) {
-  <div class="users-state">Đang tải danh sách người dùng...</div>
+  <div class="py-10 text-center text-slate-500">
+    <i class="fa-solid fa-spinner fa-spin text-xl mb-2 text-blue-600"></i>
+    <p class="m-0 text-sm">Đang tải danh sách người dùng...</p>
+  </div>
   } @else if (manager.hasError()) {
-  <div class="users-state" role="alert">
-    <p class="mb-2">Không tải được danh sách người dùng. Có thể bạn không đủ quyền hoặc máy chủ đang gặp sự cố.</p>
+  <div class="py-10 text-center" role="alert">
+    <div class="inline-flex items-center justify-center w-10 h-10 rounded-full bg-rose-50 text-rose-500 mb-2">
+      <i class="fa-solid fa-circle-exclamation text-lg"></i>
+    </div>
+    <p class="mb-3 text-rose-600 font-medium">Không tải được danh sách người dùng.</p>
     <button nz-button type="button" (click)="manager.triggerReload()">
-      <i class="fa-solid fa-rotate-right mr-1.25"></i>Thử lại</button>
+      <i class="fa-solid fa-rotate-right mr-1.5"></i>Thử lại
+    </button>
+  </div>
+  } @else if (searchKeyword() && (!displayUsers() || displayUsers().length === 0)) {
+  <div class="py-10 text-center text-slate-500">
+    <i class="fa-solid fa-magnifying-glass text-xl mb-2 text-slate-400"></i>
+    <p class="m-0 text-sm">Không tìm thấy người dùng phù hợp với từ khóa "{{ searchKeyword() }}".</p>
+    <button nz-button nzType="link" (click)="clearSearch()" class="mt-1">Xóa bộ lọc</button>
   </div>
   } @else {
-  <div class="users-state">
-    <p class="mb-2">Chưa có người dùng nào.</p>
-    <a nz-button nzType="primary" [routerLink]="urlConst.ROUTE.MANAGEMENT.USERS_NEW">Thêm người dùng đầu tiên</a>
+  <div class="py-10 text-center text-slate-500">
+    <p class="mb-3">Chưa có người dùng nào.</p>
+    <a nz-button nzType="primary" [routerLink]="urlConst.ROUTE.MANAGEMENT.USERS_NEW">
+      <i class="fa-solid fa-plus mr-1.5"></i>Thêm người dùng đầu tiên
+    </a>
   </div>
   }
 </ng-template>

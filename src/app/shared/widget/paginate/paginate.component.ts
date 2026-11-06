@@ -1,20 +1,24 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import langDataEn from '@languages/en.json';
 import langDataVi from '@languages/vi.json';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzGridModule } from 'ng-zorro-antd/grid';
 import { NzInputNumberModule } from 'ng-zorro-antd/input-number';
+import { NzPaginationModule } from 'ng-zorro-antd/pagination';
+import { NzSelectModule } from 'ng-zorro-antd/select';
 import { Paginate } from './paginate.model';
 
 export const pluginsModules = [
   FormsModule,
-  // ReactiveFormsModule,
   NzGridModule,
   NzButtonModule,
   NzInputNumberModule,
+  NzPaginationModule,
+  NzSelectModule,
 ];
+
 @Component({
   selector: 'app-table-paginate',
   templateUrl: './paginate.component.html',
@@ -27,8 +31,36 @@ export class TablePaginateComponent {
   readonly pageChange = output<Paginate<any>>();
   readonly numOfItemChange = output<Paginate<any>>();
 
-  // Ngon ngu hien thi //////////
+  // Ngôn ngữ hiển thị
   langData: Record<string, string> = (localStorage.getItem('language') === 'en' ? langDataEn : langDataVi).SHARED.PAGINATE;
+
+  readonly fromItemIndex = computed(() => {
+    const config = this.pageConfig();
+    if (config.totalItem === 0) {
+      return 0;
+    }
+    return ((config.currentPage - 1) * config.limit) + 1;
+  });
+
+  readonly toItemIndex = computed(() => {
+    const config = this.pageConfig();
+    return Math.min(config.currentPage * config.limit, config.totalItem);
+  });
+
+  onPageIndexChange(page: number): void {
+    const config = this.pageConfig();
+    if (page !== config.currentPage) {
+      config.currentPage = page;
+      this.refreshPage();
+    }
+  }
+
+  onLimitSelect(limit: number): void {
+    const config = this.pageConfig();
+    config.limit = limit;
+    config.currentPage = 1;
+    this.refreshPage();
+  }
 
   setPage(page: number): void {
     const pageConfig = this.pageConfig();

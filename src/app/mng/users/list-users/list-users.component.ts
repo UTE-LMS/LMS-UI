@@ -1,5 +1,5 @@
 import { DatePipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { createListManagerNoFilter } from '@builder/list-mng-no-filter.builder';
@@ -9,12 +9,11 @@ import { AuthService } from '@services/auth/auth.service';
 import { toApiError } from '@services/common/api-error.util';
 import { UserService } from '@services/user/user.service';
 import { BreadCrumb } from '@widget/breadcrumb/breadcrumb.model';
-import { BreadcrumbComponent } from '@widget/breadcrumb/breadcumb.component';
 import { TablePaginateComponent } from '@widget/paginate/paginate.component';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzGridModule } from 'ng-zorro-antd/grid';
+import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzModalModule, NzModalService } from 'ng-zorro-antd/modal';
-import { NzSwitchModule } from 'ng-zorro-antd/switch';
 import { NzTableModule } from 'ng-zorro-antd/table';
 import { ToastrService } from 'ngx-toastr';
 import { describeScope, roleLabel, scopeIdsTooltip } from '../users.util';
@@ -26,11 +25,10 @@ import { describeScope, roleLabel, scopeIdsTooltip } from '../users.util';
     RouterLink,
     DatePipe,
     NzGridModule,
+    NzInputModule,
     NzModalModule,
-    NzSwitchModule,
     NzTableModule,
     NzButtonModule,
-    BreadcrumbComponent,
     TablePaginateComponent,
   ],
   templateUrl: './list-users.component.html',
@@ -60,10 +58,32 @@ export class ListUsersComponent {
   /** Dòng đang chờ backend xử lý khóa/mở khóa, để hiện vòng quay trên đúng công tắc. */
   readonly selectedSwitcherId = signal('');
 
+  /** Từ khóa tìm kiếm người dùng (tên đăng nhập, họ tên, email) */
+  readonly searchKeyword = signal('');
+
   // Backend chỉ nhận page/size (API-CONTRACT.md §5.3.1) nên bỏ tham số tìm kiếm của builder.
   readonly manager = createListManagerNoFilter<IUser>(
     (page, size) => this.userSvc.filter(page - 1, size),
   );
+
+  /** Lọc danh sách người dùng hiển thị theo từ khóa tìm kiếm (UI.pdf trang 33) */
+  readonly displayUsers = computed(() => {
+    const list = this.manager.listData().data || [];
+    const kw = this.searchKeyword().toLowerCase().trim();
+    if (!kw) {
+      return list;
+    }
+    return list.filter(u => {
+      const usernameMatch = u.username.toLowerCase().includes(kw);
+      const nameMatch = u.fullName?.toLowerCase().includes(kw);
+      const emailMatch = u.email?.toLowerCase().includes(kw);
+      return usernameMatch || nameMatch || emailMatch;
+    });
+  });
+
+  clearSearch(): void {
+    this.searchKeyword.set('');
+  }
 
   /** Bấm công tắc "Cho phép đăng nhập": hỏi xác nhận rồi đổi trạng thái ACTIVE ↔ LOCKED. */
   changeStatus(user: IUser): void {

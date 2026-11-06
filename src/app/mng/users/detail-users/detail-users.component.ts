@@ -8,7 +8,6 @@ import { IUser } from '@models/user/user.model';
 import { httpStatusOf } from '@services/common/api-error.util';
 import { UserService } from '@services/user/user.service';
 import { BreadCrumb } from '@widget/breadcrumb/breadcrumb.model';
-import { BreadcrumbComponent } from '@widget/breadcrumb/breadcumb.component';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { catchError, map, Observable, of, switchMap, tap } from 'rxjs';
 import { FormUsersComponent } from '../form-users/form-users.component';
@@ -26,7 +25,7 @@ interface ILoadResult {
  */
 @Component({
   selector: 'app-detail-users',
-  imports: [RouterLink, NzButtonModule, BreadcrumbComponent, FormUsersComponent],
+  imports: [RouterLink, NzButtonModule, FormUsersComponent],
   templateUrl: './detail-users.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

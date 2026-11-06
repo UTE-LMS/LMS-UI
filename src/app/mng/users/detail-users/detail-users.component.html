@@ -1,27 +1,45 @@
-<app-breadcrumb [breadcrumb]="breadcrumbObj()" />
-<div>
-  <span class="text-xl font-bold uppercase">{{ breadcrumbObj().heading }}</span>
-  <p class="mt-1 mb-0">
-    <a [routerLink]="urlConst.ROUTE.MANAGEMENT.USERS"><i class="fa-solid fa-arrow-left mr-1.25"></i>Về danh sách</a>
-  </p>
+<div class="page-header mb-6">
+  <div class="text-xs uppercase tracking-wider font-semibold text-slate-400 mb-1">Hệ thống</div>
+  <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-bold text-slate-900 tracking-tight m-0">
+        {{ breadcrumbObj().heading }}
+      </h1>
+      <p class="text-sm text-slate-500 mt-1 mb-0">
+        <a [routerLink]="urlConst.ROUTE.MANAGEMENT.USERS" class="text-blue-600 hover:text-blue-800 font-medium inline-flex items-center gap-1.5 transition-colors">
+          <i class="fa-solid fa-arrow-left text-xs"></i>
+          <span>Về danh sách</span>
+        </a>
+      </p>
+    </div>
+  </div>
 </div>
-<hr>
 
 @switch (state()) {
   @case ('loading') {
-  <p class="py-6 text-center">Đang tải thông tin người dùng...</p>
+  <div class="py-12 text-center text-slate-500 bg-white rounded-xl border border-slate-200/80 p-8 shadow-sm">
+    <i class="fa-solid fa-spinner fa-spin text-2xl mb-3 text-blue-600"></i>
+    <p class="m-0 text-sm">Đang tải thông tin người dùng...</p>
+  </div>
   }
   @case ('notFound') {
-  <div class="py-6 text-center">
-    <p class="mb-3">Không tìm thấy dữ liệu yêu cầu.</p>
+  <div class="py-12 text-center bg-white rounded-xl border border-slate-200/80 p-8 shadow-sm">
+    <div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-rose-50 text-rose-500 mb-3">
+      <i class="fa-solid fa-triangle-exclamation text-xl"></i>
+    </div>
+    <p class="mb-3 text-slate-700 font-medium">Không tìm thấy dữ liệu yêu cầu.</p>
     <a nz-button nzType="primary" [routerLink]="urlConst.ROUTE.MANAGEMENT.USERS">Quay lại trang danh sách</a>
   </div>
   }
   @case ('error') {
-  <div class="py-6 text-center" role="alert">
-    <p class="mb-3">Không tải được thông tin người dùng. Có thể bạn không đủ quyền hoặc máy chủ đang gặp sự cố.</p>
+  <div class="py-12 text-center bg-white rounded-xl border border-slate-200/80 p-8 shadow-sm" role="alert">
+    <div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-amber-50 text-amber-500 mb-3">
+      <i class="fa-solid fa-circle-exclamation text-xl"></i>
+    </div>
+    <p class="mb-3 text-slate-700 font-medium">Không tải được thông tin người dùng. Có thể bạn không đủ quyền hoặc máy chủ đang gặp sự cố.</p>
     <button nz-button type="button" (click)="reload()">
-      <i class="fa-solid fa-rotate-right mr-1.25"></i>Thử lại</button>
+      <i class="fa-solid fa-rotate-right mr-1.5"></i>Thử lại
+    </button>
   </div>
   }
   @case ('ready') {

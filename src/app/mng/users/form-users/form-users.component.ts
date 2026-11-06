@@ -5,9 +5,11 @@ import { SystemConstant } from '@constants/system.constant';
 import { MakeForm } from '@models/common/make-form.model';
 import { ModalData } from '@models/common/modal-data.model';
 import { IApiError } from '@models/common/response-data.model';
+import { IProgram } from '@models/program/program.model';
 import { IRoleAssignment, IUser, IUserCreateDTO, IUserUpdateDTO, UserRole } from '@models/user/user.model';
 import { toApiError } from '@services/common/api-error.util';
 import { FormValidatorService } from '@services/common/form-validator.service';
+import { ProgramService } from '@services/program/program.service';
 import { UserService } from '@services/user/user.service';
 import { notBlankValidator, trimmedEmailValidator, trimmedMinLength } from '@validators/trimmed.validator';
 import { objectIdListValidator } from '@validators/object-id-list.validator';
@@ -19,7 +21,7 @@ import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzSelectModule } from 'ng-zorro-antd/select';
 import { NzTableModule } from 'ng-zorro-antd/table';
 import { ToastrService } from 'ngx-toastr';
-import { catchError, EMPTY, exhaustMap, filter, finalize, Subject, tap } from 'rxjs';
+import { catchError, EMPTY, exhaustMap, filter, finalize, of, Subject, tap } from 'rxjs';
 import { IRoleAssignmentRow, ROLE_LABELS, toAssignmentRow, toRoleAssignment } from '../users.util';
 
 type RoleRowForm = FormGroup<MakeForm<IRoleAssignmentRow>>;
@@ -46,6 +48,7 @@ export class FormUsersComponent implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
   private readonly fb = inject(NonNullableFormBuilder);
   private readonly userSvc = inject(UserService);
+  private readonly programSvc = inject(ProgramService, { optional: true });
   protected readonly formValidSvc = inject(FormValidatorService);
   private readonly alert = inject(ToastrService);
 
@@ -53,6 +56,9 @@ export class FormUsersComponent implements OnInit {
   readonly closeModal = output<boolean>();
 
   form!: FormGroup<MakeForm<IUserCreateDTO>>;
+
+  /** Danh sách CTĐT trên hệ thống để chọn vào scope */
+  readonly programs = signal<IProgram[]>([]);
 
   protected readonly roleOptions = SystemConstant.ROLE_TITLE.map(item => ({ value: item.id, label: item.title.vi }));
   protected readonly adminRole: UserRole = SystemConstant.ROLE.ADMIN;
@@ -82,6 +88,7 @@ export class FormUsersComponent implements OnInit {
 
   ngOnInit(): void {
     this.createForm();
+    this.loadPrograms();
   }
 
   createForm(): void {
@@ -131,6 +138,26 @@ export class FormUsersComponent implements OnInit {
 
   removeRole(index: number): void {
     this.roleForms.update(forms => forms.filter((_, current) => current !== index));
+  }
+
+  private loadPrograms(): void {
+    if (!this.programSvc) {
+      return;
+    }
+    this.programSvc.getPrograms(0, 100).pipe(
+      catchError(() => of({ content: [], totalElements: 0, totalPages: 0, page: 0, size: 0, last: true })),
+      takeUntilDestroyed(this.destroyRef),
+    ).subscribe(res => {
+      this.programs.set(res.content || []);
+    });
+  }
+
+  getMissingProgramIds(selectedIds: string[] | null | undefined): string[] {
+    if (!selectedIds?.length) {
+      return [];
+    }
+    const existingIds = new Set(this.programs().map(p => p.id));
+    return selectedIds.filter(id => !existingIds.has(id));
   }
 
   private clearServerError(key: ServerFieldKey): void {

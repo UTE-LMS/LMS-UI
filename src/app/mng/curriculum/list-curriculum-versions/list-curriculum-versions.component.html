@@ -1,0 +1,302 @@
+<div class="p-6 max-w-7xl mx-auto">
+  <!-- Program Header & Selector (UI.pdf Trang 3) -->
+  <div class="program-header-banner flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4">
+    <div>
+      <div class="flex items-center gap-3">
+        <h1 class="program-title">Chương trình đào tạo</h1>
+        <div class="w-72">
+          <nz-select
+            class="w-full"
+            [ngModel]="selectedProgramId()"
+            (ngModelChange)="onSelectProgram($event)"
+            nzPlaceHolder="Chọn chương trình đào tạo"
+          >
+            @for (p of programs(); track p.id) {
+            <nz-option [nzValue]="p.id" [nzLabel]="p.code + ' - ' + p.name" />
+            }
+          </nz-select>
+        </div>
+      </div>
+      <div class="program-subtitle">
+        @if (selectedProgram(); as prog) {
+        <span>Ngành {{ prog.name }} ({{ prog.code }}) · Bậc {{ prog.level }} · Hệ {{ prog.degree }}</span>
+        } @else {
+        <span>Vui lòng chọn một chương trình đào tạo để quản lý phiên bản</span>
+        }
+      </div>
+    </div>
+
+    @if (canManage()) {
+    <div>
+      <button
+        nz-button
+        nzType="primary"
+        class="bg-blue-600 hover:bg-blue-700 text-white rounded-md px-4 py-2 font-medium flex items-center gap-2"
+        (click)="openCreateModal()"
+      >
+        <i class="fa-solid fa-plus text-sm"></i>
+        <span>Phiên bản mới</span>
+      </button>
+    </div>
+    }
+  </div>
+
+  <!-- Alert Banner nghiệp vụ (UI.pdf Trang 3) -->
+  <div class="ui-alert-banner">
+    <i class="fa-solid fa-circle-info ui-alert-icon"></i>
+    <div class="ui-alert-text">
+      Chương trình đang áp dụng không sửa trực tiếp được. Sửa bản đang áp dụng sẽ tạo phiên bản nháp mới, bản cũ vẫn giữ để đọc lại báo cáo.
+    </div>
+  </div>
+
+  <!-- Table Bảng danh sách phiên bản -->
+  <div class="ui-pdf-table-wrapper">
+    <nz-table
+      #versionTable
+      [nzData]="versions()"
+      [nzLoading]="isLoading()"
+      [nzShowPagination]="false"
+      [nzFrontPagination]="false"
+    >
+      <thead>
+        <tr>
+          <th nzWidth="24%">Phiên bản</th>
+          <th nzWidth="12%">Trạng thái</th>
+          <th nzWidth="16%">Thẩm định ĐBCL</th>
+          <th nzWidth="12%">Áp dụng từ</th>
+          <th nzWidth="10%" nzAlign="center">Số PLO</th>
+          <th nzWidth="10%" nzAlign="center">Số PI</th>
+          <th nzWidth="16%" nzAlign="right">Thao tác</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (item of versions(); track item.id) {
+        <tr>
+          <td>
+            <div class="flex items-center">
+              <a
+                class="version-code-link"
+                [routerLink]="['/mng/curriculum/versions', item.id]"
+                title="Bấm để xem chi tiết phiên bản CTĐT, PLO · PI và ma trận I/R/M"
+              >
+                <span>{{ item.version }}</span>
+                <i class="fa-solid fa-arrow-up-right-from-square text-xs opacity-60 ml-1.5"></i>
+              </a>
+              @if (item.status === 'ACTIVE') {
+              <span class="current-view-badge">đang áp dụng</span>
+              }
+            </div>
+            @if (item.totalCredits !== undefined || item.durationYears !== undefined) {
+            <div class="text-xs text-slate-400 mt-0.5">
+              {{ item.totalCredits ?? '—' }} tín chỉ · {{ item.durationYears ?? '—' }} năm
+            </div>
+            }
+          </td>
+          <td>
+            @if (item.status === 'ACTIVE') {
+            <app-status-chip
+              label="Đang áp dụng"
+              tone="success"
+              icon="fa-circle-check"
+              description="Phiên bản đang được áp dụng chính thức"
+            />
+            } @else if (item.status === 'DRAFT') {
+            <app-status-chip
+              label="Nháp"
+              tone="warning"
+              icon="fa-file-lines"
+              description="Bản nháp đang soạn thảo, chưa áp dụng"
+            />
+            } @else {
+            <app-status-chip
+              label="Đã lưu trữ"
+              tone="neutral"
+              icon="fa-box-archive"
+              description="Phiên bản lịch sử đã ngưng áp dụng"
+            />
+            }
+          </td>
+          <td>
+            <app-verification-badge
+              [status]="item.verification?.status"
+              [note]="item.verification?.note"
+            />
+          </td>
+          <td>
+            <span>{{ formatCohorts(item.applicableCohorts) }}</span>
+          </td>
+          <td nzAlign="center">
+            <span>{{ getPloCount(item.id) }}</span>
+          </td>
+          <td nzAlign="center">
+            <span>{{ getPiCount(item.id) }}</span>
+          </td>
+          <td nzAlign="right">
+            <div class="flex items-center justify-end gap-3">
+              @if (item.status === 'DRAFT') {
+                <a
+                  class="table-action-link"
+                  [routerLink]="['/mng/curriculum/versions', item.id]"
+                >
+                  Xem
+                </a>
+                @if (canManage()) {
+                <a
+                  class="table-action-link"
+                  [routerLink]="['/mng/curriculum/versions', item.id, 'edit']"
+                >
+                  Sửa
+                </a>
+                @if (item.verification?.status === 'VERIFIED') {
+                <button
+                  type="button"
+                  class="table-action-link text-emerald-600 hover:text-emerald-800"
+                  (click)="confirmActivateVersion(item)"
+                >
+                  Áp dụng
+                </button>
+                } @else if (!isQaOfficer()) {
+                <span class="text-xs text-slate-400 italic">Chờ QA duyệt</span>
+                }
+                }
+                @if (isQaOfficer()) {
+                <button
+                  type="button"
+                  class="table-action-link text-indigo-600 hover:text-indigo-800"
+                  (click)="openVerifyModal(item)"
+                >
+                  Duyệt ĐBCL
+                </button>
+                }
+              } @else if (item.status === 'ACTIVE') {
+                <a
+                  class="table-action-link"
+                  [routerLink]="['/mng/curriculum/versions', item.id]"
+                >
+                  Xem
+                </a>
+                @if (canManage()) {
+                <button
+                  type="button"
+                  class="table-action-link"
+                  (click)="openCloneModal(item)"
+                >
+                  Tạo bản nháp mới từ bản này
+                </button>
+                }
+              } @else {
+                <a
+                  class="table-action-link"
+                  [routerLink]="['/mng/curriculum/versions', item.id]"
+                >
+                  Xem
+                </a>
+              }
+            </div>
+          </td>
+        </tr>
+        } @empty {
+        <tr>
+          <td colspan="7" class="text-center py-8 text-slate-400">
+            @if (!selectedProgramId()) {
+              Vui lòng chọn chương trình đào tạo để tải danh sách phiên bản
+            } @else {
+              Chưa có phiên bản nào cho chương trình đào tạo này
+            }
+          </td>
+        </tr>
+        }
+      </tbody>
+    </nz-table>
+  </div>
+
+  <!-- Pagination -->
+  <div class="table-footer-pagination pt-4 mt-3 border-t border-slate-100">
+    <app-table-paginate
+      class="w-full block"
+      [pageConfig]="pageData()"
+      (pageChange)="onPageChange($event)"
+    />
+  </div>
+</div>
+
+<!-- Modal Tạo phiên bản mới / Clone phiên bản -->
+<nz-modal
+  [(nzVisible)]="isModalVisible"
+  [nzTitle]="modalTitle()"
+  (nzOnCancel)="closeModal()"
+  (nzOnOk)="submitVersionForm()"
+  [nzOkLoading]="isSubmitting()"
+  [nzOkText]="'Lưu phiên bản'"
+  [nzCancelText]="'Hủy'"
+>
+  <ng-container *nzModalContent>
+    <form [formGroup]="versionForm" nz-form nzLayout="vertical">
+      <nz-form-item>
+        <nz-form-label nzRequired nzFor="version">Mã / Tên phiên bản</nz-form-label>
+        <nz-form-control nzErrorTip="Vui lòng nhập tên phiên bản (tối đa 100 ký tự)">
+          <input
+            nz-input
+            id="version"
+            formControlName="version"
+            placeholder="Ví dụ: BM7A-2.8-Draft"
+          />
+        </nz-form-control>
+      </nz-form-item>
+
+      <div class="grid grid-cols-2 gap-4">
+        <nz-form-item>
+          <nz-form-label nzFor="totalCredits">Tổng số tín chỉ</nz-form-label>
+          <nz-form-control nzErrorTip="Số tín chỉ không được âm">
+            <nz-input-number
+              id="totalCredits"
+              class="w-full"
+              formControlName="totalCredits"
+              [nzMin]="0"
+              [nzMax]="500"
+              [nzStep]="1"
+              nzPlaceHolder="Ví dụ: 132"
+            />
+          </nz-form-control>
+        </nz-form-item>
+
+        <nz-form-item>
+          <nz-form-label nzFor="durationYears">Thời gian đào tạo (năm)</nz-form-label>
+          <nz-form-control nzErrorTip="Thời gian đào tạo không được âm">
+            <nz-input-number
+              id="durationYears"
+              class="w-full"
+              formControlName="durationYears"
+              [nzMin]="0"
+              [nzMax]="10"
+              [nzStep]="0.5"
+              nzPlaceHolder="Ví dụ: 4.0"
+            />
+          </nz-form-control>
+        </nz-form-item>
+      </div>
+
+      <nz-form-item>
+        <nz-form-label nzFor="applicableCohorts">Khóa áp dụng</nz-form-label>
+        <nz-form-control nzExtra="Nhập khóa áp dụng (ví dụ 2026-HK1, K26) rồi nhấn Enter">
+          <nz-select
+            id="applicableCohorts"
+            nzMode="tags"
+            formControlName="applicableCohorts"
+            nzPlaceHolder="Ví dụ: 2026-HK1, K26"
+          />
+        </nz-form-control>
+      </nz-form-item>
+    </form>
+  </ng-container>
+</nz-modal>
+
+<!-- Modal Thẩm định ĐBCL cho QA Officer (US-08) -->
+<app-verification-action-modal
+  [versionId]="selectedVersionForVerify()?.id ?? ''"
+  [isVisible]="isVerifyModalVisible()"
+  [currentStatus]="selectedVersionForVerify()?.verification?.status ?? 'UNVERIFIED'"
+  [currentNote]="selectedVersionForVerify()?.verification?.note ?? ''"
+  (visibleChange)="isVerifyModalVisible.set($event)"
+  (verifiedSuccess)="loadVersions()"
+/>

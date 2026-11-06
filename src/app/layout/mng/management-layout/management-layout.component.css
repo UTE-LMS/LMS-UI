@@ -1,0 +1,16 @@
+.management-content-area {
+  min-height: calc(100vh - 56px);
+  background-color: #f0f4f9;
+  padding: 24px 32px;
+}
+
+.management-container {
+  max-width: 1440px;
+  margin: 0 auto;
+}
+
+@media (max-width: 768px) {
+  .management-content-area {
+    padding: 16px;
+  }
+}
