@@ -1,0 +1,278 @@
+<div class="page-header mb-6">
+  <div class="text-xs uppercase tracking-wider font-semibold text-blue-600 mb-1">
+    Bộ môn & Giảng viên (ADR 0010)
+  </div>
+  <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+    <div>
+      <h1 class="text-2xl font-bold text-slate-900 tracking-tight m-0">
+        Đề cương Học phần & Chuẩn đầu ra (CLO)
+      </h1>
+      <div class="title-underline"></div>
+    </div>
+
+    <div class="flex flex-wrap items-center gap-2.5">
+      @if (canAssignCourse()) {
+      <button
+        nz-button
+        nzType="default"
+        class="rounded-lg font-medium border-blue-300 text-blue-700"
+        (click)="isAssignModalVisible.set(true)"
+      >
+        <i class="fa-solid fa-user-check mr-1.5"></i>Phân công Giảng viên biên soạn
+      </button>
+      }
+
+      @if (canCreateSyllabus()) {
+      <button
+        nz-button
+        nzType="primary"
+        class="add-syllabus-btn"
+        (click)="openCreateSyllabusModal()"
+      >
+        <i class="fa-solid fa-plus mr-1.5"></i>Tạo phiên bản đề cương mới
+      </button>
+      }
+    </div>
+  </div>
+</div>
+
+<!-- Banner hướng dẫn quy trình ADR 0010 -->
+<div class="alert-banner mb-6">
+  <div class="alert-icon-box">
+    <i class="fa-solid fa-circle-info text-base"></i>
+  </div>
+  <div class="alert-text">
+    Giảng viên biên soạn đề cương và CLO ở trạng thái <strong>Nháp (DRAFT)</strong> cho các môn được phân công. Trưởng bộ môn thẩm định và phê duyệt chuyển sang <strong>Chính thức (CONFIRMED)</strong>. Đề cương đã duyệt sẽ bị khóa để bảo toàn lịch sử đo lường (TD-27).
+  </div>
+</div>
+
+<!-- Bộ chọn Học phần -->
+<div class="bg-white border border-slate-200 rounded-xl p-4 mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+  <div class="flex-1 max-w-xl">
+    <label for="courseSelect" class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5">
+      Chọn học phần làm việc
+    </label>
+    <nz-select
+      id="courseSelect"
+      class="w-full"
+      nzShowSearch
+      nzPlaceHolder="Chọn học phần..."
+      [ngModel]="selectedCourseId()"
+      (ngModelChange)="onCourseChange($event)"
+    >
+      @for (c of filteredCourses(); track c.id) {
+      <nz-option
+        [nzValue]="c.id"
+        [nzLabel]="c.code + ' — ' + c.name + (c.credits !== undefined ? ' (' + c.credits + ' TC)' : '')"
+      />
+      }
+    </nz-select>
+  </div>
+
+  <div class="flex items-center gap-3">
+    @if (!isAdmin() && scopeCourseIds().length > 0) {
+    <button
+      nz-button
+      nzType="default"
+      type="button"
+      (click)="toggleShowAllCourses()"
+    >
+      <i class="fa-solid fa-filter mr-1.5"></i>
+      {{ showAllCourses() ? 'Chỉ hiện môn trong Scope phụ trách' : 'Tra cứu toàn bộ học phần trường' }}
+    </button>
+    }
+
+    @if (selectedCourse(); as course) {
+    <div class="text-xs px-3 py-2 rounded-lg bg-slate-50 border border-slate-200 text-slate-700">
+      <div><strong>Mã môn:</strong> {{ course.code }}</div>
+      <div>
+        <strong>Phạm vi:</strong>
+        @if (isCourseInScope()) {
+        <span class="text-emerald-700 font-semibold">Thuộc Scope phụ trách</span>
+        } @else {
+        <span class="text-slate-500">Chế độ tra cứu (Chỉ đọc)</span>
+        }
+      </div>
+    </div>
+    }
+  </div>
+</div>
+
+<!-- Bảng danh sách Phiên bản Đề cương của học phần -->
+<div class="table-card">
+  <div class="flex items-center justify-between mb-4">
+    <div>
+      <h2 class="text-base font-bold text-slate-900 m-0">
+        Danh sách Phiên bản Đề cương {{ selectedCourse() ? '— ' + selectedCourse()!.code : '' }}
+      </h2>
+      <p class="text-xs text-slate-500 m-0 mt-0.5">
+        Mỗi phiên bản đề cương định nghĩa một bộ Chuẩn đầu ra học phần (CLO) độc lập theo thời kỳ áp dụng
+      </p>
+    </div>
+    <div class="text-xs text-slate-500">
+      {{ syllabi().length }} phiên bản
+    </div>
+  </div>
+
+  <nz-table
+    class="custom-admin-table"
+    nzSize="middle"
+    nzShowPagination="false"
+    [nzFrontPagination]="false"
+    [nzData]="syllabi()"
+    [nzLoading]="isLoadingSyllabi()"
+    [nzNoResult]="emptyTpl"
+    [nzScroll]="{ x: '820px' }"
+  >
+    <thead>
+      <tr>
+        <th nzWidth="160px">Phiên bản đề cương</th>
+        <th nzWidth="170px" nzAlign="center">Trạng thái</th>
+        <th nzWidth="180px" nzAlign="center">Hiệu lực từ học kỳ</th>
+        <th nzWidth="180px" nzAlign="center">Hiệu lực đến học kỳ</th>
+        <th nzWidth="170px" nzAlign="center">Xác nhận ĐBCL</th>
+        <th nzWidth="160px" nzAlign="right">Thao tác</th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (s of syllabi(); track s.id) {
+      <tr class="ui-pdf-row">
+        <td>
+          <span class="font-bold text-slate-900">{{ s.version }}</span>
+        </td>
+        <td nzAlign="center">
+          @if (s.status === 'CONFIRMED') {
+          <app-status-chip label="Đã duyệt (CONFIRMED)" tone="success" icon="fa-circle-check" />
+          } @else if (s.status === 'DRAFT') {
+          <app-status-chip label="Bản nháp (DRAFT)" tone="warning" icon="fa-pen-ruler" lineStyle="dashed" />
+          } @else {
+          <app-status-chip label="Lưu trữ (ARCHIVED)" tone="neutral" icon="fa-box-archive" />
+          }
+        </td>
+        <td nzAlign="center">
+          <span class="font-medium text-slate-700">{{ getTermCode(s.effectiveFromTermId) }}</span>
+        </td>
+        <td nzAlign="center">
+          @if (s.effectiveToTermId) {
+          <span class="font-medium text-slate-700">{{ getTermCode(s.effectiveToTermId) }}</span>
+          } @else {
+          <span class="text-slate-400 text-xs" title="Chưa giới hạn học kỳ kết thúc">— (Còn hiệu lực)</span>
+          }
+        </td>
+        <td nzAlign="center">
+          <app-verification-badge
+            [status]="s.verification?.status"
+            [note]="s.verification?.note"
+          />
+        </td>
+        <td nzAlign="right">
+          <a
+            class="table-action-link"
+            [routerLink]="['/mng/syllabi', s.id]"
+          >
+            Mở chi tiết & CLO <i class="fa-solid fa-arrow-right ml-1 text-xs"></i>
+          </a>
+        </td>
+      </tr>
+      }
+    </tbody>
+  </nz-table>
+</div>
+
+<ng-template #emptyTpl>
+  @if (hasError()) {
+  <div class="py-10 text-center" role="alert">
+    <p class="mb-3 text-rose-600 font-medium">Không tải được danh sách đề cương học phần.</p>
+    <button nz-button type="button" (click)="loadSyllabi()">
+      <i class="fa-solid fa-rotate-right mr-1.5"></i>Thử lại
+    </button>
+  </div>
+  } @else {
+  <div class="py-10 text-center text-slate-500">
+    <p class="mb-3">Học phần này chưa có phiên bản đề cương nào.</p>
+    @if (canCreateSyllabus()) {
+    <button nz-button nzType="primary" (click)="openCreateSyllabusModal()">
+      <i class="fa-solid fa-plus mr-1.5"></i>Khởi tạo phiên bản đề cương đầu tiên
+    </button>
+    }
+  </div>
+  }
+</ng-template>
+
+<!-- Modal Tạo Phiên bản Đề cương mới (US-10) -->
+<nz-modal
+  [nzVisible]="isCreateModalVisible()"
+  nzTitle="Khởi tạo Phiên bản Đề cương mới (DRAFT)"
+  [nzWidth]="520"
+  (nzOnCancel)="isCreateModalVisible.set(false)"
+  (nzOnOk)="submitCreateSyllabus()"
+  [nzOkLoading]="isSubmitting()"
+  nzOkText="Tạo phiên bản DRAFT"
+  nzCancelText="Hủy"
+>
+  <ng-container *nzModalContent>
+    <form [formGroup]="syllabusForm" nz-form nzLayout="vertical">
+      <nz-form-item>
+        <nz-form-label nzRequired nzFor="syllabusVersion">Mã phiên bản đề cương</nz-form-label>
+        <nz-form-control nzErrorTip="Vui lòng nhập mã phiên bản đề cương (ví dụ: 2026-v1)">
+          <input
+            nz-input
+            id="syllabusVersion"
+            formControlName="version"
+            placeholder="Ví dụ: 2026-v1, 2026-HK1-v1..."
+          />
+        </nz-form-control>
+      </nz-form-item>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <nz-form-item>
+          <nz-form-label nzFor="fromTerm">Hiệu lực từ học kỳ</nz-form-label>
+          <nz-form-control>
+            <nz-select
+              id="fromTerm"
+              formControlName="effectiveFromTermId"
+              nzAllowClear
+              nzPlaceHolder="Chọn học kỳ bắt đầu..."
+              class="w-full"
+            >
+              @for (t of terms(); track t.id) {
+              <nz-option [nzValue]="t.id" [nzLabel]="t.code + (t.academicYear ? ' (' + t.academicYear + ')' : '')" />
+              }
+            </nz-select>
+          </nz-form-control>
+        </nz-form-item>
+
+        <nz-form-item>
+          <nz-form-label nzFor="toTerm">Hiệu lực đến học kỳ</nz-form-label>
+          <nz-form-control>
+            <nz-select
+              id="toTerm"
+              formControlName="effectiveToTermId"
+              nzAllowClear
+              nzPlaceHolder="Để trống nếu còn hiệu lực..."
+              class="w-full"
+            >
+              @for (t of terms(); track t.id) {
+              <nz-option [nzValue]="t.id" [nzLabel]="t.code + (t.academicYear ? ' (' + t.academicYear + ')' : '')" />
+              }
+            </nz-select>
+          </nz-form-control>
+        </nz-form-item>
+      </div>
+
+      @if (syllabusForm.hasError('termOrderInvalid')) {
+      <div class="text-rose-600 text-xs mt-1" role="alert">
+        Học kỳ kết thúc hiệu lực không được có ngày bắt đầu trước học kỳ bắt đầu hiệu lực (US-10/AC-2).
+      </div>
+      }
+    </form>
+  </ng-container>
+</nz-modal>
+
+<!-- Modal Phân công Giảng viên biên soạn (ADR 0010) -->
+<app-assign-course-modal
+  [isVisible]="isAssignModalVisible()"
+  [course]="selectedCourse()"
+  [canLoadUsers]="canAssignCourse()"
+  (visibleChange)="isAssignModalVisible.set($event)"
+/>

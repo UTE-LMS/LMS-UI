@@ -1,0 +1,139 @@
+import { provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { TestBed } from '@angular/core/testing';
+import { UrlConstant } from '@constants/url.constant';
+import { INLINE_ERRORS } from '@interceptors/http-context.token';
+import {
+  IAssignCourseRequest,
+  ICourseRequest,
+  ICourseUpdateRequest,
+  IProgramCourseRequest,
+  IProgramCourseUpdateRequest,
+} from '@models/course/course.model';
+import { CourseService } from './course.service';
+
+describe('CourseService (F03 US-09, ADR 0010)', () => {
+  let service: CourseService;
+  let http: HttpTestingController;
+  const base = UrlConstant.API.COURSES;
+  const courseId = '671dcba5f123456789abcde1';
+  const pvId = '671dcba5f123456789abcdef';
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      providers: [provideHttpClient(), provideHttpClientTesting()],
+    });
+    service = TestBed.inject(CourseService);
+    http = TestBed.inject(HttpTestingController);
+  });
+
+  afterEach(() => http.verify());
+
+  it('getCourses gửi params page, size và search (khi có)', () => {
+    service.getCourses(0, 10, '  OOPR230279  ').subscribe();
+    const req = http.expectOne(r => r.url === base);
+    expect(req.request.method).toBe('GET');
+    expect(req.request.params.get('page')).toBe('0');
+    expect(req.request.params.get('size')).toBe('10');
+    expect(req.request.params.get('search')).toBe('OOPR230279');
+    req.flush({ content: [], page: 0, size: 10, totalElements: 0, totalPages: 0, last: true });
+  });
+
+  it('getCourses không gửi param search khi rỗng', () => {
+    service.getCourses(1, 20, '   ').subscribe();
+    const req = http.expectOne(r => r.url === base);
+    expect(req.request.params.has('search')).toBe(false);
+    req.flush({ content: [], page: 1, size: 20, totalElements: 0, totalPages: 0, last: true });
+  });
+
+  it('createCourse gửi đúng body qua POST /api/v1/courses', () => {
+    const body: ICourseRequest = {
+      code: 'OOPR230279',
+      name: 'Lập trình hướng đối tượng',
+      credits: 3,
+    };
+    service.createCourse(body).subscribe();
+    const req = http.expectOne(base);
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual(body);
+    expect(req.request.context.get(INLINE_ERRORS)).toBe(true);
+    req.flush({});
+  });
+
+  it('updateCourse và deleteCourse gọi đúng URL /api/v1/courses/{id}', () => {
+    const body: ICourseUpdateRequest = {
+      name: 'Lập trình hướng đối tượng (Cập nhật)',
+      credits: 4,
+    };
+    service.updateCourse(courseId, body).subscribe();
+    const putReq = http.expectOne(UrlConstant.API.COURSE_DETAIL(courseId));
+    expect(putReq.request.method).toBe('PUT');
+    expect(putReq.request.body).toEqual(body);
+    putReq.flush({});
+
+    service.deleteCourse(courseId).subscribe();
+    const delReq = http.expectOne(UrlConstant.API.COURSE_DETAIL(courseId));
+    expect(delReq.request.method).toBe('DELETE');
+    delReq.flush(null);
+  });
+
+  it('addCourseToProgramVersion, updateProgramCourse và removeCourseFromProgramVersion gọi đúng hợp đồng program_courses', () => {
+    const createBody: IProgramCourseRequest = {
+      courseId,
+      semester: 3,
+      credits: 3,
+      type: 'COMPULSORY',
+      category: 'MAJOR_FOUNDATION',
+      prerequisiteCourseIds: [],
+      previousCourseIds: [],
+    };
+    service.addCourseToProgramVersion(pvId, createBody).subscribe();
+    const postReq = http.expectOne(UrlConstant.API.PROGRAM_COURSES(pvId));
+    expect(postReq.request.method).toBe('POST');
+    expect(postReq.request.body).toEqual(createBody);
+    postReq.flush({});
+
+    const updateBody: IProgramCourseUpdateRequest = {
+      semester: 4,
+      credits: 3,
+      type: 'ELECTIVE',
+      category: 'SPECIALIZED',
+      prerequisiteCourseIds: [],
+      previousCourseIds: [],
+    };
+    service.updateProgramCourse(pvId, courseId, updateBody).subscribe();
+    const putReq = http.expectOne(UrlConstant.API.PROGRAM_COURSE_DETAIL(pvId, courseId));
+    expect(putReq.request.method).toBe('PUT');
+    expect(putReq.request.body).toEqual(updateBody);
+    putReq.flush({});
+
+    service.removeCourseFromProgramVersion(pvId, courseId).subscribe();
+    const delReq = http.expectOne(UrlConstant.API.PROGRAM_COURSE_DETAIL(pvId, courseId));
+    expect(delReq.request.method).toBe('DELETE');
+    delReq.flush(null);
+  });
+
+  it('getDepartmentLecturers, assignCourseToLecturer và unassignCourseFromLecturer gọi đúng endpoint Bộ môn (ADR 0010)', () => {
+    service.getDepartmentLecturers(courseId).subscribe();
+    const listReq = http.expectOne(r => r.url === UrlConstant.API.DEPARTMENT_LECTURERS);
+    expect(listReq.request.method).toBe('GET');
+    expect(listReq.request.params.get('courseId')).toBe(courseId);
+    listReq.flush([]);
+
+    const payload: IAssignCourseRequest = {
+      courseId,
+      lecturerId: '671dcba5f123456789abcde9',
+    };
+    service.assignCourseToLecturer(payload).subscribe();
+    const assignReq = http.expectOne(UrlConstant.API.DEPARTMENT_ASSIGN_COURSE);
+    expect(assignReq.request.method).toBe('POST');
+    expect(assignReq.request.body).toEqual(payload);
+    assignReq.flush({});
+
+    service.unassignCourseFromLecturer(payload).subscribe();
+    const unassignReq = http.expectOne(UrlConstant.API.DEPARTMENT_UNASSIGN_COURSE);
+    expect(unassignReq.request.method).toBe('POST');
+    expect(unassignReq.request.body).toEqual(payload);
+    unassignReq.flush({});
+  });
+});

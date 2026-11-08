@@ -64,6 +64,8 @@ describe('ManagementHeaderComponent (Header Admin Layout)', () => {
     expect(titles).toContain('Người dùng');
     expect(titles).toContain('Danh mục CTĐT');
     expect(titles).toContain('Khung CTĐT & Chuẩn đầu ra');
+    expect(titles).toContain('Học phần & Học kỳ');
+    expect(titles).toContain('Đề cương & CLO');
 
     // Không chứa các chức năng chưa triển khai
     expect(titles).not.toContain('Lớp học');

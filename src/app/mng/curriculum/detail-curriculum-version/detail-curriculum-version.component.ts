@@ -23,6 +23,8 @@ import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzTableModule } from 'ng-zorro-antd/table';
 import { ToastrService } from 'ngx-toastr';
 import { forkJoin } from 'rxjs';
+import { CloPiMatrixTableComponent } from './clo-pi-matrix-table/clo-pi-matrix-table.component';
+import { ProgramCoursesTableComponent } from './program-courses-table/program-courses-table.component';
 import { VerificationActionModalComponent } from './verification-action-modal/verification-action-modal.component';
 
 export interface ITreeRow {
@@ -56,6 +58,8 @@ export interface ICoursePiContribBadge {
     StatusChipComponent,
     VerificationBadgeComponent,
     VerificationActionModalComponent,
+    ProgramCoursesTableComponent,
+    CloPiMatrixTableComponent,
   ],
 })
 export class DetailCurriculumVersionComponent implements OnInit {
@@ -78,6 +82,8 @@ export class DetailCurriculumVersionComponent implements OnInit {
   readonly isLoading = signal(false);
   readonly isVerifyModalVisible = signal(false);
   readonly userRoles = signal<string[]>([]);
+  readonly activeTab = signal<'PLO_PI' | 'PROGRAM_COURSES' | 'CLO_PI_MATRIX'>('PLO_PI');
+  readonly selectedMatrixCourseId = signal<string | null>(null);
 
   private readonly ploCategoryLabels: Record<string, string> = {
     GENERAL: 'Đại cương',
@@ -110,6 +116,18 @@ export class DetailCurriculumVersionComponent implements OnInit {
     }
     const progId = ver?.programId;
     return !!progId && scopeProgramIds.includes(progId);
+  });
+
+  /** Quyền gán học phần vào CTĐT & thiết lập liên kết CLO–PI (F03 US-09, US-12, ADR 0010: PROGRAM_MANAGER trong scope hoặc ADMIN) */
+  readonly canManageCoursesAndLinks = computed(() => {
+    const ver = this.version();
+    if (ver?.status === 'ARCHIVED') {
+      return false;
+    }
+    if (this.userRoles().includes(SystemConstant.ROLE.ADMIN)) {
+      return true;
+    }
+    return this.canEdit();
   });
 
   /**
@@ -318,5 +336,14 @@ export class DetailCurriculumVersionComponent implements OnInit {
 
   openVerifyModal(): void {
     this.isVerifyModalVisible.set(true);
+  }
+
+  switchTab(tab: 'PLO_PI' | 'PROGRAM_COURSES' | 'CLO_PI_MATRIX'): void {
+    this.activeTab.set(tab);
+  }
+
+  openCloPiMatrixForCourse(courseId: string): void {
+    this.selectedMatrixCourseId.set(courseId);
+    this.activeTab.set('CLO_PI_MATRIX');
   }
 }

@@ -46,6 +46,8 @@ Quy tắc ghi: `.claude/rules/01-ai-usage-and-ownership.md`.
 | 10 | 2026-11-05 | Trong `list-curriculum-versions.component.spec.ts`, mock `getRoleAssignments` trả về `[]` để test `canManage() == false`, nhưng test báo lỗi `expected true to be false` | Chạy `npm test -- --no-watch` (Vitest báo fail 1 test) | Không đọc kỹ computed `canManage()`: khi user vẫn có role `PROGRAM_MANAGER` mà `scopeProgramIds` rỗng thì hàm coi là không giới hạn scope và trả `true`. Đã sửa test bằng cách đổi role sang `LECTURER` | _chưa commit_ |
 | 11 | 2026-11-06 | Trong `ListCurriculumVersionsComponent`, `DetailCurriculumVersionComponent` và `curriculum.routes.ts`, các hàm `canManage`, `canEdit`, `isQaOfficer` từng gộp `SystemConstant.ROLE.ADMIN` vào quyền sửa phiên bản CTĐT và quyền duyệt ĐBCL, vi phạm ADR 0004 & ADR 0005 | Sinh viên phát hiện khi rà soát giao diện ("admin đâu có quyền sửa phiên bản chương trình đào tạo với duyệt mà cho chức năng vô giao diện vậy") và đối chiếu Issue #17, #20 | AI áp dụng thói quen "ADMIN toàn quyền" của CRUD thông thường sang phân hệ học thuật chuyên môn mà không đối chiếu ranh giới phân quyền giữa `ADMIN` (chỉ quản lý danh mục ngành `/mng/programs`), `PROGRAM_MANAGER` (soạn thảo phiên bản, PLO/PI, ma trận I/R/M) và `QA_OFFICER` (thẩm định độc lập) | PR #45 (`ad0eb7f`) |
 | 12 | 2026-11-06 | Trên trang `/mng/forbidden`, kiểm thử E2E `e2e/login.e2e.ts:189:7` báo 3 phần tử vi phạm `serious: color-contrast`: (1) `.role-avatar-circle` (`#ffffff` trên nền `#d97706`, tương phản 3.18:1 < 4.5:1) ở `ManagementHeaderComponent`, và (2)-(3) hai thẻ `<p class="text-[#66727f]">` ở `ForbiddenComponent` hiển thị trên nền `#f0f4f9` mới của `.management-content-area` (tương phản 4.44:1 < 4.5:1) | CI GitHub Actions chạy Playwright + `@axe-core/playwright` (`expectNoBlockingA11yViolations` tại `e2e/support.ts:20`) trên PR #45 | Khi đổi nền `.management-content-area` từ `#ffffff` sang `#f0f4f9` và thiết kế `.role-avatar-circle` màu cam `#d97706`, AI chỉ ước lượng bằng mắt mà không tính toán tỷ lệ tương phản luminance theo công thức WCAG 2.1 AA (≥ 4.5:1). Đã sửa `.role-avatar-circle` sang `#92400e` (7.05:1) và văn bản phụ của `forbidden.component.html` sang `#46525f` (7.18:1) | PR #45 |
+| 13 | 2026-11-06 | Trong `AssignCourseModalComponent` (`src/app/mng/syllabi/assign-course-modal/assign-course-modal.component.ts`), hàm `effect()` đọc trực tiếp `this.lecturers().length === 0` mà không bọc trong `untracked()` và không có cờ `hasLoadedLecturers`; khi `userSvc.filter(0, 100)` trả về danh sách giảng viên rỗng (`[]`), `this.lecturers.set(list)` tạo tham chiếu mảng mới làm kích hoạt lại `effect()` liên tục (vòng lặp vô hạn gọi API + bật `ngx-spinner` chặn toàn bộ thao tác bấm nút `X` hoặc `Đóng` trên modal) | Sinh viên phát hiện khi mở modal Phân công Giảng viên biên soạn trên trình duyệt ("cái form hiển thị phân công giảng viên biên soạn bấm x hay đóng không được ta") | AI đọc signal `this.lecturers()` bên trong `effect()` rồi lại ghi đè `this.lecturers.set(list)` trong callback bất đồng bộ của cùng luồng đó, đồng thời quên rằng `signal([])` so sánh bằng `Object.is` nên mỗi lần `.set([])` đều tạo tham chiếu mảng mới. Đã sửa bằng cách bọc phần xử lý trong `untracked()`, thêm cờ `hasLoadedLecturers` và bổ sung `[nzFooter]` tường minh + `(nzVisibleChange)` | _chưa commit_ |
+| 14 | 2026-11-07 | Trong `ListSyllabiComponent` và `DetailSyllabusComponent`, các computed `canCreateSyllabus`, `canEditClo`, `canApproveSyllabus` từng cho phép role `ADMIN` tạo đề cương, thêm/sửa/xóa CLO và duyệt `CONFIRMED`, vi phạm ranh giới thẩm quyền học thuật và bị lệch với Backend (BE commit `ade4c16`) | Sinh viên phát hiện khi rà soát phân quyền ("admin vẫn nên có quyền biên soạn đề cương à") | AI lặp lại thói quen gán quyền `ADMIN` vào nghiệp vụ học thuật sư phạm tương tự như lỗi #11 ở F02. Đã sửa thu hồi toàn bộ quyền biên soạn và phê duyệt của `ADMIN`, chuyển giao diện sang chế độ Chỉ đọc (Read-only) cho Admin theo đúng ADR 0010 | _chưa commit_ |
 
 ## C. Danh sách kiểm soát đầu ra AI đã áp dụng
 
@@ -417,3 +419,40 @@ Phần này chuẩn bị sẵn nội dung trả lời cho 4 câu hỏi trọng t
   - Nếu loại bỏ chữ mà không có `.sr-only`, các công cụ kiểm thử tự động và người dùng sử dụng Screen Reader sẽ không thể xác định được tài khoản đang ở trạng thái nào.
 - **Góc nhìn Sinh viên IBS:**
   - Quản trị viên thao tác chậm hơn, tăng nguy cơ rò rỉ dữ liệu điểm số và chuẩn đầu ra trong trường hợp tài khoản giảng viên bị xâm phạm mà không được khóa kịp thời.
+
+
+---
+
+## Phiên #13: Thực hiện Kế hoạch UI F03 — Học phần, Đề cương, CLO, Liên kết CLO–PI & Quản lý Học kỳ (F05a)
+
+### 1. Thông tin phiên làm việc
+- **Thời gian:** 2026-11-06
+- **Người thực hiện (`git config user.name`):** `minhat5`
+- **Phạm vi nghiệp vụ:** F03 (`US-09`, `US-10`, `US-11`, `US-12`) và phần quản lý Học kỳ thuộc F05a (`US-18`), tuân thủ kiến trúc phân quyền học thuật phân cấp tại **ADR 0010** và **ADR 0004**.
+
+### 2. Các hạng mục đã hiện thực
+1. **Tầng Core (Constants, Models & Services):**
+   - Cập nhật `src/app/core/constants/url.constant.ts` bổ sung đầy đủ các hằng số API và Route cho `terms`, `courses`, `program_courses`, `departments/assign-course`, `syllabi`, `clos`, `clo-pi-links` và `clo-pi-matrix`.
+   - Khởi tạo các interface dữ liệu tại `src/app/core/models/course/` (`term.model.ts`, `course.model.ts`, `syllabus.model.ts`, `clo.model.ts`).
+   - Xây dựng 4 service tại `src/app/core/services/course/` (`TermService`, `CourseService`, `SyllabusService`, `CloService`) kèm 4 file kiểm thử đơn vị `*.service.spec.ts`.
+2. **Phân hệ Kho Học phần & Học kỳ (`/mng/courses`):**
+   - Tab **Kho Học phần cấp trường (`courses`):** Dành riêng cho `ADMIN` thêm/sửa/xóa học phần cấp trường (Master Catalog theo ADR 0010); các vai trò khác tra cứu và mở sang đề cương học phần.
+   - Tab **Danh mục Học kỳ (`terms` — F05a US-18):** Dành cho `ADMIN` và `PROGRAM_MANAGER` quản lý học kỳ (`OPEN`, `SCORE_LOCKED`, `CLOSED`), tích hợp hộp thoại bắt buộc nhập lý do giải trình khi mở lại học kỳ đã khóa sổ điểm (`SCORE_LOCKED -> OPEN`, US-18/AC-3).
+3. **Phân hệ Đề cương & Chuẩn đầu ra Học phần (`/mng/syllabi`):**
+   - Màn hình danh sách đề cương theo học phần (`ListSyllabiComponent`), lọc theo `scope.courseIds` hoặc tra cứu toàn trường.
+   - Hộp thoại Trưởng bộ môn (`DEPARTMENT_HEAD`) phân công hoặc thu hồi quyền biên soạn đề cương cho Giảng viên (`AssignCourseModalComponent` — ADR 0010).
+   - Màn hình chi tiết đề cương & biên soạn CLO (`DetailSyllabusComponent`): Kiểm tra regex mã CLO (`^CLO[0-9]+$`), thang nhận thức Bloom 1–6 (`app-bloom-level-label`), giữ `measurement` mặc định `null` (Q12), phê duyệt `CONFIRMED` bởi Trưởng bộ môn và đóng băng 100% thao tác sửa/xóa CLO khi đề cương khác `DRAFT` (TD-27).
+4. **Mở rộng Khung CTĐT (`/mng/curriculum/versions/:versionId`) & Chọn Học phần ở Form Người dùng (`/mng/users`):**
+   - Bổ sung Tab **Kế hoạch Học phần trong CTĐT (`ProgramCoursesTableComponent`):** Gán học phần vào phiên bản CTĐT kèm custom validator chặn tự tham chiếu (`selfReferenceConflict`) và chặn trùng học phần giữa danh sách Tiên quyết và Học trước (`prereqPrevConflict` — US-09/AC-3).
+   - Bổ sung Tab **Ma trận Liên kết CLO × PI & Thẩm định QA (`CloPiMatrixTableComponent`):** Chỉ liệt kê các học phần thuộc CTĐT (TD-28), cho phép `PROGRAM_MANAGER` thiết lập/xóa liên kết CLO–PI khi đề cương ở `DRAFT`, và cho phép `QA_OFFICER` thẩm định độc lập từng liên kết (`VERIFIED` / `NEEDS_CLARIFICATION` / `UNVERIFIED` — US-12/AC-3).
+   - Nâng cấp `FormUsersComponent` (`src/app/mng/users/form-users/form-users.component.ts` & `.html`): Tích hợp `CourseService.getCourses(0, 100)` và đổi ô chọn `courseIds` từ `nzMode="tags"` (nhập tay ObjectId) sang `nzMode="multiple"` kèm `nzShowSearch` hiển thị danh sách học phần theo định dạng `code - name` tương tự ô chọn Chương trình đào tạo (`programIds`).
+5. **Thu hồi quyền học thuật & phân công bộ môn của ADMIN trên phân hệ Đề cương (đồng bộ Backend commit `ade4c16` & `865bd77`):**
+   - Thu hồi quyền tạo phiên bản đề cương DRAFT (`canCreateSyllabus = false` đối với `ADMIN`) trong `ListSyllabiComponent`.
+   - Thu hồi quyền phân công giảng viên tại các endpoint bộ môn (`canAssignCourse = false` đối với `ADMIN`) trong `ListSyllabiComponent` (chỉ dành riêng cho `DEPARTMENT_HEAD` có môn trong scope).
+   - Thu hồi quyền thêm/sửa/xóa CLO (`canEditClo = false` đối với `ADMIN`) và quyền phê duyệt `CONFIRMED` (`canApproveSyllabus = false` đối với `ADMIN`) trong `DetailSyllabusComponent`.
+   - Admin chỉ có quyền tra cứu/xem chi tiết toàn trường (Read-only 100% trên `/mng/syllabi`), đảm bảo tính toàn vẹn phân cấp học thuật theo ADR 0010.
+
+### 3. Kết quả kiểm chứng
+- **ESLint (`src/`):** 0 errors, 0 warnings.
+- **Unit Tests (`npm test -- --no-watch`):** 65/65 test files passed (635/635 tests passed).
+- **Build (`npm run build:dev`):** Biên dịch thành công 0 errors.

@@ -43,6 +43,31 @@ export const UrlConstant = {
     PI_CONTRIBUTION_DETAIL: (pvId: string, id: string) => `${environment.serverUrl}api/v1/program-versions/${pvId}/pi-contributions/${id}`,
     PROGRAM_COURSES: (pvId: string) => `${environment.serverUrl}api/v1/program-versions/${pvId}/courses`,
 
+    // F03 & F05a (Terms, Courses, Syllabi, CLOs, CLO-PI Links)
+    TERMS: environment.serverUrl + 'api/v1/terms',
+    TERM_DETAIL: (id: string) => `${environment.serverUrl}api/v1/terms/${id}`,
+    TERM_STATUS: (id: string) => `${environment.serverUrl}api/v1/terms/${id}/status`,
+
+    COURSES: environment.serverUrl + 'api/v1/courses',
+    COURSE_DETAIL: (id: string) => `${environment.serverUrl}api/v1/courses/${id}`,
+    PROGRAM_COURSE_DETAIL: (pvId: string, courseId: string) => `${environment.serverUrl}api/v1/program-versions/${pvId}/courses/${courseId}`,
+
+    DEPARTMENT_LECTURERS: environment.serverUrl + 'api/v1/departments/lecturers',
+    DEPARTMENT_ASSIGN_COURSE: environment.serverUrl + 'api/v1/departments/assign-course',
+    DEPARTMENT_UNASSIGN_COURSE: environment.serverUrl + 'api/v1/departments/unassign-course',
+
+    COURSE_SYLLABI: (courseId: string) => `${environment.serverUrl}api/v1/courses/${courseId}/syllabi`,
+    SYLLABUS_DETAIL: (id: string) => `${environment.serverUrl}api/v1/syllabi/${id}`,
+    SYLLABUS_STATUS: (id: string) => `${environment.serverUrl}api/v1/syllabi/${id}/status`,
+
+    SYLLABUS_CLOS: (syllabusId: string) => `${environment.serverUrl}api/v1/syllabi/${syllabusId}/clos`,
+    CLO_DETAIL: (id: string) => `${environment.serverUrl}api/v1/clos/${id}`,
+
+    SYLLABUS_CLO_PI_LINKS: (syllabusId: string) => `${environment.serverUrl}api/v1/syllabi/${syllabusId}/clo-pi-links`,
+    SYLLABUS_CLO_PI_MATRIX: (syllabusId: string) => `${environment.serverUrl}api/v1/syllabi/${syllabusId}/clo-pi-matrix`,
+    CLO_PI_LINK_DETAIL: (id: string) => `${environment.serverUrl}api/v1/clo-pi-links/${id}`,
+    CLO_PI_LINK_VERIFY: (id: string) => `${environment.serverUrl}api/v1/clo-pi-links/${id}/verification`,
+
     // Categories
     DEMO_API: environment.serverUrl + 'rest/demo',
   },
@@ -69,6 +94,10 @@ export const UrlConstant = {
       CURRICULUM: '/mng/curriculum',
       CURRICULUM_DETAIL: (versionId: string) => `/mng/curriculum/versions/${versionId}`,
       CURRICULUM_EDIT: (versionId: string) => `/mng/curriculum/versions/${versionId}/edit`,
+
+      COURSES: '/mng/courses',
+      SYLLABI: '/mng/syllabi',
+      SYLLABUS_DETAIL: (syllabusId: string) => `/mng/syllabi/${syllabusId}`,
 
       CATEGORIES: '/mng/categories',
       ACADEMIC_RANKS: '/mng/categories/academic-ranks',

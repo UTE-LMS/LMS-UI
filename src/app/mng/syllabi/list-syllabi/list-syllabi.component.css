@@ -1,0 +1,62 @@
+.title-underline {
+  width: 44px;
+  height: 3px;
+  background-color: #2563eb;
+  border-radius: 9999px;
+  margin-top: 8px;
+}
+
+.add-syllabus-btn {
+  background-color: #2563eb !important;
+  border-color: #2563eb !important;
+  color: #ffffff !important;
+  font-weight: 500;
+  border-radius: 8px;
+  height: 38px;
+  padding: 0 16px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.alert-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+  border-radius: 8px;
+  background-color: #edf4ff;
+  border-left: 3px solid #2563eb;
+  color: #1e3a8a;
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+
+.alert-icon-box {
+  flex-shrink: 0;
+  color: #2563eb;
+  display: flex;
+  align-items: center;
+}
+
+.table-card {
+  background-color: #ffffff;
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  padding: 20px 24px;
+}
+
+.table-action-link {
+  color: #2563eb;
+  font-weight: 500;
+  font-size: 13.5px;
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.table-action-link:hover {
+  text-decoration: underline;
+}

@@ -5,8 +5,10 @@ import { UrlConstant } from '@constants/url.constant';
 import langDataEn from '@languages/en.json';
 import langDataVi from '@languages/vi.json';
 import { ISiderMenu } from '@models/common/sider-menu.model';
+import { coursesMngMenu } from '@mng/courses/courses.menu';
 import { curriculumMngMenu } from '@mng/curriculum/curriculum.menu';
 import { programsMngMenu } from '@mng/programs/programs.menu';
+import { syllabiMngMenu } from '@mng/syllabi/syllabi.menu';
 import { usersMngMenu } from '@mng/users/users.menu';
 import { AuthService } from '@services/auth/auth.service';
 import { NzButtonModule } from 'ng-zorro-antd/button';
@@ -61,6 +63,8 @@ export class ManagementHeaderComponent implements OnInit {
     ...usersMngMenu,
     ...programsMngMenu,
     ...curriculumMngMenu,
+    ...coursesMngMenu,
+    ...syllabiMngMenu,
   ];
 
   /** Lọc các mục menu phù hợp với vai trò của người dùng hiện tại */
