@@ -69,22 +69,4 @@ export interface ICoursePiContributionRequest {
   contribution: PiContributionType;
 }
 
-export interface ICourse {
-  id: string;
-  code: string;
-  name: string;
-  credits?: number;
-}
-
-export interface IProgramCourse {
-  id: string;
-  programVersionId: string;
-  courseId: string;
-  course?: ICourse;
-  semester?: number;
-  credits?: number;
-  type?: string;
-  category?: string;
-  prerequisiteCourseIds?: string[];
-  previousCourseIds?: string[];
-}
+export type { ICourse, IProgramCourse } from '@models/course/course.model';

@@ -126,6 +126,47 @@
     </div>
   </div>
 
+  <!-- Thanh điều hướng 3 phân khu (F02 & F03) -->
+  <div class="flex flex-wrap items-center gap-2 bg-slate-100 p-1.5 rounded-xl mb-6">
+    <button
+      type="button"
+      class="px-4 py-2 rounded-lg text-sm font-semibold transition-colors cursor-pointer border-0"
+      [class.bg-white]="activeTab() === 'PLO_PI'"
+      [class.text-blue-700]="activeTab() === 'PLO_PI'"
+      [class.shadow-xs]="activeTab() === 'PLO_PI'"
+      [class.text-slate-600]="activeTab() !== 'PLO_PI'"
+      [class.bg-transparent]="activeTab() !== 'PLO_PI'"
+      (click)="switchTab('PLO_PI')"
+    >
+      <i class="fa-solid fa-sitemap mr-1.5"></i>1. Khung PLO · PI & Ma trận I/R/M (F02)
+    </button>
+    <button
+      type="button"
+      class="px-4 py-2 rounded-lg text-sm font-semibold transition-colors cursor-pointer border-0"
+      [class.bg-white]="activeTab() === 'PROGRAM_COURSES'"
+      [class.text-blue-700]="activeTab() === 'PROGRAM_COURSES'"
+      [class.shadow-xs]="activeTab() === 'PROGRAM_COURSES'"
+      [class.text-slate-600]="activeTab() !== 'PROGRAM_COURSES'"
+      [class.bg-transparent]="activeTab() !== 'PROGRAM_COURSES'"
+      (click)="switchTab('PROGRAM_COURSES')"
+    >
+      <i class="fa-solid fa-layer-group mr-1.5"></i>2. Kế hoạch Học phần trong CTĐT ({{ courses().length }})
+    </button>
+    <button
+      type="button"
+      class="px-4 py-2 rounded-lg text-sm font-semibold transition-colors cursor-pointer border-0"
+      [class.bg-white]="activeTab() === 'CLO_PI_MATRIX'"
+      [class.text-blue-700]="activeTab() === 'CLO_PI_MATRIX'"
+      [class.shadow-xs]="activeTab() === 'CLO_PI_MATRIX'"
+      [class.text-slate-600]="activeTab() !== 'CLO_PI_MATRIX'"
+      [class.bg-transparent]="activeTab() !== 'CLO_PI_MATRIX'"
+      (click)="switchTab('CLO_PI_MATRIX')"
+    >
+      <i class="fa-solid fa-table-cells mr-1.5"></i>3. Ma trận Liên kết CLO × PI & Thẩm định QA
+    </button>
+  </div>
+
+  @if (activeTab() === 'PLO_PI') {
   <!-- PHẦN A: Bảng Chuẩn đầu ra PLO & Chỉ số PI (Tree Table) -->
   <div class="section-card">
     <div class="section-header">
@@ -422,6 +463,23 @@
       </tbody>
     </nz-table>
   </div>
+  } @else if (activeTab() === 'PROGRAM_COURSES') {
+  <app-program-courses-table
+    [versionId]="versionId()"
+    [programCourses]="courses()"
+    [canManage]="canManageCoursesAndLinks()"
+    (changed)="loadData()"
+    (openCloPiMatrix)="openCloPiMatrixForCourse($event)"
+  />
+  } @else {
+  <app-clo-pi-matrix-table
+    [versionId]="versionId()"
+    [programCourses]="courses()"
+    [initialCourseId]="selectedMatrixCourseId()"
+    [canManageLinks]="canManageCoursesAndLinks()"
+    [isQaOfficer]="isQaOfficer()"
+  />
+  }
 </div>
 
 <!-- Modal Thẩm định ĐBCL cho QA Officer -->

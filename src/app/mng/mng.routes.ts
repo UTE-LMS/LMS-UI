@@ -49,6 +49,26 @@ export const mngRoutes: Routes = [
         loadChildren: () => import('./curriculum/curriculum.routes').then(m => m.curriculumRoutes),
       },
       {
+        path: 'courses',
+        canActivate: [canActiveGuard],
+        data: {
+          listRoles: ALL_MNG_ROLES,
+          rolesRelation: 'OR',
+        },
+        loadChildren: () => import('./courses/courses.routes').then(m => m.coursesRoutes),
+        title: `Danh mục Học phần & Học kỳ | ${SystemConstant.WEB_NAME}`,
+      },
+      {
+        path: 'syllabi',
+        canActivate: [canActiveGuard],
+        data: {
+          listRoles: ALL_MNG_ROLES,
+          rolesRelation: 'OR',
+        },
+        loadChildren: () => import('./syllabi/syllabi.routes').then(m => m.syllabiRoutes),
+        title: `Đề cương & Chuẩn đầu ra Học phần (CLO) | ${SystemConstant.WEB_NAME}`,
+      },
+      {
         // Không đặt listRoles: ai đã đăng nhập cũng xem được trang giải thích này
         path: 'forbidden',
         loadComponent: () => import('./forbidden/forbidden.component').then(m => m.ForbiddenComponent),

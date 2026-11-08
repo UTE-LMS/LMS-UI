@@ -2,12 +2,15 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { SystemConstant } from '@constants/system.constant';
 import { ModalData } from '@models/common/modal-data.model';
+import { ICourse } from '@models/course/course.model';
 import { IUser } from '@models/user/user.model';
+import { CourseService } from '@services/course/course.service';
 import { UserService } from '@services/user/user.service';
 import { ToastrService } from 'ngx-toastr';
 import { Observable, of, Subject, throwError } from 'rxjs';
 import { FormUsersComponent } from './form-users.component';
 
+const COURSE_ID = '671dcba5f123456789abcd01';
 const SECTION_ID = '671dcba5f123456789abcd02';
 
 const apiError = (status: number, message: string, fieldErrors?: { field: string; message: string; }[]): HttpErrorResponse => new HttpErrorResponse({ status, error: { timestamp: 't', status, code: 'X', message, path: '/api/v1/users', fieldErrors } });
@@ -23,12 +26,31 @@ const existingUser: IUser = {
   updatedAt: '2026-10-27T05:00:00Z',
 };
 
+const mockCourses: ICourse[] = [
+  {
+    id: COURSE_ID,
+    code: 'OOPR230279',
+    name: 'Lập trình hướng đối tượng',
+    credits: 3,
+  },
+];
+
 describe('FormUsersComponent (F01 US-02)', () => {
   let fixture: ComponentFixture<FormUsersComponent>;
   let component: FormUsersComponent;
   const userSvc = {
     create: vi.fn((): Observable<unknown> => of({})),
     update: vi.fn((): Observable<unknown> => of({})),
+  };
+  const courseSvc = {
+    getCourses: vi.fn(() => of({
+      content: mockCourses,
+      page: 0,
+      size: 100,
+      totalElements: 1,
+      totalPages: 1,
+      last: true,
+    })),
   };
   const alert = { success: vi.fn(), error: vi.fn(), warning: vi.fn() };
   let closed: boolean[];
@@ -38,6 +60,7 @@ describe('FormUsersComponent (F01 US-02)', () => {
       imports: [FormUsersComponent],
       providers: [
         { provide: UserService, useValue: userSvc },
+        { provide: CourseService, useValue: courseSvc },
         { provide: ToastrService, useValue: alert },
       ],
     });
@@ -67,14 +90,35 @@ describe('FormUsersComponent (F01 US-02)', () => {
     vi.clearAllMocks();
     userSvc.create.mockImplementation(() => of({}));
     userSvc.update.mockImplementation(() => of({}));
+    courseSvc.getCourses.mockImplementation(() => of({
+      content: mockCourses,
+      page: 0,
+      size: 100,
+      totalElements: 1,
+      totalPages: 1,
+      last: true,
+    }));
   });
 
   describe('thêm người dùng', () => {
     beforeEach(() => setup('add'));
 
-    it('bắt đầu với đúng một dòng vai trò', () => {
+    it('bắt đầu với đúng một dòng vai trò và tải danh sách học phần', () => {
       expect(component.roleForms()).toHaveLength(1);
       expect(component.isEdit).toBe(false);
+      expect(courseSvc.getCourses).toHaveBeenCalledWith(0, 100);
+      expect(component.courses()).toEqual(mockCourses);
+    });
+
+    it('cho phép chọn học phần từ danh mục và gửi courseIds hợp lệ', () => {
+      fillValidCreate();
+      component.roleForms()[0].patchValue({ role: 'LECTURER', courseIds: [COURSE_ID] });
+      component.onSubmit();
+      const payload = userSvc.create.mock.calls[0] as unknown as [{ roleAssignments: unknown[]; }];
+      expect(payload[0].roleAssignments).toEqual([
+        { role: 'LECTURER', scope: { programIds: [], courseIds: [COURSE_ID], sectionIds: [] } },
+      ]);
+      expect(component.getMissingCourseIds([COURSE_ID, SECTION_ID])).toEqual([SECTION_ID]);
     });
 
     it('form trống: không gọi API và đánh dấu lỗi', () => {

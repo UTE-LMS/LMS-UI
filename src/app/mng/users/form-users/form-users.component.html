@@ -183,6 +183,7 @@
                 <nz-select
                   class="w-full custom-select"
                   nzMode="multiple"
+                  nzShowSearch
                   formControlName="programIds"
                   nzPlaceHolder="Chọn chương trình đào tạo..."
                   [nzStatus]="roleForm.controls.programIds.invalid && roleForm.controls.programIds.touched ? 'error' : ''"
@@ -199,12 +200,19 @@
                 <span class="scope-label">Học phần</span>
                 <nz-select
                   class="w-full custom-select"
-                  nzMode="tags"
+                  nzMode="multiple"
+                  nzShowSearch
                   formControlName="courseIds"
-                  nzPlaceHolder="Nhập mã rồi nhấn Enter"
-                  [nzTokenSeparators]="[',', ' ']"
+                  nzPlaceHolder="Chọn học phần..."
                   [nzStatus]="roleForm.controls.courseIds.invalid && roleForm.controls.courseIds.touched ? 'error' : ''"
-                />
+                >
+                  @for (course of courses(); track course.id) {
+                  <nz-option [nzValue]="course.id" [nzLabel]="course.code + ' - ' + course.name" />
+                  }
+                  @for (id of getMissingCourseIds(roleForm.controls.courseIds.value); track id) {
+                  <nz-option [nzValue]="id" [nzLabel]="id" />
+                  }
+                </nz-select>
               </div>
               <div>
                 <span class="scope-label">Lớp học phần</span>

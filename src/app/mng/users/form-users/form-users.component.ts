@@ -5,10 +5,12 @@ import { SystemConstant } from '@constants/system.constant';
 import { MakeForm } from '@models/common/make-form.model';
 import { ModalData } from '@models/common/modal-data.model';
 import { IApiError } from '@models/common/response-data.model';
+import { ICourse } from '@models/course/course.model';
 import { IProgram } from '@models/program/program.model';
 import { IRoleAssignment, IUser, IUserCreateDTO, IUserUpdateDTO, UserRole } from '@models/user/user.model';
 import { toApiError } from '@services/common/api-error.util';
 import { FormValidatorService } from '@services/common/form-validator.service';
+import { CourseService } from '@services/course/course.service';
 import { ProgramService } from '@services/program/program.service';
 import { UserService } from '@services/user/user.service';
 import { notBlankValidator, trimmedEmailValidator, trimmedMinLength } from '@validators/trimmed.validator';
@@ -49,6 +51,7 @@ export class FormUsersComponent implements OnInit {
   private readonly fb = inject(NonNullableFormBuilder);
   private readonly userSvc = inject(UserService);
   private readonly programSvc = inject(ProgramService, { optional: true });
+  private readonly courseSvc = inject(CourseService, { optional: true });
   protected readonly formValidSvc = inject(FormValidatorService);
   private readonly alert = inject(ToastrService);
 
@@ -59,6 +62,9 @@ export class FormUsersComponent implements OnInit {
 
   /** Danh sách CTĐT trên hệ thống để chọn vào scope */
   readonly programs = signal<IProgram[]>([]);
+
+  /** Danh sách Học phần cấp trường trên hệ thống để chọn vào scope (F03 ADR 0010) */
+  readonly courses = signal<ICourse[]>([]);
 
   protected readonly roleOptions = SystemConstant.ROLE_TITLE.map(item => ({ value: item.id, label: item.title.vi }));
   protected readonly adminRole: UserRole = SystemConstant.ROLE.ADMIN;
@@ -89,6 +95,7 @@ export class FormUsersComponent implements OnInit {
   ngOnInit(): void {
     this.createForm();
     this.loadPrograms();
+    this.loadCourses();
   }
 
   createForm(): void {
@@ -152,11 +159,31 @@ export class FormUsersComponent implements OnInit {
     });
   }
 
+  private loadCourses(): void {
+    if (!this.courseSvc) {
+      return;
+    }
+    this.courseSvc.getCourses(0, 100).pipe(
+      catchError(() => of({ content: [], totalElements: 0, totalPages: 0, page: 0, size: 0, last: true })),
+      takeUntilDestroyed(this.destroyRef),
+    ).subscribe(res => {
+      this.courses.set(res.content || []);
+    });
+  }
+
   getMissingProgramIds(selectedIds: string[] | null | undefined): string[] {
     if (!selectedIds?.length) {
       return [];
     }
     const existingIds = new Set(this.programs().map(p => p.id));
+    return selectedIds.filter(id => !existingIds.has(id));
+  }
+
+  getMissingCourseIds(selectedIds: string[] | null | undefined): string[] {
+    if (!selectedIds?.length) {
+      return [];
+    }
+    const existingIds = new Set(this.courses().map(c => c.id));
     return selectedIds.filter(id => !existingIds.has(id));
   }
 
