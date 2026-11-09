@@ -136,4 +136,16 @@ describe('CourseService (F03 US-09, ADR 0010)', () => {
     expect(unassignReq.request.body).toEqual(payload);
     unassignReq.flush({});
   });
+
+  it('importCourses gửi FormData chứa tệp qua POST /api/v1/courses/import', () => {
+    const file = new File(['code,name,credits\nCS101,Toan,3'], 'courses.csv', { type: 'text/csv' });
+    service.importCourses(file).subscribe();
+
+    const req = http.expectOne(UrlConstant.API.COURSE_IMPORT);
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body instanceof FormData).toBe(true);
+    expect((req.request.body as FormData).get('file')).toBe(file);
+    expect(req.request.context.get(INLINE_ERRORS)).toBe(true);
+    req.flush({ totalRows: 1, successCount: 1, failureCount: 0, errors: [] });
+  });
 });

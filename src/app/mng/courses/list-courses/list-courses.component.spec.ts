@@ -101,11 +101,12 @@ describe('ListCoursesComponent (F03 US-09/AC-1 & F05a US-18)', () => {
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.textContent).toContain('OOPR230279');
     expect(compiled.textContent).toContain('Thêm học phần mới');
+    expect(compiled.textContent).toContain('Nhập từ CSV');
     // Học phần thứ 2 chưa có credits hiển thị dấu gạch — thay vì số 0
     expect(compiled.textContent).toContain('—');
   });
 
-  it('ẩn các nút Thêm/Sửa/Xóa học phần đối với vai trò không phải ADMIN (ADR 0010)', () => {
+  it('ẩn các nút Thêm/Sửa/Xóa học phần và Nhập từ CSV đối với vai trò không phải ADMIN (ADR 0010)', () => {
     component.userRoles.set([SystemConstant.ROLE.PROGRAM_MANAGER]);
     fixture.detectChanges();
 
@@ -113,6 +114,19 @@ describe('ListCoursesComponent (F03 US-09/AC-1 & F05a US-18)', () => {
     expect(component.canManageTerms()).toBe(true);
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.textContent).not.toContain('Thêm học phần mới');
+    expect(compiled.textContent).not.toContain('Nhập từ CSV');
+  });
+
+  it('mở modal import CSV khi gọi openImportCourseModal và reload dữ liệu khi onCoursesImported', () => {
+    component.userRoles.set([SystemConstant.ROLE.ADMIN]);
+    fixture.detectChanges();
+
+    component.openImportCourseModal();
+    expect(component.isImportModalVisible()).toBe(true);
+
+    const reloadSpy = vi.spyOn(component.manager, 'triggerReload');
+    component.onCoursesImported();
+    expect(reloadSpy).toHaveBeenCalled();
   });
 
   it('yêu cầu nhập lý do giải trình khi mở lại học kỳ SCORE_LOCKED -> OPEN (US-18/AC-3)', () => {

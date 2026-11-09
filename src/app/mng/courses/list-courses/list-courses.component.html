@@ -77,6 +77,14 @@
       <i class="fa-solid fa-magnifying-glass mr-1.5"></i>Tìm kiếm
     </button>
     @if (isAdmin()) {
+    <button
+      nz-button
+      nzType="default"
+      class="import-course-btn inline-flex items-center"
+      (click)="openImportCourseModal()"
+    >
+      <i class="fa-solid fa-file-import mr-1.5 text-blue-600"></i>Nhập từ CSV
+    </button>
     <button nz-button nzType="primary" class="add-course-btn" (click)="openCreateCourseModal()">
       <i class="fa-solid fa-plus mr-1.5"></i>Thêm học phần mới
     </button>
@@ -329,6 +337,13 @@
   [editingCourse]="editingCourse()"
   (visibleChange)="isCourseModalVisible.set($event)"
   (savedSuccess)="onCourseSaved()"
+/>
+
+<!-- Modal Nhập danh mục học phần từ CSV (F03 US-09/AC-4) -->
+<app-course-import-modal
+  [isVisible]="isImportModalVisible()"
+  (isVisibleChange)="isImportModalVisible.set($event)"
+  (importSuccess)="onCoursesImported()"
 />
 
 <!-- Modal Thêm/Sửa Học kỳ -->

@@ -6,6 +6,7 @@ import { IPagedResults } from '@models/common/response-data.model';
 import {
   IAssignCourseRequest,
   ICourse,
+  ICourseImportResultResponse,
   ICourseRequest,
   ICourseUpdateRequest,
   IProgramCourse,
@@ -58,6 +59,14 @@ export class CourseService {
 
   deleteCourse(id: string): Observable<void> {
     return this.http.delete<void>(UrlConstant.API.COURSE_DETAIL(id), {
+      context: this.inlineErrors(),
+    });
+  }
+
+  importCourses(file: File): Observable<ICourseImportResultResponse> {
+    const formData = new FormData();
+    formData.append('file', file);
+    return this.http.post<ICourseImportResultResponse>(UrlConstant.API.COURSE_IMPORT, formData, {
       context: this.inlineErrors(),
     });
   }

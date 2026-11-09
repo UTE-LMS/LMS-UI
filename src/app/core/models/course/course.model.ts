@@ -64,3 +64,17 @@ export interface IAssignCourseRequest {
   courseId: string;
   lecturerId: string;
 }
+
+export interface ICourseImportRowError {
+  row: number;
+  code?: string;
+  message: string;
+}
+
+export interface ICourseImportResultResponse {
+  totalRows: number;
+  successCount: number;
+  failureCount: number;
+  errors: ICourseImportRowError[];
+}
+
