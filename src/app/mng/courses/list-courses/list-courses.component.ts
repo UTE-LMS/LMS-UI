@@ -17,6 +17,7 @@ import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzModalModule, NzModalService } from 'ng-zorro-antd/modal';
 import { NzTableModule } from 'ng-zorro-antd/table';
 import { ToastrService } from 'ngx-toastr';
+import { CourseImportModalComponent } from '../course-import-modal/course-import-modal.component';
 import { CourseModalComponent } from '../course-modal/course-modal.component';
 import { TermModalComponent } from '../term-modal/term-modal.component';
 
@@ -36,6 +37,7 @@ import { TermModalComponent } from '../term-modal/term-modal.component';
     TablePaginateComponent,
     StatusChipComponent,
     CourseModalComponent,
+    CourseImportModalComponent,
     TermModalComponent,
   ],
 })
@@ -69,6 +71,7 @@ export class ListCoursesComponent implements OnInit {
   /** Trạng thái Modal Học phần */
   readonly isCourseModalVisible = signal(false);
   readonly editingCourse = signal<ICourse | null>(null);
+  readonly isImportModalVisible = signal(false);
 
   /** Danh sách Học kỳ (F05a) */
   readonly terms = signal<ITerm[]>([]);
@@ -102,6 +105,14 @@ export class ListCoursesComponent implements OnInit {
   openCreateCourseModal(): void {
     this.editingCourse.set(null);
     this.isCourseModalVisible.set(true);
+  }
+
+  openImportCourseModal(): void {
+    this.isImportModalVisible.set(true);
+  }
+
+  onCoursesImported(): void {
+    this.manager.triggerReload();
   }
 
   openEditCourseModal(course: ICourse): void {

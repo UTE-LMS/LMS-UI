@@ -49,6 +49,7 @@ export const UrlConstant = {
     TERM_STATUS: (id: string) => `${environment.serverUrl}api/v1/terms/${id}/status`,
 
     COURSES: environment.serverUrl + 'api/v1/courses',
+    COURSE_IMPORT: environment.serverUrl + 'api/v1/courses/import',
     COURSE_DETAIL: (id: string) => `${environment.serverUrl}api/v1/courses/${id}`,
     PROGRAM_COURSE_DETAIL: (pvId: string, courseId: string) => `${environment.serverUrl}api/v1/program-versions/${pvId}/courses/${courseId}`,
 

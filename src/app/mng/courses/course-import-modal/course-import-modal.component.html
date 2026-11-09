@@ -1,0 +1,226 @@
+<nz-modal
+  [nzVisible]="isVisible()"
+  nzTitle="Nhập danh mục học phần từ tệp CSV"
+  [nzFooter]="modalFooterTpl"
+  [nzWidth]="640"
+  (nzOnCancel)="handleCancel()"
+  (nzVisibleChange)="onVisibleChange($event)"
+>
+  <ng-container *nzModalContent>
+    <!-- Hướng dẫn & Tải tệp mẫu -->
+    <div class="bg-blue-50/70 border border-blue-200 rounded-lg p-3.5 mb-4 text-xs text-blue-900 leading-relaxed">
+      <div class="flex items-start justify-between gap-3">
+        <div>
+          <div class="font-semibold text-blue-950 mb-1 flex items-center gap-1.5">
+            <i class="fa-solid fa-circle-info text-blue-600"></i>
+            Quy cách dữ liệu danh mục học phần
+          </div>
+          <p class="m-0 text-blue-800">
+            Tệp CSV cần có các cột bắt buộc: <code class="bg-white px-1 py-0.5 rounded border border-blue-200 font-mono text-blue-700">code</code> (mã học phần),
+            <code class="bg-white px-1 py-0.5 rounded border border-blue-200 font-mono text-blue-700">name</code> (tên học phần),
+            <code class="bg-white px-1 py-0.5 rounded border border-blue-200 font-mono text-blue-700">credits</code> (số tín chỉ &ge; 0).
+            Hệ thống hỗ trợ tiếng Việt có dấu (UTF-8).
+          </p>
+        </div>
+        <button
+          type="button"
+          class="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-blue-100 text-blue-700 border border-blue-300 rounded-md font-medium text-xs transition shadow-xs cursor-pointer"
+          (click)="downloadTemplate()"
+        >
+          <i class="fa-solid fa-download"></i>
+          Tải tệp mẫu CSV
+        </button>
+      </div>
+    </div>
+
+    <!-- Thông báo lỗi (nếu có lỗi validation client hoặc HTTP lỗi toàn cục) -->
+    @if (errorMessage()) {
+    <div class="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-xs flex items-center gap-2">
+      <i class="fa-solid fa-circle-exclamation shrink-0 text-red-500"></i>
+      <span>{{ errorMessage() }}</span>
+    </div>
+    }
+
+    <!-- Khu vực kéo thả / chọn file (chỉ hiển thị khi chưa có kết quả) -->
+    @if (!importResult()) {
+    <div
+      class="border-2 border-dashed rounded-xl p-6 text-center transition cursor-pointer relative"
+      [class.border-blue-500]="isDragging()"
+      [class.bg-blue-50]="isDragging()"
+      [class.border-slate-300]="!isDragging() && !selectedFile()"
+      [class.hover:border-blue-400]="!selectedFile()"
+      [class.bg-slate-50]="!selectedFile()"
+      [class.border-emerald-400]="selectedFile()"
+      [class.bg-emerald-50]="selectedFile()"
+      (dragover)="onDragOver($event)"
+      (dragleave)="onDragLeave($event)"
+      (drop)="onDrop($event)"
+      (click)="fileInput.click()"
+    >
+      <input
+        #fileInput
+        type="file"
+        accept=".csv,text/csv"
+        class="hidden"
+        (change)="onFileSelected($event)"
+      />
+
+      @if (!selectedFile()) {
+      <div class="flex flex-col items-center justify-center py-4">
+        <div class="w-12 h-12 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xl mb-3">
+          <i class="fa-solid fa-cloud-arrow-up"></i>
+        </div>
+        <p class="font-medium text-slate-800 text-sm mb-1">
+          Kéo thả tệp CSV vào đây, hoặc <span class="text-blue-600 hover:underline">nhấp để duyệt tệp</span>
+        </p>
+        <p class="text-xs text-slate-500 m-0">Hỗ trợ định dạng .csv (UTF-8), dung lượng tối đa 10MB</p>
+      </div>
+      } @else {
+      <div class="flex items-center justify-between p-2">
+        <div class="flex items-center gap-3 text-left">
+          <div class="w-10 h-10 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center text-lg shrink-0">
+            <i class="fa-solid fa-file-csv"></i>
+          </div>
+          <div>
+            <div class="font-medium text-slate-900 text-sm truncate max-w-sm" [title]="selectedFile()!.name">
+              {{ selectedFile()!.name }}
+            </div>
+            <div class="text-xs text-slate-500">{{ formatFileSize(selectedFile()!.size) }}</div>
+          </div>
+        </div>
+        <button
+          type="button"
+          class="text-slate-400 hover:text-red-500 p-2 rounded-md hover:bg-white transition cursor-pointer"
+          (click)="$event.stopPropagation(); removeSelectedFile()"
+          title="Gỡ bỏ tệp"
+          aria-label="Gỡ bỏ tệp"
+        >
+          <i class="fa-solid fa-trash-can text-sm"></i>
+        </button>
+      </div>
+      }
+    </div>
+    }
+
+    <!-- Khối hiển thị kết quả xử lý Best-effort -->
+    @if (importResult(); as result) {
+    <div class="mt-2 space-y-4">
+      <!-- Thống kê tổng quan -->
+      <div class="grid grid-cols-3 gap-3">
+        <div class="bg-slate-50 border border-slate-200 rounded-lg p-3 text-center">
+          <div class="text-xs text-slate-500 font-medium">Tổng số dòng</div>
+          <div class="text-xl font-bold text-slate-800 mt-0.5">{{ result.totalRows }}</div>
+        </div>
+        <div class="bg-emerald-50 border border-emerald-200 rounded-lg p-3 text-center">
+          <div class="text-xs text-emerald-700 font-medium">Thành công</div>
+          <div class="text-xl font-bold text-emerald-700 mt-0.5">{{ result.successCount }}</div>
+        </div>
+        <div
+          class="border rounded-lg p-3 text-center"
+          [class.bg-red-50]="result.failureCount > 0"
+          [class.border-red-200]="result.failureCount > 0"
+          [class.bg-slate-50]="result.failureCount === 0"
+          [class.border-slate-200]="result.failureCount === 0"
+        >
+          <div class="text-xs font-medium" [class.text-red-700]="result.failureCount > 0" [class.text-slate-500]="result.failureCount === 0">
+            Dòng bị lỗi
+          </div>
+          <div
+            class="text-xl font-bold mt-0.5"
+            [class.text-red-700]="result.failureCount > 0"
+            [class.text-slate-400]="result.failureCount === 0"
+          >
+            {{ result.failureCount }}
+          </div>
+        </div>
+      </div>
+
+      <!-- Báo cáo chi tiết nếu có dòng lỗi -->
+      @if (result.failureCount > 0) {
+      <div class="border border-amber-200 bg-amber-50/60 rounded-lg p-3 text-xs text-amber-900">
+        <div class="font-semibold mb-1 flex items-center gap-1.5 text-amber-950">
+          <i class="fa-solid fa-triangle-exclamation text-amber-600"></i>
+          Chi tiết các dòng không thể nhập (Đã bỏ qua)
+        </div>
+        <p class="m-0 text-amber-800 mb-2">
+          Các dòng hợp lệ đã được lưu thành công. Bạn chỉ cần sửa lại các dòng lỗi trong file CSV rồi tải lên lại (hệ thống sẽ bỏ qua các mã môn đã có).
+        </p>
+
+        <div class="max-h-48 overflow-y-auto rounded border border-amber-200 bg-white">
+          <nz-table
+            #errorTable
+            [nzData]="result.errors"
+            nzSize="small"
+            [nzShowPagination]="false"
+            [nzFrontPagination]="false"
+          >
+            <thead>
+              <tr class="bg-slate-50 text-slate-700 text-xs">
+                <th nzWidth="70px" nzAlign="center">Dòng</th>
+                <th nzWidth="130px">Mã môn</th>
+                <th>Chi tiết lỗi</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (err of result.errors; track $index) {
+              <tr class="text-xs hover:bg-slate-50">
+                <td nzAlign="center" class="font-semibold text-slate-700">{{ err.row }}</td>
+                <td>
+                  <span class="font-mono text-slate-800 font-medium">{{ err.code || '—' }}</span>
+                </td>
+                <td class="text-red-600">{{ err.message }}</td>
+              </tr>
+              }
+            </tbody>
+          </nz-table>
+        </div>
+      </div>
+      } @else {
+      <div class="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-lg text-xs flex items-center gap-2">
+        <i class="fa-solid fa-circle-check text-emerald-600 text-base"></i>
+        <span>Tất cả học phần trong tệp CSV đã được nạp thành công vào hệ thống!</span>
+      </div>
+      }
+    </div>
+    }
+  </ng-container>
+
+  <ng-template #modalFooterTpl>
+    <div class="flex items-center justify-between w-full">
+      @if (importResult()) {
+      <button
+        nz-button
+        nzType="default"
+        (click)="removeSelectedFile()"
+      >
+        <i class="fa-solid fa-rotate-left mr-1.5"></i>Tải tệp khác
+      </button>
+      } @else {
+      <div></div>
+      }
+
+      <div class="flex items-center gap-2">
+        <button
+          nz-button
+          nzType="default"
+          [disabled]="isLoading()"
+          (click)="handleCancel()"
+        >
+          {{ importResult() ? 'Đóng' : 'Hủy bỏ' }}
+        </button>
+
+        @if (!importResult()) {
+        <button
+          nz-button
+          nzType="primary"
+          [nzLoading]="isLoading()"
+          [disabled]="!selectedFile() || isLoading()"
+          (click)="submitImport()"
+        >
+          <i class="fa-solid fa-cloud-arrow-up mr-1.5"></i>Bắt đầu nạp dữ liệu
+        </button>
+        }
+      </div>
+    </div>
+  </ng-template>
+</nz-modal>
