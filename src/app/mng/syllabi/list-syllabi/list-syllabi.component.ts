@@ -1,4 +1,13 @@
-import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  DestroyRef,
+  OnInit,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
   AbstractControl,
   FormBuilder,
@@ -28,6 +37,7 @@ import { NzModalModule } from 'ng-zorro-antd/modal';
 import { NzSelectModule } from 'ng-zorro-antd/select';
 import { NzTableModule } from 'ng-zorro-antd/table';
 import { ToastrService } from 'ngx-toastr';
+import { catchError, debounceTime, distinctUntilChanged, of, Subject, switchMap } from 'rxjs';
 import { AssignCourseModalComponent } from '../assign-course-modal/assign-course-modal.component';
 
 @Component({
@@ -58,6 +68,10 @@ export class ListSyllabiComponent implements OnInit {
   private readonly authSvc = inject(AuthService);
   private readonly fb = inject(FormBuilder);
   private readonly alert = inject(ToastrService);
+  private readonly destroyRef = inject(DestroyRef);
+
+  private readonly searchCourseSubject$ = new Subject<string>();
+  readonly isSearchingCourse = signal(false);
 
   readonly userRoles = signal<string[]>([]);
   readonly scopeCourseIds = signal<string[]>([]);
@@ -149,6 +163,41 @@ export class ListSyllabiComponent implements OnInit {
       this.showAllCourses.set(true);
     }
 
+    this.searchCourseSubject$
+      .pipe(
+        debounceTime(300),
+        distinctUntilChanged(),
+        switchMap(keyword => {
+          this.isSearchingCourse.set(true);
+          return this.courseSvc.getCourses(0, 100, keyword).pipe(
+            catchError(() => of({
+              content: [],
+              page: 0,
+              size: 100,
+              totalElements: 0,
+              totalPages: 0,
+              last: true,
+            })),
+          );
+        }),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: page => {
+          const searchResults = page.content || [];
+          const current = this.selectedCourse();
+          if (current && !searchResults.some(c => c.id === current.id)) {
+            this.allCourses.set([current, ...searchResults]);
+          } else {
+            this.allCourses.set(searchResults);
+          }
+          this.isSearchingCourse.set(false);
+        },
+        error: () => {
+          this.isSearchingCourse.set(false);
+        },
+      });
+
     this.loadInitialCatalog(queryCourseId);
   }
 
@@ -178,20 +227,41 @@ export class ListSyllabiComponent implements OnInit {
     this.courseSvc.getCourses(0, 100).subscribe({
       next: page => {
         const list = page.content || [];
-        this.allCourses.set(list);
-        const candidates = this.filteredCourses();
-        const initialId =
-          preferredCourseId && list.some(c => c.id === preferredCourseId)
-            ? preferredCourseId
-            : (candidates[0]?.id ?? list[0]?.id ?? '');
-        if (initialId) {
-          this.onCourseChange(initialId);
+        if (preferredCourseId && !list.some(c => c.id === preferredCourseId)) {
+          this.courseSvc.getCourseById(preferredCourseId).subscribe({
+            next: preferredCourse => {
+              this.allCourses.set([preferredCourse, ...list]);
+              this.onCourseChange(preferredCourseId);
+            },
+            error: () => {
+              this.allCourses.set(list);
+              const candidates = this.filteredCourses();
+              const initialId = candidates[0]?.id ?? list[0]?.id ?? '';
+              if (initialId) {
+                this.onCourseChange(initialId);
+              }
+            },
+          });
+        } else {
+          this.allCourses.set(list);
+          const candidates = this.filteredCourses();
+          const initialId =
+            preferredCourseId && list.some(c => c.id === preferredCourseId)
+              ? preferredCourseId
+              : (candidates[0]?.id ?? list[0]?.id ?? '');
+          if (initialId) {
+            this.onCourseChange(initialId);
+          }
         }
       },
       error: () => {
         this.hasError.set(true);
       },
     });
+  }
+
+  onSearchCourse(keyword: string): void {
+    this.searchCourseSubject$.next(keyword);
   }
 
   onCourseChange(courseId: string): void {

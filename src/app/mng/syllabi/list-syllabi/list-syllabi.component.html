@@ -56,7 +56,10 @@
       id="courseSelect"
       class="w-full"
       nzShowSearch
-      nzPlaceHolder="Chọn học phần..."
+      nzServerSearch
+      [nzLoading]="isSearchingCourse()"
+      (nzOnSearch)="onSearchCourse($event)"
+      nzPlaceHolder="Tìm theo mã hoặc tên học phần..."
       [ngModel]="selectedCourseId()"
       (ngModelChange)="onCourseChange($event)"
     >
