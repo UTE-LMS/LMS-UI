@@ -158,6 +158,66 @@ describe('ListSyllabiComponent (Server-side Course Search & ADR 0010)', () => {
     expect(syllabusSvcMock.getSyllabiByCourse).toHaveBeenCalledWith('course-105');
   });
 
+  describe('Giảng viên / Trưởng bộ môn có Scope phụ trách và nút toggleShowAllCourses', () => {
+    beforeEach(() => {
+      authSvcMock.getRoles.mockReturnValue([SystemConstant.ROLE.LECTURER]);
+      authSvcMock.getRoleAssignments.mockReturnValue([
+        {
+          role: SystemConstant.ROLE.LECTURER,
+          scope: {
+            programIds: [],
+            courseIds: ['course-105'],
+            sectionIds: [],
+          },
+        },
+      ]);
+      courseSvcMock.getCourseById.mockImplementation((id: string) => {
+        if (id === 'course-105') {
+          return of(mockCourseOOP);
+        }
+        return of(mockCourses[0]);
+      });
+    });
+
+    it('tải môn phụ trách qua getCourseById và tự động chọn môn phụ trách đầu tiên', async () => {
+      await createComponent();
+      fixture.detectChanges();
+
+      expect(courseSvcMock.getCourseById).toHaveBeenCalledWith('course-105');
+      expect(component.scopedCourses()).toEqual([mockCourseOOP]);
+      expect(component.showAllCourses()).toBe(false);
+      expect(component.filteredCourses()).toEqual([mockCourseOOP]);
+      expect(component.selectedCourseId()).toBe('course-105');
+      expect(component.isCourseInScope()).toBe(true);
+    });
+
+    it('bấm toggleShowAllCourses chuyển đổi giữa toàn trường và chỉ môn phụ trách, tự reset về môn phụ trách', async () => {
+      await createComponent();
+      fixture.detectChanges();
+
+      // Ban đầu: chỉ hiện môn phụ trách course-105
+      expect(component.filteredCourses()).toEqual([mockCourseOOP]);
+      expect(component.selectedCourseId()).toBe('course-105');
+
+      // Bấm chuyển sang tra cứu toàn trường
+      component.toggleShowAllCourses();
+      expect(component.showAllCourses()).toBe(true);
+      expect(component.filteredCourses().length).toBeGreaterThan(1);
+
+      // Chọn 1 môn ngoài scope
+      component.onCourseChange('course-1');
+      expect(component.selectedCourseId()).toBe('course-1');
+      expect(component.isCourseInScope()).toBe(false);
+
+      // Bấm quay lại chỉ hiện môn phụ trách -> tự động chuyển selectedCourseId về môn phụ trách course-105
+      component.toggleShowAllCourses();
+      expect(component.showAllCourses()).toBe(false);
+      expect(component.filteredCourses()).toEqual([mockCourseOOP]);
+      expect(component.selectedCourseId()).toBe('course-105');
+      expect(component.isCourseInScope()).toBe(true);
+    });
+  });
+
   describe('Server-side search với debounce', () => {
     beforeEach(() => {
       vi.useFakeTimers();

@@ -37,7 +37,15 @@ import { NzModalModule } from 'ng-zorro-antd/modal';
 import { NzSelectModule } from 'ng-zorro-antd/select';
 import { NzTableModule } from 'ng-zorro-antd/table';
 import { ToastrService } from 'ngx-toastr';
-import { catchError, debounceTime, distinctUntilChanged, of, Subject, switchMap } from 'rxjs';
+import {
+  catchError,
+  debounceTime,
+  distinctUntilChanged,
+  forkJoin,
+  of,
+  Subject,
+  switchMap,
+} from 'rxjs';
 import { AssignCourseModalComponent } from '../assign-course-modal/assign-course-modal.component';
 
 @Component({
@@ -78,6 +86,7 @@ export class ListSyllabiComponent implements OnInit {
   readonly showAllCourses = signal(false);
 
   readonly allCourses = signal<ICourse[]>([]);
+  readonly scopedCourses = signal<ICourse[]>([]);
   readonly terms = signal<ITerm[]>([]);
   readonly selectedCourseId = signal<string>('');
   readonly syllabi = signal<ISyllabus[]>([]);
@@ -94,17 +103,28 @@ export class ListSyllabiComponent implements OnInit {
   readonly isAdmin = computed(() => this.userRoles().includes(SystemConstant.ROLE.ADMIN));
 
   readonly filteredCourses = computed(() => {
-    const courses = this.allCourses();
     const scopedIds = this.scopeCourseIds();
     if (this.showAllCourses() || this.isAdmin() || scopedIds.length === 0) {
-      return courses;
+      return this.allCourses();
     }
-    return courses.filter(c => scopedIds.includes(c.id));
+    const scoped = this.scopedCourses();
+    if (scoped.length > 0) {
+      return scoped;
+    }
+    return this.allCourses().filter(c => scopedIds.includes(c.id));
   });
 
-  readonly selectedCourse = computed(
-    () => this.allCourses().find(c => c.id === this.selectedCourseId()) ?? null,
-  );
+  readonly selectedCourse = computed(() => {
+    const id = this.selectedCourseId();
+    if (!id) {
+      return null;
+    }
+    return (
+      this.scopedCourses().find(c => c.id === id)
+      ?? this.allCourses().find(c => c.id === id)
+      ?? null
+    );
+  });
 
   /** Kiểm tra môn đang chọn có nằm trong scope.courseIds của người dùng không */
   readonly isCourseInScope = computed(() => {
@@ -224,6 +244,26 @@ export class ListSyllabiComponent implements OnInit {
       error: () => undefined,
     });
 
+    const scopedIds = this.scopeCourseIds();
+    if (scopedIds.length > 0) {
+      const requests = scopedIds.map(id => this.courseSvc.getCourseById(id).pipe(catchError(() => of(null))));
+      forkJoin(requests).subscribe(results => {
+        const validScoped = results.filter((c): c is ICourse => c !== null);
+        this.scopedCourses.set(validScoped);
+
+        const currentAll = this.allCourses();
+        const existingIds = new Set(currentAll.map(c => c.id));
+        const missing = validScoped.filter(c => !existingIds.has(c.id));
+        if (missing.length > 0) {
+          this.allCourses.set([...missing, ...currentAll]);
+        }
+
+        if (!preferredCourseId && !this.showAllCourses() && validScoped.length > 0) {
+          this.onCourseChange(validScoped[0].id);
+        }
+      });
+    }
+
     this.courseSvc.getCourses(0, 100).subscribe({
       next: page => {
         const list = page.content || [];
@@ -235,23 +275,15 @@ export class ListSyllabiComponent implements OnInit {
             },
             error: () => {
               this.allCourses.set(list);
-              const candidates = this.filteredCourses();
-              const initialId = candidates[0]?.id ?? list[0]?.id ?? '';
-              if (initialId) {
-                this.onCourseChange(initialId);
-              }
+              this.selectDefaultCourse(preferredCourseId);
             },
           });
         } else {
-          this.allCourses.set(list);
-          const candidates = this.filteredCourses();
-          const initialId =
-            preferredCourseId && list.some(c => c.id === preferredCourseId)
-              ? preferredCourseId
-              : (candidates[0]?.id ?? list[0]?.id ?? '');
-          if (initialId) {
-            this.onCourseChange(initialId);
-          }
+          const currentScoped = this.scopedCourses();
+          const listIds = new Set(list.map(c => c.id));
+          const missingScoped = currentScoped.filter(c => !listIds.has(c.id));
+          this.allCourses.set([...missingScoped, ...list]);
+          this.selectDefaultCourse(preferredCourseId);
         }
       },
       error: () => {
@@ -260,7 +292,31 @@ export class ListSyllabiComponent implements OnInit {
     });
   }
 
+  private selectDefaultCourse(preferredCourseId: string | null): void {
+    if (this.selectedCourseId()) {
+      return;
+    }
+    if (preferredCourseId) {
+      this.onCourseChange(preferredCourseId);
+      return;
+    }
+    const scoped = this.scopedCourses();
+    if (!this.showAllCourses() && scoped.length > 0) {
+      this.onCourseChange(scoped[0].id);
+      return;
+    }
+    const candidates = this.filteredCourses();
+    const initialId = candidates[0]?.id ?? this.allCourses()[0]?.id ?? '';
+    if (initialId) {
+      this.onCourseChange(initialId);
+    }
+  }
+
   onSearchCourse(keyword: string): void {
+    const trimmed = keyword?.trim() ?? '';
+    if (trimmed && !this.showAllCourses()) {
+      this.showAllCourses.set(true);
+    }
     this.searchCourseSubject$.next(keyword);
   }
 
@@ -299,7 +355,20 @@ export class ListSyllabiComponent implements OnInit {
   }
 
   toggleShowAllCourses(): void {
-    this.showAllCourses.update(v => !v);
+    const nextVal = !this.showAllCourses();
+    this.showAllCourses.set(nextVal);
+
+    if (!nextVal) {
+      const scoped = this.scopedCourses();
+      if (scoped.length > 0 && !this.isCourseInScope()) {
+        this.onCourseChange(scoped[0].id);
+      }
+    } else if (this.allCourses().length === 0) {
+      this.courseSvc.getCourses(0, 100).subscribe({
+        next: page => this.allCourses.set(page.content || []),
+        error: () => undefined,
+      });
+    }
   }
 
   openCreateSyllabusModal(): void {
