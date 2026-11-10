@@ -57,8 +57,9 @@
       class="w-full"
       nzShowSearch
       nzServerSearch
-      [nzLoading]="isSearchingCourse()"
+      [nzLoading]="isSearchingCourse() || isLoadingMoreCourses()"
       (nzOnSearch)="onSearchCourse($event)"
+      (nzScrollToBottom)="onCourseScrollToBottom()"
       nzPlaceHolder="Tìm theo mã hoặc tên học phần..."
       [ngModel]="selectedCourseId()"
       (ngModelChange)="onCourseChange($event)"
@@ -68,6 +69,13 @@
         [nzValue]="c.id"
         [nzLabel]="c.code + ' — ' + c.name + (c.credits !== undefined ? ' (' + c.credits + ' TC)' : '')"
       />
+      }
+      @if (isLoadingMoreCourses()) {
+      <nz-option nzDisabled nzCustomContent>
+        <div class="text-center py-1 text-slate-400 text-xs italic">
+          <i class="fa-solid fa-spinner fa-spin mr-1"></i>Đang tải thêm học phần...
+        </div>
+      </nz-option>
       }
     </nz-select>
   </div>

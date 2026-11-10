@@ -80,6 +80,13 @@ export class ListSyllabiComponent implements OnInit {
 
   private readonly searchCourseSubject$ = new Subject<string>();
   readonly isSearchingCourse = signal(false);
+  readonly isLoadingMoreCourses = signal(false);
+
+  readonly coursePageSize = 100;
+  readonly coursePage = signal(0);
+  readonly courseTotalPages = signal(1);
+  readonly isCourseLastPage = signal(true);
+  readonly currentCourseSearch = signal('');
 
   readonly userRoles = signal<string[]>([]);
   readonly scopeCourseIds = signal<string[]>([]);
@@ -189,11 +196,13 @@ export class ListSyllabiComponent implements OnInit {
         distinctUntilChanged(),
         switchMap(keyword => {
           this.isSearchingCourse.set(true);
-          return this.courseSvc.getCourses(0, 100, keyword).pipe(
+          this.currentCourseSearch.set(keyword);
+          this.coursePage.set(0);
+          return this.courseSvc.getCourses(0, this.coursePageSize, keyword).pipe(
             catchError(() => of({
               content: [],
               page: 0,
-              size: 100,
+              size: this.coursePageSize,
               totalElements: 0,
               totalPages: 0,
               last: true,
@@ -206,11 +215,13 @@ export class ListSyllabiComponent implements OnInit {
         next: page => {
           const searchResults = page.content || [];
           const current = this.selectedCourse();
-          if (current && !searchResults.some(c => c.id === current.id)) {
-            this.allCourses.set([current, ...searchResults]);
-          } else {
-            this.allCourses.set(searchResults);
+          const merged = [...searchResults];
+          if (current && !merged.some(c => c.id === current.id)) {
+            merged.unshift(current);
           }
+          this.allCourses.set(merged);
+          this.courseTotalPages.set(page.totalPages || 0);
+          this.isCourseLastPage.set(page.last ?? (1 >= (page.totalPages || 1)));
           this.isSearchingCourse.set(false);
         },
         error: () => {
@@ -264,9 +275,13 @@ export class ListSyllabiComponent implements OnInit {
       });
     }
 
-    this.courseSvc.getCourses(0, 100).subscribe({
+    this.coursePage.set(0);
+    this.currentCourseSearch.set('');
+    this.courseSvc.getCourses(0, this.coursePageSize).subscribe({
       next: page => {
         const list = page.content || [];
+        this.courseTotalPages.set(page.totalPages || 1);
+        this.isCourseLastPage.set(page.last ?? (1 >= (page.totalPages || 1)));
         if (preferredCourseId && !list.some(c => c.id === preferredCourseId)) {
           this.courseSvc.getCourseById(preferredCourseId).subscribe({
             next: preferredCourse => {
@@ -364,11 +379,66 @@ export class ListSyllabiComponent implements OnInit {
         this.onCourseChange(scoped[0].id);
       }
     } else if (this.allCourses().length === 0) {
-      this.courseSvc.getCourses(0, 100).subscribe({
-        next: page => this.allCourses.set(page.content || []),
+      this.coursePage.set(0);
+      this.currentCourseSearch.set('');
+      this.courseSvc.getCourses(0, this.coursePageSize).subscribe({
+        next: page => {
+          this.allCourses.set(page.content || []);
+          this.courseTotalPages.set(page.totalPages || 1);
+          this.isCourseLastPage.set(page.last ?? (1 >= (page.totalPages || 1)));
+        },
         error: () => undefined,
       });
     }
+  }
+
+  onCourseScrollToBottom(): void {
+    if (!this.showAllCourses() && !this.isAdmin() && this.scopeCourseIds().length > 0) {
+      return;
+    }
+    if (
+      this.isLoadingMoreCourses()
+      || this.isSearchingCourse()
+      || this.isCourseLastPage()
+      || this.coursePage() + 1 >= this.courseTotalPages()
+    ) {
+      return;
+    }
+
+    const nextPage = this.coursePage() + 1;
+    this.isLoadingMoreCourses.set(true);
+
+    this.courseSvc
+      .getCourses(nextPage, this.coursePageSize, this.currentCourseSearch())
+      .pipe(
+        catchError(() => of({
+          content: [],
+          page: nextPage,
+          size: this.coursePageSize,
+          totalElements: 0,
+          totalPages: this.courseTotalPages(),
+          last: true,
+        })),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: page => {
+          const newItems = page.content || [];
+          if (newItems.length > 0) {
+            const currentCourses = this.allCourses();
+            const existingIds = new Set(currentCourses.map(c => c.id));
+            const distinctNew = newItems.filter(c => !existingIds.has(c.id));
+            this.allCourses.set([...currentCourses, ...distinctNew]);
+          }
+          this.coursePage.set(nextPage);
+          this.courseTotalPages.set(page.totalPages || this.courseTotalPages());
+          this.isCourseLastPage.set(page.last ?? (nextPage + 1 >= (page.totalPages || 1)));
+          this.isLoadingMoreCourses.set(false);
+        },
+        error: () => {
+          this.isLoadingMoreCourses.set(false);
+        },
+      });
   }
 
   openCreateSyllabusModal(): void {

@@ -281,4 +281,85 @@ describe('ListSyllabiComponent (Server-side Course Search & ADR 0010)', () => {
       expect(component.allCourses()).toBeDefined();
     });
   });
+
+  describe('Cuộn vô tận nzScrollToBottom (Infinite Scroll)', () => {
+    it('khi người dùng cuộn xuống đáy danh sách và còn trang tiếp theo, tải trang tiếp theo và nối vào allCourses', async () => {
+      courseSvcMock.getCourses.mockReturnValue(
+        of({
+          content: [mockCourses[0]],
+          page: 0,
+          size: 100,
+          totalElements: 2,
+          totalPages: 2,
+          last: false,
+        }),
+      );
+      await createComponent();
+      fixture.detectChanges();
+
+      expect(component.allCourses()).toEqual([mockCourses[0]]);
+      expect(component.coursePage()).toBe(0);
+      expect(component.isCourseLastPage()).toBe(false);
+
+      courseSvcMock.getCourses.mockReturnValue(
+        of({
+          content: [mockCourses[1]],
+          page: 1,
+          size: 100,
+          totalElements: 2,
+          totalPages: 2,
+          last: true,
+        }),
+      );
+
+      component.onCourseScrollToBottom();
+
+      expect(courseSvcMock.getCourses).toHaveBeenCalledWith(1, 100, '');
+      expect(component.coursePage()).toBe(1);
+      expect(component.isCourseLastPage()).toBe(true);
+      expect(component.allCourses()).toEqual([mockCourses[0], mockCourses[1]]);
+      expect(component.isLoadingMoreCourses()).toBe(false);
+    });
+
+    it('khi đã ở trang cuối cùng (isCourseLastPage = true), không gọi thêm API', async () => {
+      courseSvcMock.getCourses.mockReturnValue(
+        of({
+          content: mockCourses,
+          page: 0,
+          size: 100,
+          totalElements: 2,
+          totalPages: 1,
+          last: true,
+        }),
+      );
+      await createComponent();
+      fixture.detectChanges();
+
+      courseSvcMock.getCourses.mockClear();
+      component.onCourseScrollToBottom();
+
+      expect(courseSvcMock.getCourses).not.toHaveBeenCalled();
+    });
+
+    it('nếu API trang tiếp theo bị lỗi, reset isLoadingMoreCourses về false và không làm crash danh sách', async () => {
+      courseSvcMock.getCourses.mockReturnValue(
+        of({
+          content: [mockCourses[0]],
+          page: 0,
+          size: 100,
+          totalElements: 2,
+          totalPages: 2,
+          last: false,
+        }),
+      );
+      await createComponent();
+      fixture.detectChanges();
+
+      courseSvcMock.getCourses.mockReturnValue(throwError(() => new Error('Network error')));
+      component.onCourseScrollToBottom();
+
+      expect(component.isLoadingMoreCourses()).toBe(false);
+      expect(component.allCourses()).toEqual([mockCourses[0]]);
+    });
+  });
 });
