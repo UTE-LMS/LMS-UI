@@ -1,7 +1,7 @@
 import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { createListManagerNoFilter } from '@builder/list-mng-no-filter.builder';
 import { SystemConstant } from '@constants/system.constant';
 import { ICourse } from '@models/course/course.model';
@@ -47,6 +47,7 @@ export class ListCoursesComponent implements OnInit {
   private readonly authSvc = inject(AuthService);
   private readonly alert = inject(ToastrService);
   private readonly nzModal = inject(NzModalService);
+  private readonly route = inject(ActivatedRoute);
 
   readonly activeTab = signal<'COURSES' | 'TERMS'>('COURSES');
   readonly userRoles = signal<string[]>([]);
@@ -87,6 +88,10 @@ export class ListCoursesComponent implements OnInit {
   readonly isReopening = signal(false);
 
   ngOnInit(): void {
+    // F05a: màn Lớp học phần liên kết thẳng tới tab Học kỳ bằng ?tab=terms
+    if (this.route.snapshot.queryParamMap.get('tab') === 'terms') {
+      this.activeTab.set('TERMS');
+    }
     this.userRoles.set(this.authSvc.getRoles());
     this.loadTerms();
   }

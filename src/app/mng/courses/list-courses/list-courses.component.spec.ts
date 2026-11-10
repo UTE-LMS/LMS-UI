@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
 import { SystemConstant } from '@constants/system.constant';
 import { ICourse } from '@models/course/course.model';
 import { ITerm } from '@models/course/term.model';
@@ -148,5 +148,40 @@ describe('ListCoursesComponent (F03 US-09/AC-1 & F05a US-18)', () => {
       status: 'OPEN',
       reason: 'Mở sổ điểm bổ sung phúc khảo',
     });
+  });
+});
+
+describe('ListCoursesComponent mở thẳng tab Học kỳ (F05a: liên kết từ màn Lớp học phần)', () => {
+  async function create(query: Record<string, string>): Promise<ListCoursesComponent> {
+    await TestBed.configureTestingModule({
+      imports: [ListCoursesComponent],
+      providers: [
+        provideRouter([]),
+        { provide: ActivatedRoute, useValue: { snapshot: { queryParamMap: convertToParamMap(query) } } },
+        {
+          provide: CourseService,
+          useValue: { getCourses: vi.fn(() => of({ content: [], page: 0, size: 10, totalElements: 0, totalPages: 0, last: true })) },
+        },
+        { provide: TermService, useValue: { getTerms: vi.fn(() => of([])) } },
+        { provide: AuthService, useValue: { getRoles: vi.fn(() => [SystemConstant.ROLE.ADMIN]) } },
+        { provide: ToastrService, useValue: { success: vi.fn(), error: vi.fn() } },
+        { provide: NzModalService, useValue: { confirm: vi.fn() } },
+      ],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(ListCoursesComponent);
+    fixture.detectChanges();
+    return fixture.componentInstance;
+  }
+
+  it('?tab=terms mở tab Học kỳ', async () => {
+    expect((await create({ tab: 'terms' })).activeTab()).toBe('TERMS');
+  });
+
+  it('không có tham số thì giữ tab Học phần mặc định', async () => {
+    expect((await create({})).activeTab()).toBe('COURSES');
+  });
+
+  it('giá trị tab không hợp lệ bị bỏ qua', async () => {
+    expect((await create({ tab: 'khac' })).activeTab()).toBe('COURSES');
   });
 });
