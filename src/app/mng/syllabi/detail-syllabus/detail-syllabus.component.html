@@ -60,6 +60,13 @@
 
     <!-- Nút hành động của Trưởng bộ môn / Admin (ADR 0010) -->
     <div class="flex flex-wrap items-center gap-2.5">
+      <!-- F04: khung bài đánh giá theo đề cương (mẫu để sao chép sang bài của từng lớp) -->
+      @if (syllabus()) {
+      <a nz-button nzType="default" class="rounded-lg font-medium text-slate-700"
+        [routerLink]="['/mng/assessments/syllabi', syllabusId()]">
+        <i class="fa-solid fa-clipboard-list mr-1.5"></i>Khung bài đánh giá
+      </a>
+      }
       @if (canApproveSyllabus() && syllabus()?.status === 'DRAFT') {
       <button
         nz-button

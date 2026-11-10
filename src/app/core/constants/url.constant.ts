@@ -69,6 +69,24 @@ export const UrlConstant = {
     CLO_PI_LINK_DETAIL: (id: string) => `${environment.serverUrl}api/v1/clo-pi-links/${id}`,
     CLO_PI_LINK_VERIFY: (id: string) => `${environment.serverUrl}api/v1/clo-pi-links/${id}/verification`,
 
+    // F05a - Lớp học phần, ghi danh, nhập danh sách lớp (API-CONTRACT.md §6.4)
+    SECTIONS: environment.serverUrl + 'api/v1/sections',
+    SECTION_DETAIL: (id: string) => `${environment.serverUrl}api/v1/sections/${id}`,
+    SECTION_STATUS: (id: string) => `${environment.serverUrl}api/v1/sections/${id}/status`,
+    SECTION_ENROLLMENTS: (sectionId: string) => `${environment.serverUrl}api/v1/sections/${sectionId}/enrollments`,
+    SECTION_ENROLLMENT_IMPORT: (sectionId: string) => `${environment.serverUrl}api/v1/sections/${sectionId}/enrollments/import`,
+    ENROLLMENT_STATUS: (id: string) => `${environment.serverUrl}api/v1/enrollments/${id}/status`,
+
+    // F04 - Bài đánh giá, rubric, duyệt ma trận (API-CONTRACT.md §6.3)
+    SYLLABUS_ASSESSMENT_TEMPLATES: (syllabusId: string) => `${environment.serverUrl}api/v1/syllabi/${syllabusId}/assessment-templates`,
+    SECTION_ASSESSMENTS: (sectionId: string) => `${environment.serverUrl}api/v1/sections/${sectionId}/assessments`,
+    ASSESSMENT_DETAIL: (id: string) => `${environment.serverUrl}api/v1/assessments/${id}`,
+    ASSESSMENT_ITEMS: (id: string) => `${environment.serverUrl}api/v1/assessments/${id}/items`,
+    ASSESSMENT_COVERAGE: (id: string) => `${environment.serverUrl}api/v1/assessments/${id}/coverage`,
+    ASSESSMENT_SUBMIT: (id: string) => `${environment.serverUrl}api/v1/assessments/${id}/submit`,
+    ASSESSMENT_APPROVE: (id: string) => `${environment.serverUrl}api/v1/assessments/${id}/approve`,
+    ASSESSMENT_REJECT: (id: string) => `${environment.serverUrl}api/v1/assessments/${id}/reject`,
+
     // Categories
     DEMO_API: environment.serverUrl + 'rest/demo',
   },
@@ -99,6 +117,15 @@ export const UrlConstant = {
       COURSES: '/mng/courses',
       SYLLABI: '/mng/syllabi',
       SYLLABUS_DETAIL: (syllabusId: string) => `/mng/syllabi/${syllabusId}`,
+
+      SECTIONS: '/mng/sections',
+      SECTION_DETAIL: (sectionId: string) => `/mng/sections/${sectionId}`,
+      SECTION_ROSTER_IMPORT: (sectionId: string) => `/mng/sections/${sectionId}/roster-import`,
+
+      ASSESSMENTS_OF_SECTION: (sectionId: string) => `/mng/assessments/sections/${sectionId}`,
+      ASSESSMENT_TEMPLATES: (syllabusId: string) => `/mng/assessments/syllabi/${syllabusId}`,
+      ASSESSMENT_DETAIL: (assessmentId: string) => `/mng/assessments/${assessmentId}`,
+      ASSESSMENT_REVIEW: (assessmentId: string) => `/mng/assessments/${assessmentId}/review`,
 
       CATEGORIES: '/mng/categories',
       ACADEMIC_RANKS: '/mng/categories/academic-ranks',

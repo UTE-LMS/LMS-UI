@@ -1,0 +1,199 @@
+<div class="mx-auto max-w-7xl p-6">
+  <a class="text-sm font-medium text-blue-800 hover:underline" [routerLink]="urlConst.SECTIONS">
+    <i class="fa-solid fa-arrow-left mr-1 text-xs" aria-hidden="true"></i>Danh sách lớp học phần
+  </a>
+
+  @if (loadError(); as error) {
+  <app-error-state [error]="error" [backLink]="urlConst.SECTIONS" backLabel="Quay lại danh sách lớp"
+    [retrying]="isLoading()" (retry)="load()" (reload)="load()" />
+  } @else if (isLoading() && !section()) {
+  <p class="mt-8 text-slate-700" role="status">Đang tải thông tin lớp…</p>
+  } @else if (section(); as sec) {
+  <div class="mt-3 flex flex-wrap items-end gap-3">
+    <div>
+      <p class="m-0 text-xs font-semibold uppercase tracking-wider text-blue-700">
+        {{ course()?.code ?? '—' }} · {{ term()?.code ?? '—' }}
+      </p>
+      <h1 class="m-0 text-2xl font-bold text-slate-900">Lớp {{ sec.code }}</h1>
+    </div>
+    <app-test-data-flag />
+    <span class="flex-1"></span>
+    <a nz-button [routerLink]="urlConst.ASSESSMENTS_OF_SECTION(sec.id)">Bài đánh giá</a>
+    @if (canManage()) {
+    <button nz-button type="button" (click)="isLecturersModalVisible.set(true)">Đổi giảng viên</button>
+    <button nz-button type="button" (click)="openStatusModal()">Đổi trạng thái lớp</button>
+    }
+    @if (canEditRoster()) {
+    @if (frozenReason()) {
+    <button nz-button nzType="primary" type="button" disabled [attr.title]="frozenReason()">Nhập danh sách lớp</button>
+    } @else {
+    <a nz-button nzType="primary" [routerLink]="urlConst.SECTION_ROSTER_IMPORT(sec.id)">Nhập danh sách lớp</a>
+    }
+    }
+  </div>
+
+  @if (frozenReason(); as reason) {
+  <div class="mt-4 rounded border border-[#d6b46a] bg-[#fff8e6] p-3 text-sm text-[#5c3d00]" role="status">
+    <i class="fa-solid fa-lock mr-1.5" aria-hidden="true"></i>{{ reason }}
+  </div>
+  }
+
+  <dl class="mt-6 grid grid-cols-[150px_1fr] gap-x-4 gap-y-3 text-sm md:grid-cols-[150px_1fr_150px_1fr]">
+    <dt class="text-slate-700">Học phần</dt>
+    <dd class="m-0 font-medium">{{ course()?.name ?? '—' }}</dd>
+    <dt class="text-slate-700">Giảng viên</dt>
+    <dd class="m-0 font-medium">{{ lecturersText() }}</dd>
+    <dt class="text-slate-700">Đề cương</dt>
+    <dd class="m-0">
+      @if (syllabus(); as syl) {
+      <span class="mr-1">Bản {{ syl.version }}</span>
+      <app-display-chip [display]="syllabusStatusDisplay[syl.status]" />
+      } @else {
+      —
+      }
+    </dd>
+    <dt class="text-slate-700">Học kỳ</dt>
+    <dd class="m-0">
+      @if (term(); as t) {
+      <span class="mr-1">{{ t.code }}</span>
+      <app-display-chip [display]="termStatusDisplay[t.status]" />
+      } @else {
+      —
+      }
+    </dd>
+    <dt class="text-slate-700">Trạng thái lớp</dt>
+    <dd class="m-0"><app-display-chip [display]="sectionStatusDisplay[sec.status]" /></dd>
+  </dl>
+
+  <div class="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2">
+    <div class="rounded border border-slate-300 p-4">
+      @if (hasNoRoster()) {
+      <p class="m-0 text-2xl font-bold text-slate-700" aria-label="Chưa nhập danh sách lớp">—</p>
+      <p class="m-0 text-sm text-slate-700">Chưa nhập danh sách lớp, nên chưa có mẫu số của tỷ lệ đạt.</p>
+      } @else {
+      <p class="m-0 text-3xl font-bold text-slate-900">{{ roster()?.enrolled }}</p>
+      <p class="m-0 text-sm text-slate-700">đang học, là mẫu số của tỷ lệ đạt</p>
+      }
+    </div>
+    <div class="rounded border border-slate-300 p-4">
+      @if (hasNoRoster()) {
+      <p class="m-0 text-2xl font-bold text-slate-700" aria-label="Chưa có dữ liệu">—</p>
+      <p class="m-0 text-sm text-slate-700">Chưa có sinh viên đã rút.</p>
+      } @else {
+      <p class="m-0 text-3xl font-bold text-slate-900">{{ roster()?.withdrawn }}</p>
+      <p class="m-0 text-sm text-slate-700">đã rút, giữ bản ghi, không tính vào mẫu số</p>
+      }
+    </div>
+  </div>
+
+  <div class="mt-10 flex flex-wrap items-center gap-3">
+    <h2 class="m-0 text-lg font-semibold">Danh sách ghi danh</h2>
+    <span class="flex-1"></span>
+    <div role="group" aria-label="Lọc theo trạng thái ghi danh" class="inline-flex overflow-hidden rounded border border-slate-400">
+      <button type="button" class="px-3 py-1 text-sm" [class.bg-blue-800]="rosterFilter() === 'ALL'"
+        [class.text-white]="rosterFilter() === 'ALL'" [attr.aria-pressed]="rosterFilter() === 'ALL'"
+        (click)="rosterFilter.set('ALL')">Tất cả {{ roster()?.enrollments?.length ?? 0 }}</button>
+      <button type="button" class="border-l border-slate-400 px-3 py-1 text-sm" [class.bg-blue-800]="rosterFilter() === 'ENROLLED'"
+        [class.text-white]="rosterFilter() === 'ENROLLED'" [attr.aria-pressed]="rosterFilter() === 'ENROLLED'"
+        (click)="rosterFilter.set('ENROLLED')">Đang học {{ roster()?.enrolled ?? 0 }}</button>
+      <button type="button" class="border-l border-slate-400 px-3 py-1 text-sm" [class.bg-blue-800]="rosterFilter() === 'WITHDRAWN'"
+        [class.text-white]="rosterFilter() === 'WITHDRAWN'" [attr.aria-pressed]="rosterFilter() === 'WITHDRAWN'"
+        (click)="rosterFilter.set('WITHDRAWN')">Đã rút {{ roster()?.withdrawn ?? 0 }}</button>
+    </div>
+  </div>
+
+  @if (actionError(); as message) {
+  <div class="mt-3 rounded border border-[#d9a0a6] bg-[#fdf2f3] p-3 text-sm text-[#8c2f39]" role="alert">
+    <i class="fa-solid fa-circle-exclamation mr-1.5" aria-hidden="true"></i>{{ message }}
+  </div>
+  }
+
+  <nz-table class="mt-3" nzSize="middle" [nzData]="visibleEnrollments()" [nzPageSize]="50" [nzNoResult]="emptyRosterTpl">
+    <thead>
+      <tr>
+        <th>Mã SV (thay thế)</th>
+        <th nzWidth="150px">Ngày ghi danh</th>
+        <th nzWidth="190px">Trạng thái</th>
+        @if (canEditRoster()) {
+        <th nzWidth="150px" nzAlign="right">Thao tác</th>
+        }
+      </tr>
+    </thead>
+    <tbody>
+      @for (row of visibleEnrollments(); track row.id) {
+      <tr>
+        <td class="font-semibold">{{ row.studentRef }}</td>
+        <td>{{ row.enrolledAt ? (row.enrolledAt | date: 'dd/MM/yyyy') : '—' }}</td>
+        <td><app-display-chip [display]="enrollmentStatusDisplay[row.status]" /></td>
+        @if (canEditRoster()) {
+        <td nzAlign="right">
+          @if (row.status === 'ENROLLED') {
+          <button nz-button nzSize="small" type="button" [disabled]="!!frozenReason() || busyEnrollmentId() === row.id"
+            [attr.title]="frozenReason()" [attr.aria-label]="'Rút ' + row.studentRef + ' khỏi lớp'"
+            (click)="changeEnrollment(row, 'WITHDRAWN')">Rút</button>
+          } @else {
+          <button nz-button nzSize="small" type="button" [disabled]="!!frozenReason() || busyEnrollmentId() === row.id"
+            [attr.title]="frozenReason()" [attr.aria-label]="'Ghi danh lại ' + row.studentRef"
+            (click)="changeEnrollment(row, 'ENROLLED')">Ghi danh lại</button>
+          }
+        </td>
+        }
+      </tr>
+      }
+    </tbody>
+  </nz-table>
+  <p class="mt-3 text-xs text-slate-700">
+    Chỉ hiện mã thay thế (SV-xxxx); họ tên và email chỉ lưu khi Khoa cho phép (Q09). Rút khỏi lớp làm mẫu số giảm nhưng
+    không xóa bản ghi. Số đếm do hệ thống tính.
+  </p>
+  }
+</div>
+
+<ng-template #emptyRosterTpl>
+  <div class="py-8 text-center text-slate-700">
+    @if (hasNoRoster()) {
+    <p class="mb-3">Lớp chưa có danh sách ghi danh.</p>
+    @if (canEditRoster() && !frozenReason()) {
+    <a nz-button nzType="primary" [routerLink]="urlConst.SECTION_ROSTER_IMPORT(sectionId())">Nhập danh sách lớp</a>
+    }
+    } @else {
+    <p class="m-0">Không có sinh viên nào ở trạng thái này.</p>
+    }
+  </div>
+</ng-template>
+
+<app-section-modal [isVisible]="isLecturersModalVisible()" [section]="section()" [lecturerOptions]="lecturerOptions()"
+  [lecturerListAvailable]="lecturerListAvailable()" (visibleChange)="isLecturersModalVisible.set($event)"
+  (saved)="onLecturersSaved($event)" />
+
+<nz-modal [nzVisible]="isStatusModalVisible()" nzTitle="Đổi trạng thái lớp" [nzFooter]="statusFooterTpl"
+  [nzMaskClosable]="false" (nzOnCancel)="isStatusModalVisible.set(false)">
+  <ng-container *nzModalContent>
+    <label class="mb-1 block text-sm font-medium" for="targetStatus">Trạng thái mới</label>
+    <nz-select nzId="targetStatus" class="w-full" [ngModel]="targetStatus()" (ngModelChange)="targetStatus.set($event)">
+      @for (opt of statusOptions; track opt.value) {
+      <nz-option [nzValue]="opt.value" [nzLabel]="opt.label" />
+      }
+    </nz-select>
+    <p class="mt-2 text-xs text-slate-700">
+      Lớp đóng hoặc khóa sổ điểm thì danh sách ghi danh (mẫu số của tỷ lệ đạt) bị đóng băng.
+    </p>
+    @if (needsReason()) {
+    <label class="mb-1 mt-3 block text-sm font-medium" for="statusReason">Lý do mở lại (bắt buộc)</label>
+    <textarea id="statusReason" class="w-full rounded border border-slate-400 p-2 text-sm" rows="3"
+      [ngModel]="statusReason()" (ngModelChange)="statusReason.set($event)"
+      placeholder="Ví dụ: cần sửa điểm đã nhập sai"></textarea>
+    <p class="mt-1 text-xs text-slate-700">Việc này được ghi vào nhật ký thao tác.</p>
+    }
+    @if (statusError(); as message) {
+    <p class="mt-3 text-sm text-[#8c2f39]" role="alert"><i class="fa-solid fa-circle-exclamation mr-1.5" aria-hidden="true"></i>{{ message }}</p>
+    }
+  </ng-container>
+  <ng-template #statusFooterTpl>
+    <div class="flex justify-end gap-2.5">
+      <button nz-button type="button" [disabled]="isChangingStatus()" (click)="isStatusModalVisible.set(false)">Hủy</button>
+      <button nz-button nzType="primary" type="button" [nzLoading]="isChangingStatus()" [disabled]="isChangingStatus()"
+        (click)="submitStatus()">Cập nhật</button>
+    </div>
+  </ng-template>
+</nz-modal>

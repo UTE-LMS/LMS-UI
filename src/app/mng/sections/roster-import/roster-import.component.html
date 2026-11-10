@@ -1,0 +1,142 @@
+<div class="mx-auto max-w-5xl p-6">
+  <a class="text-sm font-medium text-blue-800 hover:underline" [routerLink]="urlConst.SECTION_DETAIL(sectionId())">
+    <i class="fa-solid fa-arrow-left mr-1 text-xs" aria-hidden="true"></i>Về chi tiết lớp
+  </a>
+
+  <div class="mt-3 flex flex-wrap items-end gap-3">
+    <div>
+      <p class="m-0 text-xs font-semibold uppercase tracking-wider text-blue-700">
+        {{ section()?.code ?? '—' }} · {{ term()?.code ?? '—' }}
+      </p>
+      <h1 class="m-0 text-2xl font-bold text-slate-900">Nhập danh sách lớp</h1>
+    </div>
+    <app-test-data-flag />
+  </div>
+
+  <ol class="mt-5 flex list-none items-center gap-3 p-0 text-sm" aria-label="Các bước nhập danh sách lớp">
+    <li class="flex items-center gap-2" [attr.aria-current]="step() === 'PICK' ? 'step' : null">
+      <span class="inline-flex h-6 w-6 items-center justify-center rounded-full border-2 border-blue-800 text-xs font-bold"
+        [class.bg-blue-800]="step() === 'PICK'" [class.text-white]="step() === 'PICK'">
+        @if (step() === 'DONE') {
+        <i class="fa-solid fa-check" aria-hidden="true"></i>
+        } @else {
+        1
+        }
+      </span>Chọn tệp và ghi danh
+    </li>
+    <li class="h-px w-10 bg-slate-400" aria-hidden="true"></li>
+    <li class="flex items-center gap-2" [attr.aria-current]="step() === 'DONE' ? 'step' : null">
+      <span class="inline-flex h-6 w-6 items-center justify-center rounded-full border-2 border-blue-800 text-xs font-bold"
+        [class.bg-blue-800]="step() === 'DONE'" [class.text-white]="step() === 'DONE'">2</span>Kết quả
+    </li>
+  </ol>
+
+  @if (step() === 'PICK') {
+  <section class="mt-8">
+    <p class="m-0 text-sm text-slate-800">
+      Tệp CSV (UTF-8, phân cách <code>,</code> hoặc <code>;</code>, tối đa 5000 dòng dữ liệu) có cột
+      <code>studentRef</code> (bắt buộc), <code>cohort</code>, <code>majorCode</code>. Cột khác (họ tên, email…)
+      bị bỏ qua và được báo lại. Hệ thống chỉ dùng mã thay thế của sinh viên.
+    </p>
+    <div class="mt-4 flex flex-wrap items-center gap-3">
+      <label class="inline-flex cursor-pointer items-center gap-2 rounded border border-slate-500 px-3 py-1.5 text-sm font-medium hover:bg-slate-50 focus-within:ring-2 focus-within:ring-blue-700"
+        [class.opacity-50]="frozenReason()">
+        <i class="fa-solid fa-file-csv" aria-hidden="true"></i>
+        <span>{{ file() ? 'Đổi tệp' : 'Chọn tệp CSV' }}</span>
+        <input #fileInput class="sr-only" type="file" accept=".csv,text/csv" [disabled]="!!frozenReason()"
+          (change)="onFileSelected($event)" />
+      </label>
+      @if (file(); as picked) {
+      <span class="text-sm text-slate-800">{{ picked.name }}</span>
+      }
+      <button type="button" class="rounded px-2 py-1 text-sm font-medium text-blue-800 underline hover:bg-slate-100" (click)="downloadTemplate()">
+        <i class="fa-solid fa-download mr-1.5" aria-hidden="true"></i>Tải tệp mẫu
+      </button>
+    </div>
+    @if (fileError(); as message) {
+    <p class="mt-3 text-sm text-[#8c2f39]" role="alert"><i class="fa-solid fa-circle-exclamation mr-1.5" aria-hidden="true"></i>{{ message }}</p>
+    }
+  </section>
+
+  @if (rowErrors().length > 0) {
+  <section class="mt-8" aria-labelledby="rowErrorsTitle">
+    <div class="flex items-center gap-3">
+      <h2 id="rowErrorsTitle" class="m-0 text-lg font-semibold">{{ rowErrors().length }} dòng lỗi</h2>
+      <span class="flex-1"></span>
+      <button nz-button type="button" (click)="downloadErrors()">
+        <i class="fa-solid fa-download mr-1.5" aria-hidden="true"></i>Tải bản báo lỗi
+      </button>
+    </div>
+    <p class="mt-1 text-sm text-slate-700">
+      Hệ thống ghi tất cả hoặc không ghi gì: chưa có sinh viên nào được ghi danh. Sửa các dòng dưới đây trong tệp rồi chọn lại tệp.
+    </p>
+    <nz-table class="mt-3" nzSize="small" [nzData]="rowErrors()" [nzPageSize]="50">
+      <thead>
+        <tr>
+          <th nzWidth="90px">Dòng</th>
+          <th nzWidth="170px">Cột</th>
+          <th nzWidth="190px">Giá trị</th>
+          <th>Lỗi</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (err of rowErrors(); track $index) {
+        <tr>
+          <td class="font-semibold">{{ err.line ?? '—' }}</td>
+          <td>Mã sinh viên</td>
+          <td>
+            @if (err.rejectedValue) {
+            {{ err.rejectedValue }}
+            } @else {
+            <span class="text-slate-700">(trống)</span>
+            }
+          </td>
+          <td class="font-medium text-[#8c2f39]">{{ err.message }}</td>
+        </tr>
+        }
+      </tbody>
+    </nz-table>
+  </section>
+  }
+
+  @if (submitError(); as message) {
+  <div class="mt-6 rounded border border-[#d9a0a6] bg-[#fdf2f3] p-3 text-sm text-[#8c2f39]" role="alert">
+    <i class="fa-solid fa-circle-exclamation mr-1.5" aria-hidden="true"></i>{{ message }}
+  </div>
+  }
+  } @else if (result(); as res) {
+  <section class="mt-8" aria-labelledby="resultTitle">
+    <h2 id="resultTitle" class="m-0 text-xl font-semibold">Đã ghi danh {{ res.totalRows }} dòng.</h2>
+    <p class="mt-1 text-sm text-slate-800">
+      {{ res.newStudents }} sinh viên mới, {{ res.reusedStudents }} đã có hồ sơ và được dùng lại.
+    </p>
+    <div class="mt-4 rounded border border-slate-300 p-4">
+      <p class="m-0 text-3xl font-bold">{{ res.sectionEnrolledCount }}</p>
+      <p class="m-0 text-sm text-slate-700">đang học sau khi nhập, là mẫu số của tỷ lệ đạt (do hệ thống tính)</p>
+    </div>
+    @if (res.ignoredColumns.length > 0) {
+    <p class="mt-4 text-sm text-slate-800" role="status">
+      <i class="fa-solid fa-circle-info mr-1.5" aria-hidden="true"></i>
+      Các cột bị bỏ qua vì hệ thống chưa lưu: <strong>{{ res.ignoredColumns.join(', ') }}</strong>.
+    </p>
+    }
+    <p class="mt-4 text-xs text-slate-700">
+      Nhập lại cùng một danh sách sẽ bị từ chối vì sinh viên đã ghi danh; hệ thống không tạo sinh viên trùng.
+    </p>
+  </section>
+  }
+</div>
+
+<app-action-dock [tone]="dock().tone" [message]="dock().message">
+  @if (step() === 'DONE') {
+  <a nz-button nzType="primary" [routerLink]="urlConst.SECTION_DETAIL(sectionId())">Về chi tiết lớp</a>
+  } @else {
+  @if (rowErrors().length > 0) {
+  <button nz-button type="button" (click)="chooseAnother()">Chọn tệp khác</button>
+  }
+  <button nz-button nzType="primary" type="button" [nzLoading]="isSubmitting()"
+    [disabled]="!file() || isSubmitting() || !!frozenReason() || rowErrors().length > 0" (click)="submit()">
+    Ghi danh
+  </button>
+  }
+</app-action-dock>

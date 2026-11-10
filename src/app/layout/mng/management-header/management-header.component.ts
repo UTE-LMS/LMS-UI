@@ -8,6 +8,7 @@ import { ISiderMenu } from '@models/common/sider-menu.model';
 import { coursesMngMenu } from '@mng/courses/courses.menu';
 import { curriculumMngMenu } from '@mng/curriculum/curriculum.menu';
 import { programsMngMenu } from '@mng/programs/programs.menu';
+import { sectionsMngMenu } from '@mng/sections/sections.menu';
 import { syllabiMngMenu } from '@mng/syllabi/syllabi.menu';
 import { usersMngMenu } from '@mng/users/users.menu';
 import { AuthService } from '@services/auth/auth.service';
@@ -65,6 +66,7 @@ export class ManagementHeaderComponent implements OnInit {
     ...curriculumMngMenu,
     ...coursesMngMenu,
     ...syllabiMngMenu,
+    ...sectionsMngMenu,
   ];
 
   /** Lọc các mục menu phù hợp với vai trò của người dùng hiện tại */

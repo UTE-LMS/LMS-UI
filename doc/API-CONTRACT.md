@@ -677,24 +677,69 @@ Các mục dưới đây giữ vai trò khung định hướng và sẽ được
 - `POST /api/v1/courses/{id}/clos` — Thêm mới / cập nhật danh mục CLO.
 - `PUT /api/v1/courses/{id}/clo-pi-mapping` — Ánh xạ giữa CLO của học phần và PI của CTĐT.
 
-### 6.3. F04: Đề Thi, Ma Trận Đánh Giá & Rubric (Assessment, Question Matrix & Rubrics)
-- `GET /api/v1/assessments` — Danh sách bài đánh giá (giữa kỳ, cuối kỳ, đồ án).
-- `POST /api/v1/assessments` — Tạo bài đánh giá mới.
-- `GET /api/v1/assessments/{id}/matrix` — Xem ma trận cấu trúc câu hỏi ánh xạ với CLO và thang đo Bloom.
-- `PUT /api/v1/assessments/{id}/matrix` — Cập nhật ma trận cấu trúc câu hỏi.
-- `POST /api/v1/assessments/{id}/submit` — Nộp ma trận đề thi để phê duyệt (`DRAFT` -> `SUBMITTED`).
-- `POST /api/v1/assessments/{id}/approve` — Trưởng bộ môn phê duyệt ma trận (`SUBMITTED` -> `APPROVED`).
-- `POST /api/v1/assessments/{id}/reject` — Trưởng bộ môn từ chối ma trận kèm lý do (`SUBMITTED` -> `REJECTED`).
-- `GET /api/v1/rubrics` — Danh mục tiêu chí Rubric đánh giá năng lực.
+### 6.3. F04: Bài Đánh Giá, Rubric & Duyệt Ma Trận Đề Thi (Assessment, Rubric & Matrix Approval)
 
-### 6.4. F05: Quản Lý Học Kỳ, Lớp Học Phần & Nhập Điểm (Terms, Course Sections & Score Import)
-- `GET /api/v1/terms` — Danh sách học kỳ năm học.
-- `GET /api/v1/course-sections` — Danh sách lớp học phần theo học kỳ.
-- `GET /api/v1/course-sections/{id}/roster` — Danh sách sinh viên thuộc lớp học phần.
-- `POST /api/v1/course-sections/{id}/scores/import-preview` — Tải file Excel điểm sinh viên lên để xem trước kết quả parse và kiểm tra lỗi.
-- `POST /api/v1/course-sections/{id}/scores/confirm` — Xác nhận lưu điểm sinh viên vào CSDL (yêu cầu transaction và ghi `audit_logs`).
-- `PUT /api/v1/course-sections/{id}/scores/{studentId}` — Cập nhật điểm từng phần của sinh viên (bắt buộc nhập `reason`).
-- `POST /api/v1/course-sections/{id}/scores/lock` — Khóa bảng điểm học phần sau khi hoàn tất.
+> **Trạng thái:** đã hiện thực ở backend (nhánh `feat/f04-assessments`, đã merge). Nội dung dưới đây đối chiếu mã `AssessmentController` và các DTO `Assessment*`, `OutcomeMappingDto`, `Rubric*`, `CoverageResponse`. Phần "Question Bank" (US-13/14) và nhập câu hỏi (US-17) **chưa làm**, không có endpoint. Tiền tố `/api/v1`. Mã lỗi theo §2–§3.
+
+| Phương thức | Đường dẫn | Ai gọi được (backend kiểm tra) | Phản hồi |
+|---|---|---|---|
+| GET | `/syllabi/{syllabusId}/assessment-templates` | đọc được đề cương (`canAccessSyllabus` READ) | `AssessmentResponse[]` (khung, sắp theo `code`) |
+| POST | `/syllabi/{syllabusId}/assessment-templates` | `LECTURER` hoặc `DEPARTMENT_HEAD` có học phần trong `scope.courseIds`; `ADMIN`, `PROGRAM_MANAGER` chỉ đọc | 201 `AssessmentResponse` |
+| GET | `/sections/{sectionId}/assessments` | đọc được lớp (`canAccessSection` READ) | `AssessmentResponse[]` |
+| POST | `/sections/{sectionId}/assessments` | `LECTURER` của lớp | 201 `AssessmentResponse` |
+| GET | `/assessments/{id}` | đọc được lớp/đề cương của bài | `AssessmentResponse` |
+| PUT | `/assessments/{id}` | như tạo (`LECTURER`/`DEPARTMENT_HEAD`, đúng phạm vi) | `AssessmentResponse` |
+| PUT | `/assessments/{id}/items` | như tạo | `AssessmentResponse` (thay **toàn bộ** `items`) |
+| GET | `/assessments/{id}/coverage` | như đọc | `CoverageResponse` |
+| POST | `/assessments/{id}/submit` | `LECTURER` của lớp | `AssessmentResponse` (không body) |
+| POST | `/assessments/{id}/approve` | `DEPARTMENT_HEAD` có học phần của đề cương trong `scope.courseIds` (`ADMIN` **không** có quyền) | `AssessmentResponse` (không body) |
+| POST | `/assessments/{id}/reject` | như approve | `AssessmentResponse`; body `{ "reviewNote": string (bắt buộc, ≤ 1000) }` |
+
+**`AssessmentResponse`:** `id`, `syllabusId`, `sectionId` (null với khung), `templateId`, `code`, `name`, `scope` (`SYLLABUS_TEMPLATE` | `SECTION`), `type` (`QUIZ`, `PRACTICAL`, `PROJECT`, `MIDTERM`, `FINAL`, `OTHER`), `phase` (`FORMATIVE`, `MIDTERM`, `SUMMATIVE`), `scheduledAt`, `totalPoints`, `weightInCourse` (0–1), `dataGranularity` (`ITEM` | `TOTAL_ONLY`), `measurableByOutcome` (false khi `TOTAL_ONLY`), `status` (`DRAFT`, `SUBMITTED`, `APPROVED`, `REJECTED`, `SCORE_ENTERED`, `LOCKED`), **`locked`** (JSON dùng tên `locked`, không phải `isLocked`; true khi đã duyệt trở đi), `approval` (`submittedBy`, `submittedAt`, `reviewedBy`, `reviewedAt`, `reviewNote`, `history[{action, actorId, at, note}]`, `action` ∈ `SUBMIT`/`APPROVE`/`REJECT`/`UNLOCK`; chỉ có **ID** người thực hiện, chưa có tên), `coverageSummary`, `items[]`, `revision`.
+
+**Phần tử `items[]` (`AssessmentItemDto`):** `id` (tùy chọn khi gửi: có thì giữ định danh), `code` (bắt buộc, `^[A-Za-z0-9._-]{1,40}$`, không trùng trong bài), `orderIndex` (≥ 1), `title` (≤ 300), `kind` (`QUESTION` | `CRITERION`, bắt buộc), `maxScore` (bắt buộc, > 0), `bloomLevel` (1–6, tùy chọn), `topic` (≤ 200), `externalRef` (≤ 100), `outcomeMappings[]` (bắt buộc ≥ 1; mỗi phần tử `{ cloId, weight }`, `weight` ∈ (0, 1]), `rubric` (`{ levels: [{ level 1–4, description ≤ 500, score ≥ 0 }] }`, tùy chọn, `levels` không rỗng).
+
+**Quy tắc (xem plan F04 §4 và §11 của backend):**
+
+- Ánh xạ chỉ có **CLO** (`cloId` + `weight`); **PI không khai báo ở câu hỏi** mà suy ra từ liên kết CLO–PI (ADR 0011). Σ `weight` của một phần tử = 1 (sai số 0,0001), không trùng CLO, CLO phải thuộc đúng đề cương của bài → vi phạm trả **422**.
+- Rubric: mức không lặp, điểm mỗi mức ≤ `maxScore` → **422**; mức ngoài 1–4 → **400**. Mức rubric (1–4) tách khỏi `bloomLevel` (1–6).
+- Gửi duyệt (`submit`) chỉ từ `DRAFT`, cần ≥ 1 phần tử, đã có `totalPoints`, và `|totalPoints − Σ maxScore| < 0,001`, nếu không **422**. Khung (`SYLLABUS_TEMPLATE`) không qua quy trình duyệt: `submit` → **422**, `approve`/`reject` → **403** (`canReviewAssessment` chỉ chấp nhận bản lớp).
+- Bản lớp chỉ sửa được ở `DRAFT` hoặc `REJECTED`; sửa bài `REJECTED` tự đưa về `DRAFT`. Từ `SUBMITTED` trở đi sửa → **422**. `approve`/`reject` chỉ từ `SUBMITTED`; sai thứ tự → **422**. Người gửi duyệt không được duyệt/từ chối lượt của chính mình → **403**.
+- Trùng `code` trong cùng phạm vi → **409**. `revision` (khóa lạc quan) → hai người cùng duyệt: một người nhận **409**.
+- `coverageSummary`/`/coverage`: `{ totalItemsSum, byClo[{cloId, cloCode?, points, percentage}], byBloom[{bloomLevel, questionCount, points, percentage}] }`; `percentage` là 0–100 so với `totalItemsSum`; phần tử không có Bloom không nằm trong `byBloom`. `cloCode` chỉ có ở `/coverage`.
+- Chưa có: API mở khóa (`UNLOCK`), xóa bài, danh sách "bài chờ duyệt" theo Trưởng bộ môn (UI phải đi từ lớp → bài), tên người trong `history`.
+
+**Xử lý ở UI (`LMS-UI`):** `INLINE_ERRORS` cho mọi lệnh gọi; 400/409/422 hiển thị thông điệp backend tại thanh hành động dưới cùng, giữ nguyên dữ liệu đã soạn; 409 kèm nút "Tải lại dữ liệu"; 403 hiện "Bạn không có quyền truy cập chức năng này" (theo §3, không đăng xuất). Ẩn nút theo vai trò chỉ để tiện dùng.
+
+### 6.4. F05a: Học Kỳ, Lớp Học Phần, Ghi Danh & Nhập Danh Sách Lớp (Terms, Sections, Enrollments)
+
+> **Trạng thái:** đã hiện thực ở backend. Đối chiếu `TermController`, `SectionController`, `EnrollmentController`. Phần **nhập điểm** (`/scores/...`) là F05b, **chưa có**; các đường dẫn `course-sections/...` ghi trước đây trong tài liệu này **không tồn tại**. Tiền tố `/api/v1`.
+
+| Phương thức | Đường dẫn | Ai gọi được | Ghi chú |
+|---|---|---|---|
+| GET | `/terms`, `/terms/{id}` | đã xác thực | `TermResponse[]`/`TermResponse` |
+| POST | `/terms` | `ADMIN`, `PROGRAM_MANAGER` | body `{ code (^[A-Za-z0-9_-]{2,30}$), academicYear?, startDate?, endDate? }`; trùng `code` → 409; `startDate > endDate` → 422 |
+| PUT | `/terms/{id}` | `ADMIN`, `PROGRAM_MANAGER` | body `{ academicYear?, startDate?, endDate? }` |
+| PUT | `/terms/{id}/status` | `ADMIN`, `PROGRAM_MANAGER` | body `{ status: OPEN \| SCORE_LOCKED \| CLOSED, reason? }`; **mở lại `SCORE_LOCKED → OPEN` bắt buộc `reason`** (thiếu → 422) |
+| DELETE | `/terms/{id}` | `ADMIN` | 204 |
+| GET | `/sections?termId=&courseId=` | đã xác thực | **không phân trang**; chỉ trả lớp người gọi đọc/quản lý được (giảng viên: lớp mình) |
+| GET | `/sections/{id}` | đọc được lớp hoặc quản lý được lớp | `SectionResponse` |
+| POST | `/sections` | `ADMIN`, hoặc `PROGRAM_MANAGER` mà học phần thuộc CTĐT trong `scope.programIds` | 201; body `{ code (^[A-Za-z0-9._-]{2,40}$), courseId, syllabusId, termId, lecturerIds[≥1] }` |
+| PUT | `/sections/{id}` | như POST | body `{ lecturerIds[≥1] }` (học phần/đề cương/học kỳ **bất biến**) |
+| PUT | `/sections/{id}/status` | như POST | body `{ status: OPEN \| CLOSED \| LOCKED, reason? }`; mở lại lớp `LOCKED` bắt buộc `reason` |
+| GET | `/sections/{id}/enrollments?status=` | đọc được lớp | `EnrollmentListResponse` |
+| POST | `/sections/{id}/enrollments/import` | `ADMIN` hoặc giảng viên của lớp (`canAccessSection` WRITE) | `multipart/form-data`, trường **`file`** (CSV) → `EnrollmentImportResponse` |
+| PUT | `/enrollments/{id}/status` | `ADMIN` hoặc giảng viên của lớp | body `{ status: ENROLLED \| WITHDRAWN }` |
+
+**DTO:** `TermResponse { id, code, academicYear, startDate, endDate, status }`. `SectionResponse { id, code, courseId, syllabusId, termId, lecturerIds[], enrolledCount, status }` — `enrolledCount` là giá trị dẫn xuất do backend tính lại sau mỗi lần nhập/rút/ghi danh lại và **mặc định 0 cho lớp mới**, nên không phân biệt được "chưa nhập danh sách" với "0 sinh viên" ở danh sách lớp. `EnrollmentListResponse { sectionId, enrolled, withdrawn, enrollments[{ id, sectionId, studentId, studentRef, cohort, majorCode, status, enrolledAt }] }` (sắp theo `studentRef`; `enrolled` là mẫu số của tỷ lệ đạt cấp lớp). `EnrollmentImportResponse { sectionId, totalRows, newStudents, reusedStudents, sectionEnrolledCount, ignoredColumns[] }`.
+
+**Quy tắc quan trọng cho UI:**
+
+- Mở lớp chỉ trên đề cương `CONFIRMED` và học kỳ `OPEN`; `lecturerIds` phải là người dùng `ACTIVE` có vai trò `LECTURER` → vi phạm **422**; trùng mã lớp **409**.
+- Danh sách ghi danh (mẫu số) **đóng băng** khi lớp không còn `OPEN` **hoặc** học kỳ không còn `OPEN`: nhập CSV và rút/ghi danh lại trả **422**.
+- **Nhập CSV là một thao tác thống nhất, không có bước xem trước.** UTF-8 (chấp nhận BOM), phân cách `,` hoặc `;`, tối đa 5000 dòng dữ liệu, chỉ đọc cột `studentRef` (bắt buộc), `cohort`, `majorCode`; cột khác bị bỏ qua và liệt kê trong `ignoredColumns`. Có dòng lỗi thì **không ghi gì** và trả **422** với `fieldErrors[]` theo dòng: `{ "field": "line 12", "message": "...", "rejectedValue": "SV-0018" }` (dòng 1 là tiêu đề). Tệp rỗng/sai cột/sai định dạng → **400** không có `fieldErrors`. Nhập lại cùng tệp bị từ chối (sinh viên đã ghi danh → 422); sinh viên đã `WITHDRAWN` phải ghi danh lại bằng `PUT /enrollments/{id}/status`. Excel (`.xlsx`) chưa hỗ trợ.
+- Riêng tư: chỉ dùng `studentRef` (mã thay thế, Q09); không có họ tên/email.
+- Chưa có: endpoint liệt kê giảng viên cho `PROGRAM_MANAGER` (chỉ `GET /users` của `ADMIN` và `GET /departments/lecturers` của Trưởng bộ môn), tên/mã học phần, học kỳ, phiên bản đề cương và tên giảng viên **nhúng trong** `SectionResponse` (UI phải tra thêm bằng nhiều lệnh gọi), `audit_logs` cho đổi trạng thái học kỳ/lớp.
 
 ### 6.5. F06: Tính Toán & Đo Lường Chuẩn Đầu Ra (Calculation & Outcome Measurement Engine)
 - `POST /api/v1/calculations/run` — Khởi chạy tiến trình tính toán đo lường kết quả chuẩn đầu ra theo phạm vi (lớp học phần / toàn khóa).

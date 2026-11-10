@@ -1,0 +1,97 @@
+<nz-modal
+  [nzVisible]="isVisible()"
+  [nzTitle]="mode() === 'SECTION' ? 'Tạo bài đánh giá cho lớp' : 'Tạo khung bài đánh giá theo đề cương'"
+  [nzFooter]="footerTpl"
+  [nzWidth]="720"
+  [nzMaskClosable]="false"
+  (nzOnCancel)="handleCancel()"
+>
+  <ng-container *nzModalContent>
+    <form [formGroup]="form" (keydown.enter)="$event.preventDefault()">
+      <div class="grid grid-cols-1 gap-x-4 gap-y-3 md:grid-cols-2">
+        @if (mode() === 'SECTION') {
+        <div class="md:col-span-2">
+          <label class="mb-1 block text-sm font-medium" for="newTemplate">Sao chép từ khung theo đề cương</label>
+          <nz-select nzId="newTemplate" class="w-full" formControlName="templateId" nzAllowClear nzPlaceHolder="Không dùng khung (tự soạn câu hỏi sau)">
+            @for (tpl of templates(); track tpl.id) {
+            <nz-option [nzValue]="tpl.id" [nzLabel]="tpl.code + ' · ' + tpl.name" />
+            }
+          </nz-select>
+          <p class="m-0 mt-1 text-xs text-slate-700">
+            Cấu trúc được sao chép tại thời điểm tạo; sửa khung hay đổi liên kết CLO–PI về sau không làm đổi bài đã tạo.
+            Thông tin để trống sẽ lấy từ khung.
+          </p>
+        </div>
+        }
+        <div>
+          <label class="mb-1 block text-sm font-medium" for="newCode">Mã bài <span class="text-[#8c2f39]" aria-hidden="true">*</span></label>
+          <input id="newCode" class="h-8 w-full rounded border border-slate-400 px-2 text-sm" formControlName="code" aria-required="true"
+            [attr.aria-invalid]="form.controls.code.touched && form.controls.code.invalid" aria-describedby="newCodeHint" />
+          <p id="newCodeHint" class="m-0 mt-1 text-xs" [class.text-red-800]="form.controls.code.touched && form.controls.code.invalid">
+            Chữ, số, dấu chấm, gạch ngang, gạch dưới (1–40 ký tự); không trùng mã khác trong cùng phạm vi.
+          </p>
+        </div>
+        <div>
+          <label class="mb-1 block text-sm font-medium" for="newName">Tên bài <span class="text-[#8c2f39]" aria-hidden="true">*</span></label>
+          <input id="newName" class="h-8 w-full rounded border border-slate-400 px-2 text-sm" formControlName="name" aria-required="true"
+            [attr.aria-invalid]="form.controls.name.touched && form.controls.name.invalid" />
+          @if (form.controls.name.touched && form.controls.name.invalid) {
+          <p class="m-0 mt-1 text-xs text-[#8c2f39]">Nhập tên bài (tối đa 200 ký tự).</p>
+          }
+        </div>
+        <div>
+          <label class="mb-1 block text-sm font-medium" for="newType">Loại</label>
+          <nz-select nzId="newType" class="w-full" formControlName="type" nzAllowClear nzPlaceHolder="Chưa chọn">
+            @for (opt of typeOptions; track opt.value) {
+            <nz-option [nzValue]="opt.value" [nzLabel]="opt.label" />
+            }
+          </nz-select>
+        </div>
+        <div>
+          <label class="mb-1 block text-sm font-medium" for="newPhase">Giai đoạn đánh giá</label>
+          <nz-select nzId="newPhase" class="w-full" formControlName="phase" nzAllowClear nzPlaceHolder="Chưa chọn">
+            @for (opt of phaseOptions; track opt.value) {
+            <nz-option [nzValue]="opt.value" [nzLabel]="opt.label" />
+            }
+          </nz-select>
+        </div>
+        <div>
+          <label class="mb-1 block text-sm font-medium" for="newTotal">Tổng điểm</label>
+          <input id="newTotal" type="number" step="0.25" min="0" inputmode="decimal" placeholder="Chưa khai báo"
+            class="h-8 w-full rounded border border-slate-400 px-2 text-right text-sm" formControlName="totalPoints" />
+          <p class="m-0 mt-1 text-xs text-slate-700">Gửi duyệt cần tổng điểm khớp tổng điểm tối đa các câu.</p>
+        </div>
+        <div>
+          <label class="mb-1 block text-sm font-medium" for="newWeight">Tỷ trọng trong học phần (0–1)</label>
+          <input id="newWeight" type="number" step="0.05" min="0" max="1" inputmode="decimal" placeholder="Chưa khai báo"
+            class="h-8 w-full rounded border border-slate-400 px-2 text-right text-sm" formControlName="weightInCourse" />
+        </div>
+        <div>
+          <label class="mb-1 block text-sm font-medium" for="newDate">Ngày dự kiến</label>
+          <input id="newDate" type="date" class="h-8 w-full rounded border border-slate-400 px-2 text-sm" formControlName="scheduledDate" />
+        </div>
+        <div>
+          <label class="mb-1 block text-sm font-medium" for="newGranularity">Độ chi tiết của điểm</label>
+          <nz-select nzId="newGranularity" class="w-full" formControlName="dataGranularity">
+            @for (opt of granularityOptions; track opt.value) {
+            <nz-option [nzValue]="opt.value" [nzLabel]="opt.label" />
+            }
+          </nz-select>
+        </div>
+      </div>
+
+      @if (submitError(); as message) {
+      <div class="mt-4 rounded border border-[#d9a0a6] bg-[#fdf2f3] p-3 text-sm text-[#8c2f39]" role="alert">
+        <i class="fa-solid fa-circle-exclamation mr-1.5" aria-hidden="true"></i>{{ message }}
+      </div>
+      }
+    </form>
+  </ng-container>
+
+  <ng-template #footerTpl>
+    <div class="flex items-center justify-end gap-2.5">
+      <button nz-button type="button" [disabled]="isSubmitting()" (click)="handleCancel()">Hủy</button>
+      <button nz-button nzType="primary" type="button" [nzLoading]="isSubmitting()" [disabled]="isSubmitting()" (click)="submit()">Tạo bài</button>
+    </div>
+  </ng-template>
+</nz-modal>
