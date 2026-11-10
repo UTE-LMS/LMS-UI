@@ -1,4 +1,13 @@
-import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  DestroyRef,
+  OnInit,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
   AbstractControl,
   FormBuilder,
@@ -28,6 +37,15 @@ import { NzModalModule } from 'ng-zorro-antd/modal';
 import { NzSelectModule } from 'ng-zorro-antd/select';
 import { NzTableModule } from 'ng-zorro-antd/table';
 import { ToastrService } from 'ngx-toastr';
+import {
+  catchError,
+  debounceTime,
+  distinctUntilChanged,
+  forkJoin,
+  of,
+  Subject,
+  switchMap,
+} from 'rxjs';
 import { AssignCourseModalComponent } from '../assign-course-modal/assign-course-modal.component';
 
 @Component({
@@ -58,12 +76,24 @@ export class ListSyllabiComponent implements OnInit {
   private readonly authSvc = inject(AuthService);
   private readonly fb = inject(FormBuilder);
   private readonly alert = inject(ToastrService);
+  private readonly destroyRef = inject(DestroyRef);
+
+  private readonly searchCourseSubject$ = new Subject<string>();
+  readonly isSearchingCourse = signal(false);
+  readonly isLoadingMoreCourses = signal(false);
+
+  readonly coursePageSize = 100;
+  readonly coursePage = signal(0);
+  readonly courseTotalPages = signal(1);
+  readonly isCourseLastPage = signal(true);
+  readonly currentCourseSearch = signal('');
 
   readonly userRoles = signal<string[]>([]);
   readonly scopeCourseIds = signal<string[]>([]);
   readonly showAllCourses = signal(false);
 
   readonly allCourses = signal<ICourse[]>([]);
+  readonly scopedCourses = signal<ICourse[]>([]);
   readonly terms = signal<ITerm[]>([]);
   readonly selectedCourseId = signal<string>('');
   readonly syllabi = signal<ISyllabus[]>([]);
@@ -80,17 +110,28 @@ export class ListSyllabiComponent implements OnInit {
   readonly isAdmin = computed(() => this.userRoles().includes(SystemConstant.ROLE.ADMIN));
 
   readonly filteredCourses = computed(() => {
-    const courses = this.allCourses();
     const scopedIds = this.scopeCourseIds();
     if (this.showAllCourses() || this.isAdmin() || scopedIds.length === 0) {
-      return courses;
+      return this.allCourses();
     }
-    return courses.filter(c => scopedIds.includes(c.id));
+    const scoped = this.scopedCourses();
+    if (scoped.length > 0) {
+      return scoped;
+    }
+    return this.allCourses().filter(c => scopedIds.includes(c.id));
   });
 
-  readonly selectedCourse = computed(
-    () => this.allCourses().find(c => c.id === this.selectedCourseId()) ?? null,
-  );
+  readonly selectedCourse = computed(() => {
+    const id = this.selectedCourseId();
+    if (!id) {
+      return null;
+    }
+    return (
+      this.scopedCourses().find(c => c.id === id)
+      ?? this.allCourses().find(c => c.id === id)
+      ?? null
+    );
+  });
 
   /** Kiểm tra môn đang chọn có nằm trong scope.courseIds của người dùng không */
   readonly isCourseInScope = computed(() => {
@@ -149,6 +190,45 @@ export class ListSyllabiComponent implements OnInit {
       this.showAllCourses.set(true);
     }
 
+    this.searchCourseSubject$
+      .pipe(
+        debounceTime(300),
+        distinctUntilChanged(),
+        switchMap(keyword => {
+          this.isSearchingCourse.set(true);
+          this.currentCourseSearch.set(keyword);
+          this.coursePage.set(0);
+          return this.courseSvc.getCourses(0, this.coursePageSize, keyword).pipe(
+            catchError(() => of({
+              content: [],
+              page: 0,
+              size: this.coursePageSize,
+              totalElements: 0,
+              totalPages: 0,
+              last: true,
+            })),
+          );
+        }),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: page => {
+          const searchResults = page.content || [];
+          const current = this.selectedCourse();
+          const merged = [...searchResults];
+          if (current && !merged.some(c => c.id === current.id)) {
+            merged.unshift(current);
+          }
+          this.allCourses.set(merged);
+          this.courseTotalPages.set(page.totalPages || 0);
+          this.isCourseLastPage.set(page.last ?? (1 >= (page.totalPages || 1)));
+          this.isSearchingCourse.set(false);
+        },
+        error: () => {
+          this.isSearchingCourse.set(false);
+        },
+      });
+
     this.loadInitialCatalog(queryCourseId);
   }
 
@@ -175,23 +255,84 @@ export class ListSyllabiComponent implements OnInit {
       error: () => undefined,
     });
 
-    this.courseSvc.getCourses(0, 100).subscribe({
+    const scopedIds = this.scopeCourseIds();
+    if (scopedIds.length > 0) {
+      const requests = scopedIds.map(id => this.courseSvc.getCourseById(id).pipe(catchError(() => of(null))));
+      forkJoin(requests).subscribe(results => {
+        const validScoped = results.filter((c): c is ICourse => c !== null);
+        this.scopedCourses.set(validScoped);
+
+        const currentAll = this.allCourses();
+        const existingIds = new Set(currentAll.map(c => c.id));
+        const missing = validScoped.filter(c => !existingIds.has(c.id));
+        if (missing.length > 0) {
+          this.allCourses.set([...missing, ...currentAll]);
+        }
+
+        if (!preferredCourseId && !this.showAllCourses() && validScoped.length > 0) {
+          this.onCourseChange(validScoped[0].id);
+        }
+      });
+    }
+
+    this.coursePage.set(0);
+    this.currentCourseSearch.set('');
+    this.courseSvc.getCourses(0, this.coursePageSize).subscribe({
       next: page => {
         const list = page.content || [];
-        this.allCourses.set(list);
-        const candidates = this.filteredCourses();
-        const initialId =
-          preferredCourseId && list.some(c => c.id === preferredCourseId)
-            ? preferredCourseId
-            : (candidates[0]?.id ?? list[0]?.id ?? '');
-        if (initialId) {
-          this.onCourseChange(initialId);
+        this.courseTotalPages.set(page.totalPages || 1);
+        this.isCourseLastPage.set(page.last ?? (1 >= (page.totalPages || 1)));
+        if (preferredCourseId && !list.some(c => c.id === preferredCourseId)) {
+          this.courseSvc.getCourseById(preferredCourseId).subscribe({
+            next: preferredCourse => {
+              this.allCourses.set([preferredCourse, ...list]);
+              this.onCourseChange(preferredCourseId);
+            },
+            error: () => {
+              this.allCourses.set(list);
+              this.selectDefaultCourse(preferredCourseId);
+            },
+          });
+        } else {
+          const currentScoped = this.scopedCourses();
+          const listIds = new Set(list.map(c => c.id));
+          const missingScoped = currentScoped.filter(c => !listIds.has(c.id));
+          this.allCourses.set([...missingScoped, ...list]);
+          this.selectDefaultCourse(preferredCourseId);
         }
       },
       error: () => {
         this.hasError.set(true);
       },
     });
+  }
+
+  private selectDefaultCourse(preferredCourseId: string | null): void {
+    if (this.selectedCourseId()) {
+      return;
+    }
+    if (preferredCourseId) {
+      this.onCourseChange(preferredCourseId);
+      return;
+    }
+    const scoped = this.scopedCourses();
+    if (!this.showAllCourses() && scoped.length > 0) {
+      this.onCourseChange(scoped[0].id);
+      return;
+    }
+    const candidates = this.filteredCourses();
+    const initialId = candidates[0]?.id ?? this.allCourses()[0]?.id ?? '';
+    if (initialId) {
+      this.onCourseChange(initialId);
+    }
+  }
+
+  onSearchCourse(keyword: string): void {
+    const trimmed = keyword?.trim() ?? '';
+    if (trimmed && !this.showAllCourses()) {
+      this.showAllCourses.set(true);
+    }
+    this.searchCourseSubject$.next(keyword);
   }
 
   onCourseChange(courseId: string): void {
@@ -229,7 +370,75 @@ export class ListSyllabiComponent implements OnInit {
   }
 
   toggleShowAllCourses(): void {
-    this.showAllCourses.update(v => !v);
+    const nextVal = !this.showAllCourses();
+    this.showAllCourses.set(nextVal);
+
+    if (!nextVal) {
+      const scoped = this.scopedCourses();
+      if (scoped.length > 0 && !this.isCourseInScope()) {
+        this.onCourseChange(scoped[0].id);
+      }
+    } else if (this.allCourses().length === 0) {
+      this.coursePage.set(0);
+      this.currentCourseSearch.set('');
+      this.courseSvc.getCourses(0, this.coursePageSize).subscribe({
+        next: page => {
+          this.allCourses.set(page.content || []);
+          this.courseTotalPages.set(page.totalPages || 1);
+          this.isCourseLastPage.set(page.last ?? (1 >= (page.totalPages || 1)));
+        },
+        error: () => undefined,
+      });
+    }
+  }
+
+  onCourseScrollToBottom(): void {
+    if (!this.showAllCourses() && !this.isAdmin() && this.scopeCourseIds().length > 0) {
+      return;
+    }
+    if (
+      this.isLoadingMoreCourses()
+      || this.isSearchingCourse()
+      || this.isCourseLastPage()
+      || this.coursePage() + 1 >= this.courseTotalPages()
+    ) {
+      return;
+    }
+
+    const nextPage = this.coursePage() + 1;
+    this.isLoadingMoreCourses.set(true);
+
+    this.courseSvc
+      .getCourses(nextPage, this.coursePageSize, this.currentCourseSearch())
+      .pipe(
+        catchError(() => of({
+          content: [],
+          page: nextPage,
+          size: this.coursePageSize,
+          totalElements: 0,
+          totalPages: this.courseTotalPages(),
+          last: true,
+        })),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: page => {
+          const newItems = page.content || [];
+          if (newItems.length > 0) {
+            const currentCourses = this.allCourses();
+            const existingIds = new Set(currentCourses.map(c => c.id));
+            const distinctNew = newItems.filter(c => !existingIds.has(c.id));
+            this.allCourses.set([...currentCourses, ...distinctNew]);
+          }
+          this.coursePage.set(nextPage);
+          this.courseTotalPages.set(page.totalPages || this.courseTotalPages());
+          this.isCourseLastPage.set(page.last ?? (nextPage + 1 >= (page.totalPages || 1)));
+          this.isLoadingMoreCourses.set(false);
+        },
+        error: () => {
+          this.isLoadingMoreCourses.set(false);
+        },
+      });
   }
 
   openCreateSyllabusModal(): void {
