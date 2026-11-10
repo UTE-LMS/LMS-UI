@@ -176,4 +176,10 @@ describe('DetailSyllabusComponent (F03 US-10, US-11, TD-27, ADR 0010)', () => {
     expect(component.cloForm.get('code')?.valid).toBe(true);
     expect(component.cloForm.get('bloomLevel')?.valid).toBe(true);
   });
+
+  it('F04: có liên kết sang khung bài đánh giá của đề cương (mở được ở mọi trạng thái đề cương)', () => {
+    const link = (fixture.nativeElement as HTMLElement).querySelector('a[href$="/mng/assessments/syllabi/' + syllabusId + '"]');
+    expect(link).not.toBeNull();
+    expect(link?.textContent).toContain('Khung bài đánh giá');
+  });
 });
