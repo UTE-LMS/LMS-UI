@@ -458,3 +458,46 @@ Phần này chuẩn bị sẵn nội dung trả lời cho 4 câu hỏi trọng t
 - **ESLint (`src/`):** 0 errors, 0 warnings.
 - **Unit Tests (`npm test -- --no-watch`):** 65/65 test files passed (635/635 tests passed).
 - **Build (`npm run build:dev`):** Biên dịch thành công 0 errors.
+
+
+---
+
+### 1. Thông tin phiên làm việc
+- **Thời gian:** 2026-11-10
+- **Người thực hiện (`git config user.name`):** `minhat5`
+- **Phạm vi nghiệp vụ:** Chuyển đổi trải nghiệm biên soạn/chỉnh sửa phiên bản Chương trình Đào tạo (`/mng/curriculum/versions/:versionId/edit`) từ giao diện rời rạc sang Quy trình Wizard 4 bước đồng bộ (`<nz-steps>`), hợp nhất quản lý Chuẩn đầu ra (US-05, US-06), Kế hoạch Học phần (US-09), Ma trận đóng góp I/R/M (US-11) và Dashboard Rà soát ĐBCL.
+
+### 2. Các hạng mục đã hiện thực
+1. **Kiến trúc Wizard 4 bước tại `FormCurriculumVersionComponent` (`src/app/mng/curriculum/form-curriculum-version/`):**
+   - **Bước 1 (Step 0): Cấu trúc phiên bản & Chuẩn đầu ra (PLO/PI):**
+     - Form cấu trúc phiên bản CTĐT (Mã/Tên, Khóa áp dụng, Tín chỉ tốt nghiệp, Thời gian đào tạo).
+     - Form danh mục PLO và các chỉ số PI trực thuộc (thêm/sửa/xóa, kiểm tra regex mã `^PLO[1-9][0-9]*$` và `^PI[1-9][0-9]*(\.[1-9][0-9]*)+$`).
+     - Tự động khóa trường mã đối với các bản ghi PLO/PI đã lưu vào CSDL để bảo vệ dữ liệu đo lường.
+     - Nút "Lưu thay đổi" và "Lưu & Sang bước 2 (Gán học phần)".
+   - **Bước 2 (Step 1): Kế hoạch Học phần trong CTĐT (US-09):**
+     - Tích hợp trực tiếp `ProgramCoursesTableComponent` (`app-program-courses-table`) trong wizard.
+     - Cho phép thêm học phần từ kho môn học, phân bổ học kỳ giảng dạy, nhóm kiến thức, và điều kiện tiên quyết / học trước.
+     - Tự động tải lại danh sách học phần (`loadCourses()`) khi có thay đổi.
+   - **Bước 3 (Step 2): Ma trận Đóng góp Học phần → PI (I/R/M - US-11):**
+     - Lưới ma trận trực tiếp liên kết giữa các môn học trong CTĐT và các chỉ số PI.
+     - Cơ chế xoay vòng mức đóng góp theo click: `[Trống] → I (Introduce) → R (Reinforce) → M (Master) → [Trống]`. Tự động gọi API `createContribution` / `deleteContribution` tức thì.
+     - Thanh thống kê độ phủ PI (`coveredPiCount() / totalPiCount()`) kèm quy ước chú giải trực quan.
+   - **Bước 4 (Step 3): Tổng quan & Hoàn tất (Review & Finalize):**
+     - Dashboard 4 thẻ chỉ số tổng quan: Tổng số PLO, Tổng số PI, Tổng số học phần (kèm tổng tín chỉ), và Tỷ lệ bao phủ chuẩn đầu ra (%).
+     - Cảnh báo Đảm bảo Chất lượng đào tạo (QA Warning) nếu phát hiện chỉ số PI nào chưa có học phần đóng góp (thiếu I/R/M), kèm nút chuyển nhanh về Bước 3 để gán môn.
+     - Khối tóm tắt thông tin cho từng bước kèm nút "Sửa Bước 1/2/3" cho phép nhảy trực tiếp về bước tương ứng.
+     - Nút "Hoàn tất & Quay về trang chi tiết" điều hướng an toàn về `/mng/curriculum/versions/:versionId`.
+2. **Kiểm thử đơn vị (`form-curriculum-version.component.spec.ts`):**
+   - Bổ sung 14 kịch bản kiểm thử bao quát toàn diện quy trình wizard:
+     - Nạp song song toàn bộ dữ liệu (Version, PLO, PI, ProgramCourses, Contributions).
+     - Khóa mã code cho bản ghi đã tồn tại.
+     - Thêm PLO/PI mới kèm kiểm tra định dạng regex.
+     - Chuyển bước tuần tự và nhảy bước tự do (`saveAndGoToStep1`, `goToStep`, `onStepIndexChange`).
+     - Tương tác click xoay vòng trên ma trận I/R/M (Trống -> I -> R -> M -> Trống).
+     - Tính toán chính xác các chỉ số thống kê độ phủ PI và tín chỉ.
+     - Điều hướng an toàn khi hoàn tất hoặc hủy thao tác.
+
+### 3. Kết quả kiểm chứng
+- **ESLint (`src/app/mng/curriculum/form-curriculum-version/`):** 0 errors, 0 warnings.
+- **Unit Tests (`npm test -- --watch=false`):** 81/81 test files passed (875/875 tests passed).
+- **Build (`npm run build:dev`):** Biên dịch thành công 0 errors.

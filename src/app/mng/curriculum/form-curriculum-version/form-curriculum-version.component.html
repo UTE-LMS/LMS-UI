@@ -13,331 +13,788 @@
   <div class="page-header">
     <h1 class="page-title">Sửa chương trình đào tạo & Chuẩn đầu ra</h1>
     <div class="page-subtitle">
-      Điều chỉnh thông tin phiên bản, danh mục PLO và các chỉ số PI
+      Quy trình 4 bước thiết lập toàn diện thông tin phiên bản, Chuẩn đầu ra (PLO/PI), Kế hoạch Học phần và Ma trận Đóng góp I/R/M
     </div>
   </div>
 
-  <!-- Alert Banner nghiệp vụ -->
-  <div class="ui-alert-banner">
-    <i class="fa-solid fa-circle-info text-blue-800 mt-0.5"></i>
-    <div class="ui-alert-text">
-      Thay đổi chỉ có hiệu lực sau khi bấm <strong>Lưu thay đổi</strong>. Mã PLO và PI của các bản ghi đã lưu vào CSDL sẽ bị khóa để đảm bảo an toàn cho dữ liệu đo lường.
-    </div>
+  <!-- Wizard Steps Navigation -->
+  <div class="wizard-steps-card">
+    <nz-steps [nzCurrent]="currentStep()" (nzIndexChange)="onStepIndexChange($event)">
+      <nz-step nzTitle="1. Cấu trúc & CĐR" nzDescription="Phiên bản, PLO & PI" />
+      <nz-step nzTitle="2. Kế hoạch Học phần" nzDescription="Gán môn học vào CTĐT" />
+      <nz-step nzTitle="3. Ma trận Đóng góp" nzDescription="Ma trận I / R / M" />
+      <nz-step nzTitle="4. Tổng quan & Hoàn tất" nzDescription="Rà soát & Hoàn tất" />
+    </nz-steps>
   </div>
 
-  <!-- Form 1: Cấu trúc phiên bản -->
-  <div class="form-section-card">
-    <h2 class="form-section-title">1. Thông tin cấu trúc phiên bản</h2>
-
-    <form [formGroup]="versionForm" nz-form nzLayout="vertical">
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <nz-form-item>
-          <nz-form-label nzRequired nzFor="version">Mã / Tên phiên bản</nz-form-label>
-          <nz-form-control nzErrorTip="Vui lòng nhập tên phiên bản (tối đa 100 ký tự)">
-            <input nz-input id="version" formControlName="version" placeholder="Ví dụ: BM7A-2.8-Draft" />
-          </nz-form-control>
-        </nz-form-item>
-
-        <nz-form-item>
-          <nz-form-label nzFor="applicableCohorts">Khóa áp dụng</nz-form-label>
-          <nz-form-control nzExtra="Nhập mã khóa (ví dụ: 2026-HK1) rồi nhấn Enter">
-            <nz-select
-              id="applicableCohorts"
-              nzMode="tags"
-              formControlName="applicableCohorts"
-              nzPlaceHolder="Ví dụ: 2026-HK1"
-            />
-          </nz-form-control>
-        </nz-form-item>
-
-        <nz-form-item>
-          <nz-form-label nzFor="totalCredits">Tổng số tín chỉ tốt nghiệp</nz-form-label>
-          <nz-form-control nzErrorTip="Số tín chỉ không được âm">
-            <nz-input-number
-              id="totalCredits"
-              class="w-full"
-              formControlName="totalCredits"
-              [nzMin]="0"
-              [nzMax]="500"
-              [nzStep]="1"
-              nzPlaceHolder="Ví dụ: 132"
-            />
-          </nz-form-control>
-        </nz-form-item>
-
-        <nz-form-item>
-          <nz-form-label nzFor="durationYears">Thời gian đào tạo chuẩn (năm)</nz-form-label>
-          <nz-form-control nzErrorTip="Thời gian đào tạo không được âm">
-            <nz-input-number
-              id="durationYears"
-              class="w-full"
-              formControlName="durationYears"
-              [nzMin]="0"
-              [nzMax]="10"
-              [nzStep]="0.5"
-              nzPlaceHolder="Ví dụ: 4.0"
-            />
-          </nz-form-control>
-        </nz-form-item>
+  <!-- ==================== BƯỚC 1: CẤU TRÚC PHIÊN BẢN & CHUẨN ĐẦU RA ==================== -->
+  @if (currentStep() === 0) {
+    <!-- Alert Banner nghiệp vụ -->
+    <div class="ui-alert-banner">
+      <i class="fa-solid fa-circle-info text-blue-800 mt-0.5"></i>
+      <div class="ui-alert-text">
+        Thay đổi chỉ có hiệu lực sau khi bấm <strong>Lưu thay đổi</strong> hoặc <strong>Lưu & Tiếp tục</strong>. Mã PLO và PI của các bản ghi đã lưu vào CSDL sẽ bị khóa để đảm bảo an toàn cho dữ liệu đo lường.
       </div>
-    </form>
-  </div>
-
-  <!-- Form 2: Soạn thảo PLO & PI -->
-  <div class="form-section-card">
-    <div class="form-section-title">
-      <span>2. Danh mục Chuẩn đầu ra (PLO) & Chỉ số (PI)</span>
-      <button
-        type="button"
-        nz-button
-        class="bg-blue-600 hover:bg-blue-700 text-white rounded-md text-xs font-medium flex items-center gap-1.5"
-        (click)="addPlo()"
-      >
-        <i class="fa-solid fa-plus text-xs"></i>
-        <span>Thêm PLO</span>
-      </button>
     </div>
 
-    @for (plo of ploForms(); track $index; let ploIdx = $index) {
-    <div class="plo-card-item">
-      <div class="plo-card-header">
-        <div class="flex items-center gap-3">
-          <span class="plo-badge-label">
-            <i class="fa-solid fa-graduation-cap"></i>
-            {{ plo.form.get('code')?.value || 'PLO mới' }}
-          </span>
-          @if (plo.isPersisted) {
-          <span class="text-xs text-slate-500 font-normal italic">(Đã lưu CSDL - Mã khóa)</span>
-          }
-        </div>
+    <!-- Form 1: Cấu trúc phiên bản -->
+    <div class="form-section-card">
+      <h2 class="form-section-title">1. Thông tin cấu trúc phiên bản</h2>
 
-        <button
-          type="button"
-          class="text-red-500 hover:text-red-700 text-xs font-medium flex items-center gap-1"
-          (click)="removePlo(ploIdx)"
-        >
-          <i class="fa-solid fa-trash-can"></i>
-          <span>Xóa PLO</span>
-        </button>
-      </div>
-
-      <form [formGroup]="plo.form" nz-form nzLayout="vertical">
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <nz-form-item>
-            <nz-form-label nzRequired>Mã PLO</nz-form-label>
-            <nz-form-control nzErrorTip="Định dạng hợp lệ: PLO1, PLO2, ...">
-              <input
-                nz-input
-                formControlName="code"
-                placeholder="Ví dụ: PLO1"
-              />
-            </nz-form-control>
-          </nz-form-item>
-
-          <nz-form-item>
-            <nz-form-label nzRequired>Thứ tự hiển thị</nz-form-label>
-            <nz-form-control nzErrorTip="Thứ tự hiển thị không được để trống">
-              <nz-input-number
-                class="w-full"
-                formControlName="displayOrder"
-                [nzMin]="0"
-                [nzStep]="1"
-              />
-            </nz-form-control>
-          </nz-form-item>
-
-          <nz-form-item>
-            <nz-form-label>Phân loại CĐR</nz-form-label>
-            <nz-form-control>
-              <nz-select formControlName="category">
-                <nz-option nzValue="GENERAL" nzLabel="Đại cương" />
-                <nz-option nzValue="SPECIALIZED" nzLabel="Chuyên ngành" />
-                <nz-option nzValue="UNSPECIFIED" nzLabel="Chưa phân loại" />
-              </nz-select>
-            </nz-form-control>
-          </nz-form-item>
-
-          <nz-form-item>
-            <nz-form-label>Mức năng lực (1 - 6)</nz-form-label>
-            <nz-form-control>
-              <nz-select formControlName="capabilityLevelRaw" nzPlaceHolder="Chọn mức">
-                <nz-option [nzValue]="1" nzLabel="Mức 1" />
-                <nz-option [nzValue]="2" nzLabel="Mức 2" />
-                <nz-option [nzValue]="3" nzLabel="Mức 3" />
-                <nz-option [nzValue]="4" nzLabel="Mức 4" />
-                <nz-option [nzValue]="5" nzLabel="Mức 5" />
-                <nz-option [nzValue]="6" nzLabel="Mức 6" />
-              </nz-select>
-            </nz-form-control>
-          </nz-form-item>
-        </div>
-
+      <form [formGroup]="versionForm" nz-form nzLayout="vertical">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <nz-form-item>
-            <nz-form-label>Nội dung tóm tắt / Diễn giải</nz-form-label>
-            <nz-form-control nzErrorTip="Tối đa 5000 ký tự">
-              <textarea
-                nz-input
-                formControlName="contentSummary"
-                rows="2"
-                placeholder="Tóm tắt ngắn gọn nội dung của PLO..."
-              ></textarea>
+            <nz-form-label nzRequired nzFor="version">Mã / Tên phiên bản</nz-form-label>
+            <nz-form-control nzErrorTip="Vui lòng nhập tên phiên bản (tối đa 100 ký tự)">
+              <input nz-input id="version" formControlName="version" placeholder="Ví dụ: BM7A-2.8-Draft" />
             </nz-form-control>
           </nz-form-item>
 
           <nz-form-item>
-            <nz-form-label>Nội dung nguyên văn (CTĐT gốc)</nz-form-label>
-            <nz-form-control nzErrorTip="Tối đa 5000 ký tự">
-              <textarea
-                nz-input
-                formControlName="contentOriginal"
-                rows="2"
-                placeholder="Nguyên văn trích xuất từ tài liệu CTĐT được phê duyệt..."
-              ></textarea>
+            <nz-form-label nzFor="applicableCohorts">Khóa áp dụng</nz-form-label>
+            <nz-form-control nzExtra="Nhập mã khóa (ví dụ: 2026-HK1) rồi nhấn Enter">
+              <nz-select
+                id="applicableCohorts"
+                nzMode="tags"
+                formControlName="applicableCohorts"
+                nzPlaceHolder="Ví dụ: 2026-HK1"
+              />
+            </nz-form-control>
+          </nz-form-item>
+
+          <nz-form-item>
+            <nz-form-label nzFor="totalCredits">Tổng số tín chỉ tốt nghiệp</nz-form-label>
+            <nz-form-control nzErrorTip="Số tín chỉ không được âm">
+              <nz-input-number
+                id="totalCredits"
+                class="w-full"
+                formControlName="totalCredits"
+                [nzMin]="0"
+                [nzMax]="500"
+                [nzStep]="1"
+                nzPlaceHolder="Ví dụ: 132"
+              />
+            </nz-form-control>
+          </nz-form-item>
+
+          <nz-form-item>
+            <nz-form-label nzFor="durationYears">Thời gian đào tạo chuẩn (năm)</nz-form-label>
+            <nz-form-control nzErrorTip="Thời gian đào tạo không được âm">
+              <nz-input-number
+                id="durationYears"
+                class="w-full"
+                formControlName="durationYears"
+                [nzMin]="0"
+                [nzMax]="10"
+                [nzStep]="0.5"
+                nzPlaceHolder="Ví dụ: 4.0"
+              />
             </nz-form-control>
           </nz-form-item>
         </div>
       </form>
+    </div>
 
-      <!-- Danh sách PI trực thuộc PLO -->
-      <div class="pi-container">
-        <div class="flex items-center justify-between mb-3">
-          <span class="text-xs font-bold text-slate-700 uppercase tracking-wider">
-            Các chỉ số hiệu năng (PI) của {{ plo.form.get('code')?.value || 'PLO này' }}
-          </span>
+    <!-- Form 2: Soạn thảo PLO & PI -->
+    <div class="form-section-card">
+      <div class="form-section-title">
+        <span>2. Danh mục Chuẩn đầu ra (PLO) & Chỉ số (PI)</span>
+        <button
+          type="button"
+          nz-button
+          class="bg-blue-600 hover:bg-blue-700 text-white rounded-md text-xs font-medium flex items-center gap-1.5"
+          (click)="addPlo()"
+        >
+          <i class="fa-solid fa-plus text-xs"></i>
+          <span>Thêm PLO</span>
+        </button>
+      </div>
+
+      @for (plo of ploForms(); track $index; let ploIdx = $index) {
+      <div class="plo-card-item">
+        <div class="plo-card-header">
+          <div class="flex items-center gap-3">
+            <span class="plo-badge-label">
+              <i class="fa-solid fa-graduation-cap"></i>
+              {{ plo.form.get('code')?.value || 'PLO mới' }}
+            </span>
+            @if (plo.isPersisted) {
+            <span class="text-xs text-slate-500 font-normal italic">(Đã lưu CSDL - Mã khóa)</span>
+            }
+          </div>
+
           <button
             type="button"
-            class="text-blue-600 hover:text-blue-800 text-xs font-medium flex items-center gap-1"
-            (click)="addPi(ploIdx)"
+            class="text-red-500 hover:text-red-700 text-xs font-medium flex items-center gap-1"
+            (click)="removePlo(ploIdx)"
           >
-            <i class="fa-solid fa-plus text-xs"></i>
-            <span>Thêm PI</span>
+            <i class="fa-solid fa-trash-can"></i>
+            <span>Xóa PLO</span>
           </button>
         </div>
 
-        @for (pi of plo.pis; track $index; let piIdx = $index) {
-        <div class="pi-card-item">
-          <div class="pi-card-header">
-            <div class="flex items-center gap-2">
-              <span class="text-xs font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded">
-                {{ pi.form.get('code')?.value || 'PI mới' }}
-              </span>
-              @if (pi.isPersisted) {
-              <span class="text-xs text-slate-400 italic">(Đã lưu CSDL)</span>
-              }
-            </div>
-            <button
-              type="button"
-              class="text-red-500 hover:text-red-700 text-xs"
-              (click)="removePi(ploIdx, piIdx)"
-            >
-              <i class="fa-solid fa-xmark"></i>
-            </button>
+        <form [formGroup]="plo.form" nz-form nzLayout="vertical">
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <nz-form-item>
+              <nz-form-label nzRequired>Mã PLO</nz-form-label>
+              <nz-form-control nzErrorTip="Định dạng hợp lệ: PLO1, PLO2, ...">
+                <input
+                  nz-input
+                  formControlName="code"
+                  placeholder="Ví dụ: PLO1"
+                />
+              </nz-form-control>
+            </nz-form-item>
+
+            <nz-form-item>
+              <nz-form-label nzRequired>Thứ tự hiển thị</nz-form-label>
+              <nz-form-control nzErrorTip="Thứ tự hiển thị không được để trống">
+                <nz-input-number
+                  class="w-full"
+                  formControlName="displayOrder"
+                  [nzMin]="0"
+                  [nzStep]="1"
+                />
+              </nz-form-control>
+            </nz-form-item>
+
+            <nz-form-item>
+              <nz-form-label>Phân loại CĐR</nz-form-label>
+              <nz-form-control>
+                <nz-select formControlName="category">
+                  <nz-option nzValue="GENERAL" nzLabel="Đại cương" />
+                  <nz-option nzValue="SPECIALIZED" nzLabel="Chuyên ngành" />
+                  <nz-option nzValue="UNSPECIFIED" nzLabel="Chưa phân loại" />
+                </nz-select>
+              </nz-form-control>
+            </nz-form-item>
+
+            <nz-form-item>
+              <nz-form-label>Mức năng lực (1 - 6)</nz-form-label>
+              <nz-form-control>
+                <nz-select formControlName="capabilityLevelRaw" nzPlaceHolder="Chọn mức">
+                  <nz-option [nzValue]="1" nzLabel="Mức 1" />
+                  <nz-option [nzValue]="2" nzLabel="Mức 2" />
+                  <nz-option [nzValue]="3" nzLabel="Mức 3" />
+                  <nz-option [nzValue]="4" nzLabel="Mức 4" />
+                  <nz-option [nzValue]="5" nzLabel="Mức 5" />
+                  <nz-option [nzValue]="6" nzLabel="Mức 6" />
+                </nz-select>
+              </nz-form-control>
+            </nz-form-item>
           </div>
 
-          <form [formGroup]="pi.form" nz-form nzLayout="vertical">
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
-              <nz-form-item class="mb-2">
-                <nz-form-label nzRequired>Mã PI</nz-form-label>
-                <nz-form-control nzErrorTip="Dạng: PI1.1, PI6.2, ...">
-                  <input nz-input formControlName="code" placeholder="Ví dụ: PI1.1" />
-                </nz-form-control>
-              </nz-form-item>
-
-              <nz-form-item class="mb-2">
-                <nz-form-label nzRequired>Thứ tự</nz-form-label>
-                <nz-form-control nzErrorTip="Thứ tự không được để trống">
-                  <nz-input-number class="w-full" formControlName="displayOrder" [nzMin]="0" [nzStep]="1" />
-                </nz-form-control>
-              </nz-form-item>
-
-              <nz-form-item class="mb-2">
-                <nz-form-label>Mức năng lực</nz-form-label>
-                <nz-form-control>
-                  <nz-select formControlName="capabilityLevelRaw" nzPlaceHolder="Chọn mức">
-                    <nz-option [nzValue]="1" nzLabel="Mức 1" />
-                    <nz-option [nzValue]="2" nzLabel="Mức 2" />
-                    <nz-option [nzValue]="3" nzLabel="Mức 3" />
-                    <nz-option [nzValue]="4" nzLabel="Mức 4" />
-                    <nz-option [nzValue]="5" nzLabel="Mức 5" />
-                    <nz-option [nzValue]="6" nzLabel="Mức 6" />
-                  </nz-select>
-                </nz-form-control>
-              </nz-form-item>
-
-              <nz-form-item class="mb-2">
-                <nz-form-label>Tỷ lệ đạt mục tiêu (0 - 100%)</nz-form-label>
-                <nz-form-control nzErrorTip="Tỷ lệ từ 0 đến 100">
-                  <nz-input-number
-                    class="w-full"
-                    formControlName="targetPassRatePercent"
-                    [nzMin]="0"
-                    [nzMax]="100"
-                    [nzStep]="5"
-                    nzPlaceHolder="Ví dụ: 70"
-                  />
-                </nz-form-control>
-              </nz-form-item>
-            </div>
-
-            <nz-form-item class="mb-0">
-              <nz-form-label>Nội dung PI</nz-form-label>
-              <nz-form-control nzErrorTip="Tối đa 2000 ký tự">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <nz-form-item>
+              <nz-form-label>Nội dung tóm tắt / Diễn giải</nz-form-label>
+              <nz-form-control nzErrorTip="Tối đa 5000 ký tự">
                 <textarea
                   nz-input
-                  formControlName="contentShort"
+                  formControlName="contentSummary"
                   rows="2"
-                  placeholder="Mô tả cụ thể chỉ số hành vi / hiệu năng cần đạt..."
+                  placeholder="Tóm tắt ngắn gọn nội dung của PLO..."
                 ></textarea>
               </nz-form-control>
             </nz-form-item>
-          </form>
-        </div>
-        } @empty {
-        <div class="text-xs text-slate-400 italic py-2">
-          Chưa có chỉ số PI nào cho PLO này. Bấm "+ Thêm PI" ở trên để bổ sung.
-        </div>
-        }
-      </div>
-    </div>
-    } @empty {
-    <div class="text-center py-12 text-slate-400">
-      Chưa có Chuẩn đầu ra (PLO) nào. Bấm nút <strong>"+ Thêm PLO"</strong> ở trên để bắt đầu soạn thảo.
-    </div>
-    }
-  </div>
 
-  <!-- Sticky Action Bar Chân trang (UI.pdf Trang 9, 10) -->
-  <div class="sticky-action-bar">
-    <div>
-      @if (validationErrorMessage(); as errMsg) {
-      <div class="validation-error-summary">
-        <i class="fa-solid fa-triangle-exclamation"></i>
-        <span>{{ errMsg }}</span>
+            <nz-form-item>
+              <nz-form-label>Nội dung nguyên văn (CTĐT gốc)</nz-form-label>
+              <nz-form-control nzErrorTip="Tối đa 5000 ký tự">
+                <textarea
+                  nz-input
+                  formControlName="contentOriginal"
+                  rows="2"
+                  placeholder="Nguyên văn trích xuất từ tài liệu CTĐT được phê duyệt..."
+                ></textarea>
+              </nz-form-control>
+            </nz-form-item>
+          </div>
+        </form>
+
+        <!-- Danh sách PI trực thuộc PLO -->
+        <div class="pi-container">
+          <div class="flex items-center justify-between mb-3">
+            <span class="text-xs font-bold text-slate-700 uppercase tracking-wider">
+              Các chỉ số hiệu năng (PI) của {{ plo.form.get('code')?.value || 'PLO này' }}
+            </span>
+            <button
+              type="button"
+              class="text-blue-600 hover:text-blue-800 text-xs font-medium flex items-center gap-1"
+              (click)="addPi(ploIdx)"
+            >
+              <i class="fa-solid fa-plus text-xs"></i>
+              <span>Thêm PI</span>
+            </button>
+          </div>
+
+          @for (pi of plo.pis; track $index; let piIdx = $index) {
+          <div class="pi-card-item">
+            <div class="pi-card-header">
+              <div class="flex items-center gap-2">
+                <span class="text-xs font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded">
+                  {{ pi.form.get('code')?.value || 'PI mới' }}
+                </span>
+                @if (pi.isPersisted) {
+                <span class="text-xs text-slate-400 italic">(Đã lưu CSDL)</span>
+                }
+              </div>
+              <button
+                type="button"
+                class="text-red-500 hover:text-red-700 text-xs"
+                (click)="removePi(ploIdx, piIdx)"
+              >
+                <i class="fa-solid fa-xmark"></i>
+              </button>
+            </div>
+
+            <form [formGroup]="pi.form" nz-form nzLayout="vertical">
+              <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+                <nz-form-item class="mb-2">
+                  <nz-form-label nzRequired>Mã PI</nz-form-label>
+                  <nz-form-control nzErrorTip="Dạng: PI1.1, PI6.2, ...">
+                    <input nz-input formControlName="code" placeholder="Ví dụ: PI1.1" />
+                  </nz-form-control>
+                </nz-form-item>
+
+                <nz-form-item class="mb-2">
+                  <nz-form-label nzRequired>Thứ tự</nz-form-label>
+                  <nz-form-control nzErrorTip="Thứ tự không được để trống">
+                    <nz-input-number class="w-full" formControlName="displayOrder" [nzMin]="0" [nzStep]="1" />
+                  </nz-form-control>
+                </nz-form-item>
+
+                <nz-form-item class="mb-2">
+                  <nz-form-label>Mức năng lực</nz-form-label>
+                  <nz-form-control>
+                    <nz-select formControlName="capabilityLevelRaw" nzPlaceHolder="Chọn mức">
+                      <nz-option [nzValue]="1" nzLabel="Mức 1" />
+                      <nz-option [nzValue]="2" nzLabel="Mức 2" />
+                      <nz-option [nzValue]="3" nzLabel="Mức 3" />
+                      <nz-option [nzValue]="4" nzLabel="Mức 4" />
+                      <nz-option [nzValue]="5" nzLabel="Mức 5" />
+                      <nz-option [nzValue]="6" nzLabel="Mức 6" />
+                    </nz-select>
+                  </nz-form-control>
+                </nz-form-item>
+
+                <nz-form-item class="mb-2">
+                  <nz-form-label>Tỷ lệ đạt mục tiêu (0 - 100%)</nz-form-label>
+                  <nz-form-control nzErrorTip="Tỷ lệ từ 0 đến 100">
+                    <nz-input-number
+                      class="w-full"
+                      formControlName="targetPassRatePercent"
+                      [nzMin]="0"
+                      [nzMax]="100"
+                      [nzStep]="5"
+                      nzPlaceHolder="Ví dụ: 70"
+                    />
+                  </nz-form-control>
+                </nz-form-item>
+              </div>
+
+              <nz-form-item class="mb-0">
+                <nz-form-label>Nội dung PI</nz-form-label>
+                <nz-form-control nzErrorTip="Tối đa 2000 ký tự">
+                  <textarea
+                    nz-input
+                    formControlName="contentShort"
+                    rows="2"
+                    placeholder="Mô tả cụ thể chỉ số hành vi / hiệu năng cần đạt..."
+                  ></textarea>
+                </nz-form-control>
+              </nz-form-item>
+            </form>
+          </div>
+          } @empty {
+          <div class="text-xs text-slate-400 italic py-2">
+            Chưa có chỉ số PI nào cho PLO này. Bấm "+ Thêm PI" ở trên để bổ sung.
+          </div>
+          }
+        </div>
+      </div>
+      } @empty {
+      <div class="text-center py-12 text-slate-400">
+        Chưa có Chuẩn đầu ra (PLO) nào. Bấm nút <strong>"+ Thêm PLO"</strong> ở trên để bắt đầu soạn thảo.
       </div>
       }
     </div>
 
-    <div class="flex items-center gap-3">
-      <button
-        type="button"
-        nz-button
-        class="border-slate-300 text-slate-700"
-        (click)="cancelChanges()"
-      >
-        Hủy thay đổi
-      </button>
+    <!-- Sticky Action Bar Step 0 -->
+    <div class="sticky-action-bar">
+      <div>
+        @if (validationErrorMessage(); as errMsg) {
+        <div class="validation-error-summary">
+          <i class="fa-solid fa-triangle-exclamation"></i>
+          <span>{{ errMsg }}</span>
+        </div>
+        }
+      </div>
 
-      <button
-        type="button"
-        nz-button
-        nzType="primary"
-        class="bg-blue-600 hover:bg-blue-700 text-white font-medium px-5"
-        [nzLoading]="isSubmitting()"
-        (click)="saveChanges()"
-      >
-        Lưu thay đổi
-      </button>
+      <div class="flex items-center gap-3">
+        <button
+          type="button"
+          nz-button
+          class="border-slate-300 text-slate-700"
+          (click)="cancelChanges()"
+        >
+          Hủy thay đổi
+        </button>
+
+        <button
+          type="button"
+          nz-button
+          class="border-slate-300 text-slate-700 hover:text-blue-600 hover:border-blue-500"
+          [nzLoading]="isSubmitting()"
+          (click)="saveChanges()"
+        >
+          <i class="fa-solid fa-floppy-disk mr-1"></i>
+          <span>Lưu thay đổi</span>
+        </button>
+
+        <button
+          type="button"
+          nz-button
+          nzType="primary"
+          class="bg-blue-600 hover:bg-blue-700 text-white font-medium px-5"
+          [nzLoading]="isSubmitting()"
+          (click)="saveAndGoToStep1()"
+        >
+          <span>Lưu & Sang bước 2 (Gán học phần)</span>
+          <i class="fa-solid fa-arrow-right ml-1"></i>
+        </button>
+      </div>
     </div>
-  </div>
+  }
+
+  <!-- ==================== BƯỚC 2: KẾ HOẠCH HỌC PHẦN TRONG CTĐT ==================== -->
+  @if (currentStep() === 1) {
+    <div class="form-section-card">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between pb-4 border-b border-slate-200 mb-6 gap-2">
+        <div>
+          <h2 class="text-base font-bold text-slate-800 m-0">2. Kế hoạch Học phần trong Chương trình đào tạo (US-09)</h2>
+          <p class="text-xs text-slate-500 mt-1 m-0">
+            Thêm học phần từ danh mục, phân bổ học kỳ giảng dạy, nhóm kiến thức và điều kiện tiên quyết / học trước.
+          </p>
+        </div>
+        <div class="text-xs text-slate-600 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-md self-start sm:self-auto font-medium">
+          Hiện có <strong class="text-blue-700">{{ courses().length }}</strong> học phần (<strong class="text-blue-700">{{ totalCourseCredits() }}</strong> tín chỉ)
+        </div>
+      </div>
+
+      <app-program-courses-table
+        [versionId]="versionId()"
+        [programCourses]="courses()"
+        [canManage]="true"
+        (changed)="loadCourses()"
+      />
+    </div>
+
+    <!-- Sticky Action Bar Step 1 -->
+    <div class="sticky-action-bar">
+      <div></div>
+      <div class="flex items-center gap-3">
+        <button
+          type="button"
+          nz-button
+          class="border-slate-300 text-slate-700"
+          (click)="goToStep(0)"
+        >
+          <i class="fa-solid fa-arrow-left mr-1"></i>
+          <span>Quay lại Bước 1 (CĐR)</span>
+        </button>
+
+        <button
+          type="button"
+          nz-button
+          nzType="primary"
+          class="bg-blue-600 hover:bg-blue-700 text-white font-medium px-5"
+          (click)="goToStep(2)"
+        >
+          <span>Tiếp tục: Sang bước 3 (Ma trận I/R/M)</span>
+          <i class="fa-solid fa-arrow-right ml-1"></i>
+        </button>
+      </div>
+    </div>
+  }
+
+  <!-- ==================== BƯỚC 3: MA TRẬN ĐÓNG GÓP HỌC PHẦN -> PI ==================== -->
+  @if (currentStep() === 2) {
+    <div class="form-section-card">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between pb-4 border-b border-slate-200 mb-4 gap-2">
+        <div>
+          <h2 class="text-base font-bold text-slate-800 m-0">3. Ma trận Đóng góp Học phần → Chuẩn đầu ra (I / R / M - US-11)</h2>
+          <p class="text-xs text-slate-500 mt-1 m-0">
+            Click trực tiếp vào từng ô để xoay vòng mức đóng góp: <strong>[Trống] → I → R → M → [Trống]</strong>. Thay đổi được tự động lưu vào CSDL.
+          </p>
+        </div>
+        <div class="flex items-center gap-2">
+          <div
+            class="coverage-badge"
+            [class.coverage-badge-good]="coveragePercent() >= 80"
+            [class.coverage-badge-warn]="coveragePercent() < 80"
+          >
+            <i class="fa-solid fa-shield-halved mr-1"></i>
+            Độ phủ PI: {{ coveredPiCount() }}/{{ totalPiCount() }} ({{ coveragePercent() }}%)
+          </div>
+        </div>
+      </div>
+
+      <!-- Legend -->
+      <div class="irm-legend mb-4">
+        <span class="text-xs font-semibold text-slate-700">Quy ước mức đóng góp:</span>
+        <span class="irm-chip irm-chip-i">I - Introduce</span>
+        <span class="text-xs text-slate-500">(Giới thiệu)</span>
+        <span class="irm-chip irm-chip-r ml-2">R - Reinforce</span>
+        <span class="text-xs text-slate-500">(Củng cố)</span>
+        <span class="irm-chip irm-chip-m ml-2">M - Master</span>
+        <span class="text-xs text-slate-500">(Nắm vững)</span>
+        <span class="text-xs text-slate-400 ml-3 italic">(* Nhấn ô để chuyển đổi: Trống ➔ I ➔ R ➔ M ➔ Trống)</span>
+      </div>
+
+      <!-- Table Ma trận -->
+      @if (courses().length === 0) {
+        <div class="empty-state-card text-center py-10">
+          <i class="fa-solid fa-book-open text-3xl text-slate-300 mb-3"></i>
+          <p class="text-sm font-medium text-slate-700 m-0">Chưa có học phần nào trong kế hoạch đào tạo</p>
+          <p class="text-xs text-slate-500 mt-1">Vui lòng quay lại Bước 2 để thêm học phần trước khi gán ma trận I/R/M.</p>
+          <button type="button" nz-button nzType="primary" class="mt-3 bg-blue-600" (click)="goToStep(1)">
+            <i class="fa-solid fa-arrow-left mr-1"></i> Về Bước 2: Thêm học phần
+          </button>
+        </div>
+      } @else if (pis().length === 0) {
+        <div class="empty-state-card text-center py-10">
+          <i class="fa-solid fa-bullseye text-3xl text-slate-300 mb-3"></i>
+          <p class="text-sm font-medium text-slate-700 m-0">Chưa có chỉ số Chuẩn đầu ra (PI) nào</p>
+          <p class="text-xs text-slate-500 mt-1">Vui lòng quay lại Bước 1 để tạo PLO và các chỉ số PI trước khi gán ma trận.</p>
+          <button type="button" nz-button nzType="primary" class="mt-3 bg-blue-600" (click)="goToStep(0)">
+            <i class="fa-solid fa-arrow-left mr-1"></i> Về Bước 1: Thêm Chuẩn đầu ra
+          </button>
+        </div>
+      } @else {
+        <div class="irm-table-scroll-container">
+          <nz-table
+            #irmTable
+            [nzData]="courses()"
+            [nzFrontPagination]="false"
+            [nzShowPagination]="false"
+            nzBordered
+            nzSize="small"
+            class="irm-matrix-table"
+          >
+            <thead>
+              <tr>
+                <th rowspan="2" nzWidth="90px" nzLeft class="bg-slate-100 text-center font-bold text-xs">Mã HP</th>
+                <th rowspan="2" nzWidth="220px" nzLeft class="bg-slate-100 font-bold text-xs">Tên học phần</th>
+                <th rowspan="2" nzWidth="60px" class="bg-slate-100 text-center font-bold text-xs">STC</th>
+                @for (plo of sortedPlos(); track plo.id) {
+                  @if (getPisOfPlo(plo.id).length > 0) {
+                    <th
+                      [colSpan]="getPisOfPlo(plo.id).length"
+                      class="text-center font-bold text-xs bg-blue-50 text-blue-900 border-l border-blue-200"
+                    >
+                      {{ plo.code }}
+                    </th>
+                  }
+                }
+              </tr>
+              <tr>
+                @for (plo of sortedPlos(); track plo.id) {
+                  @for (pi of getPisOfPlo(plo.id); track pi.id) {
+                    <th
+                      class="text-center font-semibold text-xs bg-slate-50 cursor-pointer"
+                      [title]="pi.contentShort || pi.code"
+                    >
+                      {{ pi.code }}
+                    </th>
+                  }
+                }
+              </tr>
+            </thead>
+            <tbody>
+              @for (pc of courses(); track pc.id) {
+                <tr>
+                  <td nzLeft class="font-mono text-xs font-semibold text-blue-700 text-center">
+                    {{ getCourseCode(pc) }}
+                  </td>
+                  <td nzLeft class="text-xs font-medium text-slate-800 truncate" [title]="getCourseName(pc)">
+                    {{ getCourseName(pc) }}
+                  </td>
+                  <td class="text-center text-xs text-slate-600">
+                    {{ pc.course?.credits ?? '—' }}
+                  </td>
+                  @for (plo of sortedPlos(); track plo.id) {
+                    @for (pi of getPisOfPlo(plo.id); track pi.id) {
+                      @let contrib = getContribution(pc.courseId, pi.id);
+                      <td
+                        class="text-center irm-cell p-0 cursor-pointer hover:bg-blue-50 transition-colors"
+                        (click)="onCellClick(pc.courseId, pi.id)"
+                      >
+                        @if (contrib) {
+                          <span
+                            class="irm-cell-badge"
+                            [class.irm-cell-i]="contrib.contribution === 'I'"
+                            [class.irm-cell-r]="contrib.contribution === 'R'"
+                            [class.irm-cell-m]="contrib.contribution === 'M'"
+                          >
+                            {{ contrib.contribution }}
+                          </span>
+                        } @else {
+                          <span class="irm-cell-placeholder text-slate-300">·</span>
+                        }
+                      </td>
+                    }
+                  }
+                </tr>
+              }
+            </tbody>
+          </nz-table>
+        </div>
+      }
+    </div>
+
+    <!-- Sticky Action Bar Step 2 -->
+    <div class="sticky-action-bar">
+      <div></div>
+      <div class="flex items-center gap-3">
+        <button
+          type="button"
+          nz-button
+          class="border-slate-300 text-slate-700"
+          (click)="goToStep(1)"
+        >
+          <i class="fa-solid fa-arrow-left mr-1"></i>
+          <span>Quay lại Bước 2 (Học phần)</span>
+        </button>
+
+        <button
+          type="button"
+          nz-button
+          nzType="primary"
+          class="bg-blue-600 hover:bg-blue-700 text-white font-medium px-5"
+          (click)="goToStep(3)"
+        >
+          <span>Tiếp tục: Sang bước 4 (Tổng quan hoàn tất)</span>
+          <i class="fa-solid fa-arrow-right ml-1"></i>
+        </button>
+      </div>
+    </div>
+  }
+
+  <!-- ==================== BƯỚC 4: TỔNG QUAN & HOÀN TẤT ==================== -->
+  @if (currentStep() === 3) {
+    <!-- Dashboard 4 chỉ số thống kê -->
+    <div class="metrics-grid mb-6">
+      <div class="metric-card">
+        <div class="metric-icon-wrapper bg-blue-100 text-blue-700">
+          <i class="fa-solid fa-graduation-cap"></i>
+        </div>
+        <div class="metric-info">
+          <div class="metric-label">Chuẩn đầu ra (PLO)</div>
+          <div class="metric-value">{{ plos().length }}</div>
+        </div>
+      </div>
+
+      <div class="metric-card">
+        <div class="metric-icon-wrapper bg-indigo-100 text-indigo-700">
+          <i class="fa-solid fa-bullseye"></i>
+        </div>
+        <div class="metric-info">
+          <div class="metric-label">Chỉ số năng lực (PI)</div>
+          <div class="metric-value">{{ totalPiCount() }}</div>
+        </div>
+      </div>
+
+      <div class="metric-card">
+        <div class="metric-icon-wrapper bg-emerald-100 text-emerald-700">
+          <i class="fa-solid fa-book"></i>
+        </div>
+        <div class="metric-info">
+          <div class="metric-label">Học phần trong CTĐT</div>
+          <div class="metric-value">
+            {{ courses().length }} <span class="text-xs text-slate-500 font-normal">({{ totalCourseCredits() }} TC)</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="metric-card">
+        <div
+          class="metric-icon-wrapper"
+          [class.bg-emerald-100]="coveragePercent() >= 80"
+          [class.text-emerald-700]="coveragePercent() >= 80"
+          [class.bg-amber-100]="coveragePercent() < 80"
+          [class.text-amber-700]="coveragePercent() < 80"
+        >
+          <i class="fa-solid fa-shield-halved"></i>
+        </div>
+        <div class="metric-info">
+          <div class="metric-label">Độ phủ chuẩn đầu ra</div>
+          <div class="metric-value">
+            {{ coveragePercent() }}%
+            <span
+              class="text-xs font-normal"
+              [class.text-emerald-600]="coveragePercent() >= 80"
+              [class.text-amber-600]="coveragePercent() < 80"
+            >
+              ({{ coveredPiCount() }}/{{ totalPiCount() }} PI)
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Cảnh báo ĐBCL nếu có PI chưa được phủ -->
+    @if (uncoveredPis().length > 0) {
+      <div class="qa-warning-banner mb-6">
+        <div class="flex items-start gap-3">
+          <i class="fa-solid fa-triangle-exclamation text-amber-600 text-lg mt-0.5"></i>
+          <div class="flex-1">
+            <h4 class="text-sm font-bold text-amber-900 m-0">Cảnh báo Đảm bảo Chất lượng đào tạo</h4>
+            <p class="text-xs text-amber-800 mt-1 mb-2">
+              Có <strong>{{ uncoveredPis().length }}</strong> chỉ số PI chưa được bất kỳ môn học nào hỗ trợ đạt được (thiếu liên kết I/R/M). Điều này có thể dẫn đến việc không thể thu thập dữ liệu đo lường CĐR:
+            </p>
+            <div class="flex flex-wrap gap-1.5 mb-2">
+              @for (upi of uncoveredPis(); track upi.id) {
+                <span class="uncovered-pi-tag font-mono text-xs">{{ upi.code }}</span>
+              }
+            </div>
+            <button
+              type="button"
+              class="text-xs font-semibold text-amber-900 hover:text-amber-950 underline flex items-center gap-1 mt-1"
+              (click)="goToStep(2)"
+            >
+              <span>Đi đến Ma trận I/R/M để gán học phần cho các PI này</span>
+              <i class="fa-solid fa-arrow-right text-xs"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    } @else {
+      <div class="qa-success-banner mb-6">
+        <div class="flex items-center gap-3">
+          <i class="fa-solid fa-circle-check text-emerald-600 text-lg"></i>
+          <div>
+            <h4 class="text-sm font-bold text-emerald-900 m-0">Kiểm tra ĐBCL: Hoàn toàn hợp lệ (100% PI được bao phủ)</h4>
+            <p class="text-xs text-emerald-800 mt-0.5 mb-0">Tất cả các chỉ số năng lực PI đều đã được gán ít nhất một mức đóng góp (I/R/M) từ các học phần trong chương trình đào tạo.</p>
+          </div>
+        </div>
+      </div>
+    }
+
+    <!-- Rà soát từng phần (Summary Review Blocks) -->
+    <div class="space-y-4 mb-6">
+      <!-- Section 1 Summary -->
+      <div class="review-block">
+        <div class="review-block-header">
+          <div class="flex items-center gap-2">
+            <span class="step-num-badge">1</span>
+            <span class="font-bold text-sm text-slate-800">Cấu trúc phiên bản & Chuẩn đầu ra</span>
+          </div>
+          <button
+            type="button"
+            class="review-edit-btn"
+            (click)="goToStep(0)"
+          >
+            <i class="fa-solid fa-pen-to-square"></i>
+            <span>Sửa Bước 1</span>
+          </button>
+        </div>
+        <div class="review-block-body">
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs mb-3">
+            <div>
+              <span class="text-slate-500">Mã / Tên phiên bản:</span>
+              <div class="font-semibold text-slate-800 mt-0.5">{{ version()?.version || '—' }}</div>
+            </div>
+            <div>
+              <span class="text-slate-500">Khóa áp dụng:</span>
+              <div class="font-semibold text-slate-800 mt-0.5">{{ formatCohorts(version()?.applicableCohorts) }}</div>
+            </div>
+            <div>
+              <span class="text-slate-500">Tổng tín chỉ tốt nghiệp:</span>
+              <div class="font-semibold text-slate-800 mt-0.5">{{ version()?.totalCredits ?? '—' }} TC</div>
+            </div>
+            <div>
+              <span class="text-slate-500">Thời gian chuẩn:</span>
+              <div class="font-semibold text-slate-800 mt-0.5">{{ version()?.durationYears ?? '—' }} năm</div>
+            </div>
+          </div>
+          <div class="text-xs text-slate-600">
+            Bao gồm <strong>{{ plos().length }} PLO</strong> và <strong>{{ totalPiCount() }} PI</strong> đã được thiết lập.
+          </div>
+        </div>
+      </div>
+
+      <!-- Section 2 Summary -->
+      <div class="review-block">
+        <div class="review-block-header">
+          <div class="flex items-center gap-2">
+            <span class="step-num-badge">2</span>
+            <span class="font-bold text-sm text-slate-800">Kế hoạch Học phần trong CTĐT</span>
+          </div>
+          <button
+            type="button"
+            class="review-edit-btn"
+            (click)="goToStep(1)"
+          >
+            <i class="fa-solid fa-pen-to-square"></i>
+            <span>Sửa Bước 2</span>
+          </button>
+        </div>
+        <div class="review-block-body text-xs">
+          <p class="text-slate-600 m-0">
+            Tổng cộng <strong>{{ courses().length }} học phần</strong> đã được đưa vào chương trình với tổng số <strong>{{ totalCourseCredits() }} tín chỉ</strong>.
+          </p>
+        </div>
+      </div>
+
+      <!-- Section 3 Summary -->
+      <div class="review-block">
+        <div class="review-block-header">
+          <div class="flex items-center gap-2">
+            <span class="step-num-badge">3</span>
+            <span class="font-bold text-sm text-slate-800">Ma trận Đóng góp Học phần → PI (I/R/M)</span>
+          </div>
+          <button
+            type="button"
+            class="review-edit-btn"
+            (click)="goToStep(2)"
+          >
+            <i class="fa-solid fa-pen-to-square"></i>
+            <span>Sửa Bước 3</span>
+          </button>
+        </div>
+        <div class="review-block-body text-xs">
+          <p class="text-slate-600 m-0">
+            Đã thiết lập <strong>{{ contributions().length }} liên kết đóng góp</strong> trên ma trận. Tỷ lệ bao phủ PI đạt <strong>{{ coveragePercent() }}%</strong> ({{ coveredPiCount() }}/{{ totalPiCount() }} PI).
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sticky Action Bar Step 3 -->
+    <div class="sticky-action-bar">
+      <div></div>
+      <div class="flex items-center gap-3">
+        <button
+          type="button"
+          nz-button
+          class="border-slate-300 text-slate-700"
+          (click)="goToStep(2)"
+        >
+          <i class="fa-solid fa-arrow-left mr-1"></i>
+          <span>Quay lại Bước 3 (Ma trận)</span>
+        </button>
+
+        <button
+          type="button"
+          nz-button
+          nzType="primary"
+          class="bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-6"
+          (click)="finishWizard()"
+        >
+          <i class="fa-solid fa-check mr-1.5"></i>
+          <span>Hoàn tất & Quay về trang chi tiết</span>
+        </button>
+      </div>
+    </div>
+  }
 </div>
