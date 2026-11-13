@@ -8,13 +8,9 @@
 }
 .sidebar-brand { display: inline-flex; align-items: center; gap: 10px; text-decoration: none; padding: 2px 4px; }
 .loms-mark {
-  display: grid; grid-template-columns: repeat(4, 1fr);
-  width: 26px; height: 26px; border-radius: 6px; overflow: hidden; flex-shrink: 0;
+  width: 28px; height: 28px; border-radius: 6px; padding: 2px;
+  background: #fff; object-fit: contain; flex-shrink: 0;
 }
-.loms-mark span:nth-child(1) { background: #f97316; }
-.loms-mark span:nth-child(2) { background: #8b5cf6; }
-.loms-mark span:nth-child(3) { background: #0ea5e9; }
-.loms-mark span:nth-child(4) { background: #10b981; }
 .brand-title { color: #fff; font-size: 1rem; font-weight: 700; letter-spacing: .04em; }
 .brand-sub { color: #94a3b8; font-size: .6rem; font-weight: 600; letter-spacing: .09em; text-transform: uppercase; margin-top: 2px; }
 

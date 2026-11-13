@@ -1,7 +1,7 @@
 <!-- Thanh top bar trên thiết bị nhỏ (< 1024px) -->
 <div class="loms-mobile-bar">
   <a [routerLink]="urlConst.ROUTE.MANAGEMENT.DASHBOARD" class="sidebar-brand">
-    <span class="loms-mark" aria-hidden="true"><span></span><span></span><span></span><span></span></span>
+    <img class="loms-mark" src="assets/img/logo/ute_logo.png" alt="HCM-UTE Logo" />
     <span class="flex flex-col leading-tight">
       <span class="brand-title">LOMS</span>
       <span class="brand-sub">ĐO LƯỜNG CHUẨN ĐẦU RA</span>
@@ -20,7 +20,7 @@
 <aside class="loms-sidebar" [class.is-open]="mobileMenuOpen()" aria-label="Điều hướng chính">
   <div class="p-4 pb-3 flex flex-col gap-3.5">
     <a [routerLink]="urlConst.ROUTE.MANAGEMENT.DASHBOARD" class="sidebar-brand" (click)="closeMobileMenu()">
-      <span class="loms-mark" aria-hidden="true"><span></span><span></span><span></span><span></span></span>
+      <img class="loms-mark" src="assets/img/logo/ute_logo.png" alt="HCM-UTE Logo" />
       <span class="flex flex-col leading-tight">
         <span class="brand-title">LOMS</span>
         <span class="brand-sub">ĐO LƯỜNG CHUẨN ĐẦU RA</span>

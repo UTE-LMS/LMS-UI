@@ -12,13 +12,9 @@
 
 .login-logo { display: inline-flex; align-items: center; gap: 10px; font-weight: 700; font-size: 18px; letter-spacing: .04em; color: #fff; }
 .loms-mark {
-  display: grid; grid-template-columns: repeat(4, 1fr);
-  width: 24px; height: 24px; border-radius: 6px; overflow: hidden; flex-shrink: 0;
+  width: 28px; height: 28px; border-radius: 6px; padding: 2px;
+  background-color: #fff; object-fit: contain; flex-shrink: 0;
 }
-.loms-mark span:nth-child(1) { background-color: #f97316; }
-.loms-mark span:nth-child(2) { background-color: #8b5cf6; }
-.loms-mark span:nth-child(3) { background-color: #0ea5e9; }
-.loms-mark span:nth-child(4) { background-color: #10b981; }
 
 .login-title { margin: 0; font-size: 40px; line-height: 1.22; font-weight: 700; letter-spacing: -.02em; color: #fff; }
 .login-lead { margin: 0; font-size: 15px; color: #94a3b8; }
