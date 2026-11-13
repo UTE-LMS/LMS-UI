@@ -1,7 +1,29 @@
-import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
-import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  OnInit,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
+import {
+  FormBuilder,
+  FormGroup,
+  FormsModule,
+  ReactiveFormsModule,
+  Validators,
+} from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { IPi, IPiRequest, IPlo, IPloRequest, PloCategory } from '@models/program/plo-pi.model';
+import { IProgramCourse } from '@models/course/course.model';
+import {
+  ICoursePiContribution,
+  IPi,
+  IPiRequest,
+  IPlo,
+  IPloRequest,
+  PiContributionType,
+  PloCategory,
+} from '@models/program/plo-pi.model';
 import { IProgramVersion, IProgramVersionUpdateRequest } from '@models/program/program-version.model';
 import { toApiError } from '@services/common/api-error.util';
 import { PloPiService } from '@services/program/plo-pi.service';
@@ -11,9 +33,12 @@ import { NzFormModule } from 'ng-zorro-antd/form';
 import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzInputNumberModule } from 'ng-zorro-antd/input-number';
 import { NzSelectModule } from 'ng-zorro-antd/select';
+import { NzStepsModule } from 'ng-zorro-antd/steps';
+import { NzTableModule } from 'ng-zorro-antd/table';
 import { ToastrService } from 'ngx-toastr';
 import { forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
+import { ProgramCoursesTableComponent } from '../detail-curriculum-version/program-courses-table/program-courses-table.component';
 
 export interface IPiFormItem {
   id?: string;
@@ -33,6 +58,7 @@ interface IPloFormValue {
   displayOrder: number;
   category: PloCategory;
   capabilityLevelRaw?: number | null;
+  passThreshold: number;
   contentSummary?: string | null;
   contentOriginal?: string | null;
 }
@@ -42,6 +68,8 @@ interface IPiFormValue {
   displayOrder: number;
   capabilityLevelRaw?: number | null;
   targetPassRatePercent?: number | null;
+  weight: number;
+  passThreshold: number;
   contentShort?: string | null;
   contentOriginal?: string | null;
 }
@@ -55,11 +83,14 @@ interface IPiFormValue {
     FormsModule,
     ReactiveFormsModule,
     RouterLink,
+    NzStepsModule,
+    NzTableModule,
     NzFormModule,
     NzInputModule,
     NzInputNumberModule,
     NzSelectModule,
     NzButtonModule,
+    ProgramCoursesTableComponent,
   ],
 })
 export class FormCurriculumVersionComponent implements OnInit {
@@ -69,6 +100,9 @@ export class FormCurriculumVersionComponent implements OnInit {
   private readonly versionSvc = inject(ProgramVersionService);
   private readonly ploPiSvc = inject(PloPiService);
   private readonly alert = inject(ToastrService);
+
+  /** Bước hiện tại của Wizard: 0 = CĐR, 1 = Kế hoạch Học phần, 2 = Ma trận I/R/M, 3 = Review */
+  readonly currentStep = signal(0);
 
   readonly versionId = signal<string>('');
   readonly version = signal<IProgramVersion | null>(null);
@@ -81,6 +115,45 @@ export class FormCurriculumVersionComponent implements OnInit {
 
   versionForm!: FormGroup;
   readonly ploForms = signal<IPloFormItem[]>([]);
+
+  /** Dữ liệu nạp từ API phục vụ các bước Wizard */
+  readonly plos = signal<IPlo[]>([]);
+  readonly pis = signal<IPi[]>([]);
+  readonly courses = signal<IProgramCourse[]>([]);
+  readonly contributions = signal<ICoursePiContribution[]>([]);
+  readonly isCoursesLoading = signal(false);
+  readonly isContributionsLoading = signal(false);
+
+  readonly sortedPlos = computed(() => [...this.plos()].sort((a, b) => a.displayOrder - b.displayOrder));
+
+  readonly coveredPiIds = computed(() => {
+    const contribs = this.contributions();
+    return new Set(contribs.map(c => c.piId));
+  });
+
+  readonly coveredPiCount = computed(() => {
+    const covered = this.coveredPiIds();
+    return this.pis().filter(pi => covered.has(pi.id)).length;
+  });
+
+  readonly totalPiCount = computed(() => this.pis().length);
+
+  readonly uncoveredPis = computed(() => {
+    const covered = this.coveredPiIds();
+    return this.pis().filter(pi => !covered.has(pi.id));
+  });
+
+  readonly coveragePercent = computed(() => {
+    const total = this.totalPiCount();
+    if (total === 0) {
+      return 0;
+    }
+    return Math.round((this.coveredPiCount() / total) * 100);
+  });
+
+  readonly totalCourseCredits = computed(() => {
+    return this.courses().reduce((sum, c) => sum + (c.course?.credits ?? 0), 0);
+  });
 
   ngOnInit(): void {
     this.initVersionForm();
@@ -100,8 +173,12 @@ export class FormCurriculumVersionComponent implements OnInit {
     });
   }
 
-  loadData(): void {
+  loadData(onDone?: () => void): void {
     const vId = this.versionId();
+    if (!vId) {
+      return;
+    }
+
     this.versionSvc.getProgramVersionById(vId).subscribe({
       next: ver => {
         this.version.set(ver);
@@ -112,17 +189,58 @@ export class FormCurriculumVersionComponent implements OnInit {
           durationYears: ver.durationYears ?? null,
         });
 
-        // Tải danh sách PLO và PI
+        // Tải đồng thời PLO, PI, Danh sách học phần và Ma trận I/R/M
         forkJoin({
           plos: this.ploPiSvc.getPlos(vId).pipe(catchError(() => of([]))),
           pis: this.ploPiSvc.getPis(vId).pipe(catchError(() => of([]))),
-        }).subscribe(({ plos, pis }) => {
+          courses: this.ploPiSvc.getProgramCourses(vId).pipe(catchError(() => of([]))),
+          contributions: this.ploPiSvc.getContributions(vId).pipe(catchError(() => of([]))),
+        }).subscribe(({ plos, pis, courses, contributions }) => {
+          this.plos.set(plos);
+          this.pis.set(pis);
+          this.courses.set(courses);
+          this.contributions.set(contributions);
           this.buildPloPiForms(plos, pis);
+          onDone?.();
         });
       },
       error: err => {
         const apiErr = toApiError(err);
         this.alert.error(apiErr?.message ?? 'Không tìm thấy phiên bản CTĐT');
+      },
+    });
+  }
+
+  loadCourses(): void {
+    const vId = this.versionId();
+    if (!vId) {
+      return;
+    }
+    this.isCoursesLoading.set(true);
+    this.ploPiSvc.getProgramCourses(vId).subscribe({
+      next: res => {
+        this.courses.set(res || []);
+        this.isCoursesLoading.set(false);
+      },
+      error: () => {
+        this.isCoursesLoading.set(false);
+      },
+    });
+  }
+
+  loadContributions(): void {
+    const vId = this.versionId();
+    if (!vId) {
+      return;
+    }
+    this.isContributionsLoading.set(true);
+    this.ploPiSvc.getContributions(vId).subscribe({
+      next: res => {
+        this.contributions.set(res || []);
+        this.isContributionsLoading.set(false);
+      },
+      error: () => {
+        this.isContributionsLoading.set(false);
       },
     });
   }
@@ -158,123 +276,132 @@ export class FormCurriculumVersionComponent implements OnInit {
         plo?.code ?? '',
         [Validators.required, Validators.pattern(/^PLO[1-9][0-9]*$/)],
       ],
-      displayOrder: [plo?.displayOrder ?? 0, [Validators.required, Validators.min(0)]],
-      category: [plo?.category ?? 'UNSPECIFIED'],
+      displayOrder: [plo?.displayOrder ?? this.ploForms().length + 1, [Validators.required]],
+      category: [plo?.category ?? 'SPECIALIZED', [Validators.required]],
       capabilityLevelRaw: [plo?.capabilityLevelRaw ?? null],
-      contentSummary: [plo?.contentSummary ?? '', [Validators.maxLength(5000)]],
-      contentOriginal: [plo?.contentOriginal ?? '', [Validators.maxLength(5000)]],
+      passThreshold: [
+        plo?.passThreshold ?? 0.5,
+        [Validators.required, Validators.min(0.01), Validators.max(1.0)],
+      ],
+      contentSummary: [plo?.contentSummary ?? '', [Validators.maxLength(2000)]],
+      contentOriginal: [plo?.contentOriginal ?? '', [Validators.maxLength(2000)]],
     });
 
-    // Nếu đã lưu vào DB -> khóa mã code không cho sửa
     if (plo?.id) {
       group.get('code')?.disable();
     }
-
     return group;
   }
 
   private createPiFormGroup(pi?: IPi): FormGroup {
-    const ratePercent = pi?.targetPassRate != null ? Math.round(pi.targetPassRate * 100) : null;
+    const passRatePercent =
+      pi?.targetPassRate != null ? Math.round(pi.targetPassRate * 100) : null;
+
     const group = this.fb.group({
       code: [
         pi?.code ?? '',
-        [Validators.required, Validators.pattern(/^PI[1-9][0-9]*\.[1-9][0-9]*$/)],
+        [Validators.required, Validators.pattern(/^PI[1-9][0-9]*(\.[1-9][0-9]*)+$/)],
       ],
-      displayOrder: [pi?.displayOrder ?? 0, [Validators.required, Validators.min(0)]],
+      displayOrder: [pi?.displayOrder ?? 1, [Validators.required]],
       capabilityLevelRaw: [pi?.capabilityLevelRaw ?? null],
-      targetPassRatePercent: [ratePercent, [Validators.min(0), Validators.max(100)]],
+      targetPassRatePercent: [passRatePercent, [Validators.min(0), Validators.max(100)]],
+      weight: [
+        pi?.weight ?? 1.0,
+        [Validators.required, Validators.min(0.01), Validators.max(1.0)],
+      ],
+      passThreshold: [
+        pi?.passThreshold ?? 0.5,
+        [Validators.required, Validators.min(0.01), Validators.max(1.0)],
+      ],
       contentShort: [pi?.contentShort ?? '', [Validators.maxLength(2000)]],
-      contentOriginal: [pi?.contentOriginal ?? '', [Validators.maxLength(5000)]],
+      contentOriginal: [pi?.contentOriginal ?? '', [Validators.maxLength(2000)]],
     });
 
     if (pi?.id) {
       group.get('code')?.disable();
     }
-
     return group;
   }
 
   addPlo(): void {
-    const currentList = this.ploForms();
-    const nextOrder = currentList.length + 1;
-    const newForm = this.createPloFormGroup({
+    const nextOrder = this.ploForms().length + 1;
+    const newGroup = this.createPloFormGroup({
       id: '',
       programVersionId: this.versionId(),
       code: `PLO${nextOrder}`,
       displayOrder: nextOrder,
+      category: 'SPECIALIZED',
     });
 
-    this.ploForms.update(list => [
-      ...list,
-      {
-        id: undefined,
-        isPersisted: false,
-        form: newForm,
-        pis: [],
-      },
-    ]);
+    const item: IPloFormItem = {
+      isPersisted: false,
+      form: newGroup,
+      pis: [],
+    };
+    this.ploForms.update(list => [...list, item]);
   }
 
-  removePlo(ploIndex: number): void {
-    const list = this.ploForms();
-    const target = list[ploIndex];
-    if (target.id) {
+  removePlo(index: number): void {
+    const target = this.ploForms()[index];
+    if (target?.id) {
       this.deletedPloIds.update(ids => [...ids, target.id!]);
       target.pis.forEach(pi => {
         if (pi.id) {
-          this.deletedPiIds.update(ids => [...ids, pi.id!]);
+          this.deletedPiIds.update(piIds => [...piIds, pi.id!]);
         }
       });
     }
-    this.ploForms.update(l => l.filter((_, idx) => idx !== ploIndex));
+    this.ploForms.update(list => list.filter((_, idx) => idx !== index));
   }
 
   addPi(ploIndex: number): void {
-    const list = this.ploForms();
-    const plo = list[ploIndex];
-    const nextOrder = plo.pis.length + 1;
-    const ploCode = (plo.form.get('code')?.value as string | null) ?? 'PLO1';
-    const ploNumberMatch = /PLO(\d+)/.exec(ploCode);
-    const ploNum = ploNumberMatch ? ploNumberMatch[1] : '1';
+    const ploItem = this.ploForms()[ploIndex];
+    if (!ploItem) {
+      return;
+    }
+    const ploCode = (ploItem.form.get('code')?.value as string | null) ?? 'PLO1';
+    const numPart = ploCode.replace('PLO', '');
+    const nextPiOrder = ploItem.pis.length + 1;
 
-    const newPiForm = this.createPiFormGroup({
+    const newPiGroup = this.createPiFormGroup({
       id: '',
       programVersionId: this.versionId(),
-      ploId: plo.id ?? '',
-      code: `PI${ploNum}.${nextOrder}`,
-      displayOrder: nextOrder,
+      ploId: ploItem.id ?? '',
+      code: `PI${numPart}.${nextPiOrder}`,
+      displayOrder: nextPiOrder,
     });
 
-    plo.pis.push({
-      id: undefined,
+    const piItem: IPiFormItem = {
       isPersisted: false,
-      form: newPiForm,
-    });
+      form: newPiGroup,
+    };
 
-    this.ploForms.set([...list]);
+    ploItem.pis = [...ploItem.pis, piItem];
+    this.ploForms.update(list => [...list]);
   }
 
   removePi(ploIndex: number, piIndex: number): void {
-    const list = this.ploForms();
-    const plo = list[ploIndex];
-    const targetPi = plo.pis[piIndex];
-    if (targetPi.id) {
+    const ploItem = this.ploForms()[ploIndex];
+    if (!ploItem) {
+      return;
+    }
+    const targetPi = ploItem.pis[piIndex];
+    if (targetPi?.id) {
       this.deletedPiIds.update(ids => [...ids, targetPi.id!]);
     }
-    plo.pis = plo.pis.filter((_, idx) => idx !== piIndex);
-    this.ploForms.set([...list]);
+    ploItem.pis = ploItem.pis.filter((_, idx) => idx !== piIndex);
+    this.ploForms.update(list => [...list]);
   }
 
-  cancelChanges(): void {
-    this.router.navigate(['/mng/curriculum/versions', this.versionId()]);
-  }
-
-  saveChanges(): void {
+  /**
+   * Lưu thông tin Step 0 (Version + PLO + PI)
+   */
+  saveStep0(onSuccess?: () => void): void {
     this.validationErrorMessage.set(null);
 
     // Kiểm tra version form
     if (this.versionForm.invalid) {
-      this.validationErrorMessage.set('Thông tin phiên bản chưa hợp lệ');
+      this.validationErrorMessage.set('Vui lòng kiểm tra lại thông tin phiên bản');
       return;
     }
 
@@ -320,7 +447,16 @@ export class FormCurriculumVersionComponent implements OnInit {
         // 2. Xóa các PLO và PI bị remove
         this.executeDeletes(vId, () => {
           // 3. Lưu danh sách PLO và PI
-          this.executeSavePlosAndPis(vId);
+          this.executeSavePlosAndPis(vId, () => {
+            this.isSubmitting.set(false);
+            this.alert.success('Lưu cấu trúc phiên bản & Chuẩn đầu ra thành công');
+            // Tải lại dữ liệu mới nhất (gán id cho các PLO/PI mới)
+            this.loadData(() => {
+              if (onSuccess) {
+                onSuccess();
+              }
+            });
+          });
         });
       },
       error: err => {
@@ -348,16 +484,15 @@ export class FormCurriculumVersionComponent implements OnInit {
     });
   }
 
-  private executeSavePlosAndPis(vId: string): void {
+  private executeSavePlosAndPis(vId: string, onDone: () => void): void {
     const ploItems = this.ploForms();
     if (ploItems.length === 0) {
-      this.finishSave();
+      onDone();
       return;
     }
 
-    // Tuần tự lưu từng PLO, sau đó lưu các PI của PLO đó
     this.savePloSequential(vId, ploItems, 0, () => {
-      this.finishSave();
+      onDone();
     });
   }
 
@@ -379,6 +514,7 @@ export class FormCurriculumVersionComponent implements OnInit {
       displayOrder: Number(rawVal.displayOrder),
       category: rawVal.category,
       capabilityLevelRaw: rawVal.capabilityLevelRaw ? Number(rawVal.capabilityLevelRaw) : undefined,
+      passThreshold: Number(rawVal.passThreshold),
       contentSummary: rawVal.contentSummary ? rawVal.contentSummary.trim() : undefined,
       contentOriginal: rawVal.contentOriginal ? rawVal.contentOriginal.trim() : undefined,
     };
@@ -425,6 +561,8 @@ export class FormCurriculumVersionComponent implements OnInit {
         displayOrder: Number(piVal.displayOrder),
         capabilityLevelRaw: piVal.capabilityLevelRaw ? Number(piVal.capabilityLevelRaw) : undefined,
         targetPassRate: targetRate,
+        weight: Number(piVal.weight),
+        passThreshold: Number(piVal.passThreshold),
         contentShort: piVal.contentShort ? piVal.contentShort.trim() : undefined,
         contentOriginal: piVal.contentOriginal ? piVal.contentOriginal.trim() : undefined,
       };
@@ -444,9 +582,141 @@ export class FormCurriculumVersionComponent implements OnInit {
     });
   }
 
-  private finishSave(): void {
-    this.isSubmitting.set(false);
-    this.alert.success('Lưu chương trình đào tạo & Chuẩn đầu ra thành công');
+  saveChanges(): void {
+    this.saveStep0();
+  }
+
+  saveAndGoToStep1(): void {
+    this.saveStep0(() => {
+      this.loadCourses();
+      this.currentStep.set(1);
+    });
+  }
+
+  goToStep(step: number): void {
+    this.onStepIndexChange(step);
+  }
+
+  onStepIndexChange(targetStep: number): void {
+    if (this.currentStep() === 0 && targetStep > 0) {
+      this.saveStep0(() => {
+        if (targetStep === 1) {
+          this.loadCourses();
+        } else if (targetStep === 2) {
+          this.loadContributions();
+        }
+        this.currentStep.set(targetStep);
+      });
+    } else {
+      if (targetStep === 1) {
+        this.loadCourses();
+      } else if (targetStep === 2) {
+        this.loadContributions();
+      }
+      this.currentStep.set(targetStep);
+    }
+  }
+
+  finishWizard(): void {
+    this.alert.success('Hoàn tất cấu hình phiên bản CTĐT');
     this.router.navigate(['/mng/curriculum/versions', this.versionId()]);
+  }
+
+  cancelChanges(): void {
+    this.router.navigate(['/mng/curriculum/versions', this.versionId()]);
+  }
+
+  // ========== Logic Ma trận I/R/M (Step 2 & Step 3) ==========
+
+  getPisOfPlo(ploId: string): IPi[] {
+    return this.pis()
+      .filter(pi => pi.ploId === ploId)
+      .sort((a, b) => a.displayOrder - b.displayOrder);
+  }
+
+  getContribution(courseId: string, piId: string): ICoursePiContribution | undefined {
+    return this.contributions().find(c => c.courseId === courseId && c.piId === piId);
+  }
+
+  onCellClick(courseId: string, piId: string): void {
+    const current = this.getContribution(courseId, piId);
+    const vId = this.versionId();
+
+    if (!current) {
+      // Trống -> I
+      this.ploPiSvc
+        .createContribution(vId, { courseId, piId, contribution: 'I' })
+        .subscribe({
+          next: created => {
+            this.contributions.update(list => [...list, created]);
+          },
+          error: err => {
+            const apiErr = toApiError(err);
+            this.alert.error(apiErr?.message ?? 'Không thể cập nhật đóng góp I/R/M');
+          },
+        });
+    } else if (current.contribution === 'I') {
+      // I -> R
+      this.cycleContribution(current, 'R');
+    } else if (current.contribution === 'R') {
+      // R -> M
+      this.cycleContribution(current, 'M');
+    } else {
+      // M -> Xóa (về Trống)
+      this.ploPiSvc.deleteContribution(vId, current.id).subscribe({
+        next: () => {
+          this.contributions.update(list => list.filter(c => c.id !== current.id));
+        },
+        error: err => {
+          const apiErr = toApiError(err);
+          this.alert.error(apiErr?.message ?? 'Không thể xóa đóng góp I/R/M');
+        },
+      });
+    }
+  }
+
+  private cycleContribution(oldContrib: ICoursePiContribution, nextType: PiContributionType): void {
+    const vId = this.versionId();
+    this.ploPiSvc.deleteContribution(vId, oldContrib.id).subscribe({
+      next: () => {
+        this.ploPiSvc
+          .createContribution(vId, {
+            courseId: oldContrib.courseId,
+            piId: oldContrib.piId,
+            contribution: nextType,
+          })
+          .subscribe({
+            next: created => {
+              this.contributions.update(list => [
+                ...list.filter(c => c.id !== oldContrib.id),
+                created,
+              ]);
+            },
+            error: err => {
+              const apiErr = toApiError(err);
+              this.alert.error(apiErr?.message ?? 'Không thể cập nhật đóng góp I/R/M');
+            },
+          });
+      },
+      error: err => {
+        const apiErr = toApiError(err);
+        this.alert.error(apiErr?.message ?? 'Không thể cập nhật đóng góp I/R/M');
+      },
+    });
+  }
+
+  formatCohorts(cohorts?: string[]): string {
+    if (!cohorts || cohorts.length === 0) {
+      return '—';
+    }
+    return cohorts.join(', ');
+  }
+
+  getCourseCode(pc: IProgramCourse): string {
+    return pc.course?.code ?? pc.courseId;
+  }
+
+  getCourseName(pc: IProgramCourse): string {
+    return pc.course?.name ?? '—';
   }
 }

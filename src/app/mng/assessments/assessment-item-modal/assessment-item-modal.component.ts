@@ -3,23 +3,21 @@ import {
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormsModule, NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { BLOOM_LEVEL_OPTIONS, ITEM_KIND_LABEL } from '@constants/assessment-display.constant';
-import { IAssessmentItem, IRubricLevel, ItemKind } from '@models/assessment/assessment.model';
+import { BLOOM_LEVEL_OPTIONS } from '@constants/assessment-display.constant';
+import { IAssessmentItem } from '@models/assessment/assessment.model';
 import { IClo } from '@models/course/clo.model';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzModalModule } from 'ng-zorro-antd/modal';
 import { NzSelectModule } from 'ng-zorro-antd/select';
-import { cleanOptional, formatNumber, hasDuplicates, nextItemCode, sumWeights, weightSumMatches } from '../assessments.util';
+import { formatNumber, hasDuplicates, nextItemCode, sumOutcomeScores } from '../assessments.util';
 
-const CODE_PATTERN = /^[A-Za-z0-9._-]{1,40}$/;
-const RUBRIC_LEVELS = [1, 2, 3, 4] as const;
+const CODE_PATTERN = /^[A-Za-z0-9._ -]{1,40}$/;
 
 /**
- * Modal thêm/sửa một câu hỏi hoặc tiêu chí của bài đánh giá (F04 US-15, US-16). Chỉ sửa danh sách trong bộ nhớ
- * của màn hình cha; cấu trúc chỉ được ghi khi người dùng bấm "Lưu cấu trúc" (PUT items thay toàn bộ).
- * - Mỗi phần tử đo ≥ 1 CLO, phần điểm trong (0, 1], tổng bằng 1, không trùng CLO (ADR 0011). PI không khai báo ở đây.
- * - Rubric mức 1–4 TÁCH KHỎI mức Bloom 1–6: hai trường độc lập, nhãn khác nhau.
- * Các kiểm tra ở đây chỉ để phản hồi nhanh; backend kiểm tra lại và quyết định (422).
+ * Modal thêm/sửa một câu hỏi của bài đánh giá (ADR 0014, Schema v0.7).
+ * - Mỗi câu hỏi đo ≥ 1 CLO, điểm tối đa maxScore > 0 cho từng CLO.
+ * - Mức Bloom 1–6 (bắt buộc).
+ * - Rubric đã được loại bỏ hoàn toàn theo ADR 0014.
  */
 @Component({
   selector: 'app-assessment-item-modal',
@@ -31,10 +29,10 @@ export class AssessmentItemModalComponent {
   private readonly fb = inject(NonNullableFormBuilder);
 
   readonly isVisible = input(false);
-  /** null: thêm mới; có giá trị: sửa phần tử đó (giữ nguyên `id`). */
+  /** null: thêm mới; có giá trị: sửa câu hỏi đó (giữ nguyên `id`). */
   readonly item = input<IAssessmentItem | null>(null);
   readonly clos = input<IClo[]>([]);
-  /** Mã của các phần tử khác trong bài, để báo trùng mã. */
+  /** Mã của các câu hỏi khác trong bài, để báo trùng mã. */
   readonly otherCodes = input<string[]>([]);
   readonly disabled = input(false);
 
@@ -42,180 +40,131 @@ export class AssessmentItemModalComponent {
   readonly saved = output<IAssessmentItem>();
 
   protected readonly bloomOptions = BLOOM_LEVEL_OPTIONS;
-  protected readonly kindOptions: { value: ItemKind; label: string; }[] = [
-    { value: 'QUESTION', label: ITEM_KIND_LABEL.QUESTION },
-    { value: 'CRITERION', label: ITEM_KIND_LABEL.CRITERION },
-  ];
-  protected readonly rubricLevels = RUBRIC_LEVELS;
   protected readonly formatNumber = formatNumber;
 
   readonly form = this.fb.group({
     code: ['', [Validators.required, Validators.pattern(CODE_PATTERN)]],
-    title: ['', [Validators.maxLength(300)]],
-    kind: this.fb.control<ItemKind>('QUESTION'),
-    maxScore: [null as number | null, [Validators.required, Validators.min(0.0001)]],
-    bloomLevel: [null as number | null],
-    topic: ['', [Validators.maxLength(200)]],
-    externalRef: ['', [Validators.maxLength(100)]],
+    bloomLevel: [null as number | null, [Validators.required, Validators.min(1), Validators.max(6)]],
     mappings: this.fb.array([this.newMapping()]),
-    rubric: this.fb.array(RUBRIC_LEVELS.map(level => this.newRubricRow(level))),
   });
 
   readonly attempted = signal(false);
-  /** Phần tử đang sửa đã có rubric: vẫn hiện ô rubric dù loại là Câu hỏi để không làm mất dữ liệu âm thầm. */
-  private readonly hadRubric = signal(false);
 
   private readonly values = toSignal(this.form.valueChanges, { initialValue: this.form.getRawValue() });
 
-  readonly showRubric = computed(() => this.values().kind === 'CRITERION' || this.hadRubric());
+  get mappings() {
+    return this.form.controls.mappings;
+  }
 
-  readonly weightSum = computed(() => sumWeights((this.values().mappings ?? []).map(m => ({ weight: m.weight ?? null }))));
+  readonly duplicateCode = computed(() => {
+    const raw = this.values().code?.trim().toLowerCase();
+    if (!raw) {
+      return false;
+    }
+    const target = this.item()?.code.trim().toLowerCase();
+    return this.otherCodes().map(c => c.trim().toLowerCase()).some(c => c === raw && c !== target);
+  });
 
-  readonly weightSumInvalid = computed(() => !weightSumMatches(this.weightSum()));
+  readonly totalItemScore = computed(() => {
+    const m = (this.values().mappings ?? []).map(r => ({ maxScore: r.maxScore ?? null }));
+    return sumOutcomeScores(m);
+  });
 
-  /** Các lỗi gợi ý theo thứ tự đọc; rỗng nghĩa là có thể lưu. Backend vẫn kiểm tra lại. */
-  readonly issues = computed<string[]>(() => {
-    const v = this.values();
-    const issues: string[] = [];
-    const code = (v.code ?? '').trim();
-    if (!code) {
-      issues.push('Nhập mã phần tử.');
-    } else if (!CODE_PATTERN.test(code)) {
-      issues.push('Mã phần tử chỉ gồm chữ, số, dấu chấm, gạch ngang, gạch dưới (1–40 ký tự).');
-    } else if (this.otherCodes().some(c => c.toLowerCase() === code.toLowerCase())) {
-      issues.push(`Mã ${code} đã dùng cho phần tử khác trong bài.`);
-    }
-    if (typeof v.maxScore !== 'number' || v.maxScore <= 0) {
-      issues.push('Điểm tối đa phải lớn hơn 0.');
-    }
-    const mappings = v.mappings ?? [];
-    if (mappings.length === 0 || mappings.some(m => !m.cloId)) {
-      issues.push('Mỗi phần tử phải đo ít nhất một CLO: chọn CLO cho mọi dòng.');
-    }
-    if (hasDuplicates(mappings.map(m => m.cloId ?? '').filter(id => id !== ''))) {
-      issues.push('Một CLO chỉ được khai báo một lần trong cùng phần tử.');
-    }
-    if (mappings.some(m => typeof m.weight !== 'number' || m.weight <= 0 || m.weight > 1)) {
-      issues.push('Phần điểm của mỗi CLO phải lớn hơn 0 và không quá 1.');
-    } else if (!weightSumMatches(this.weightSum())) {
-      issues.push(`Tổng phần điểm là ${formatNumber(this.weightSum())}, cần bằng 1.`);
-    }
-    if (this.showRubric()) {
-      const max = typeof v.maxScore === 'number' ? v.maxScore : Number.POSITIVE_INFINITY;
-      for (const row of v.rubric ?? []) {
-        if (typeof row.score === 'number' && row.score > max) {
-          issues.push(`Điểm của mức rubric ${row.level} vượt điểm tối đa ${formatNumber(max)}.`);
-        }
-        if (typeof row.score === 'number' && row.score < 0) {
-          issues.push(`Điểm của mức rubric ${row.level} không được âm.`);
-        }
-        if (cleanOptional(row.description) && typeof row.score !== 'number') {
-          issues.push(`Mức rubric ${row.level} có mô tả nhưng thiếu điểm.`);
-        }
-      }
-    }
-    return issues;
+  readonly duplicateClo = computed(() => {
+    const ids = (this.values().mappings ?? []).map(r => r.cloId).filter((id): id is string => Boolean(id));
+    return hasDuplicates(ids);
+  });
+
+  readonly hasMissingCloOrScore = computed(() => {
+    const m = this.values().mappings ?? [];
+    if (m.length === 0) return true;
+    return m.some(row => !row.cloId || typeof row.maxScore !== 'number' || row.maxScore <= 0);
   });
 
   constructor() {
     effect(() => {
-      if (this.isVisible()) {
-        const current = this.item();
-        untracked(() => this.reset(current));
+      const visible = this.isVisible();
+      const current = this.item();
+      const codes = this.otherCodes();
+      const cloList = this.clos();
+      if (!visible) {
+        untracked(() => this.attempted.set(false));
+        return;
       }
+      untracked(() => {
+        this.attempted.set(false);
+        if (current) {
+          this.form.reset({
+            code: current.code,
+            bloomLevel: current.bloomLevel,
+          });
+          this.mappings.clear();
+          for (const m of current.outcomeMappings) {
+            this.mappings.push(this.newMapping(m.cloId, m.maxScore));
+          }
+          if (this.mappings.length === 0) {
+            this.mappings.push(this.newMapping());
+          }
+        } else {
+          this.form.reset({
+            code: nextItemCode(codes),
+            bloomLevel: 3,
+          });
+          this.mappings.clear();
+          const firstCloId = cloList[0]?.id ?? '';
+          this.mappings.push(this.newMapping(firstCloId, 1.0));
+        }
+      });
     });
   }
 
-  protected get mappings() {
-    return this.form.controls.mappings;
-  }
-
-  protected get rubric() {
-    return this.form.controls.rubric;
-  }
-
   addMapping(): void {
-    this.mappings.push(this.newMapping());
+    const existing = new Set(this.mappings.controls.map(c => c.controls.cloId.value));
+    const nextClo = this.clos().find(c => !existing.has(c.id));
+    this.mappings.push(this.newMapping(nextClo?.id ?? '', 1.0));
   }
 
   removeMapping(index: number): void {
-    if (this.mappings.length > 1) {
-      this.mappings.removeAt(index);
+    if (this.mappings.length <= 1) {
+      return;
     }
+    this.mappings.removeAt(index);
   }
 
   handleCancel(): void {
     this.visibleChange.emit(false);
   }
 
-  save(): void {
+  handleSave(): void {
     this.attempted.set(true);
-    if (this.disabled() || this.issues().length > 0) {
+    if (this.disabled()) {
       return;
     }
-    const v = this.form.getRawValue();
-    const rubricLevels: IRubricLevel[] = this.showRubric()
-      ? v.rubric
-        .filter(row => typeof row.score === 'number')
-        .map(row => ({ level: row.level, score: row.score as number, description: cleanOptional(row.description) }))
-      : [];
-    const current = this.item();
+    if (this.form.invalid || this.duplicateCode() || this.duplicateClo() || this.hasMissingCloOrScore()) {
+      return;
+    }
+    const raw = this.form.getRawValue();
+    const outcomeMappings = raw.mappings.map(m => ({
+      cloId: m.cloId,
+      maxScore: Number(m.maxScore),
+    }));
+
     const result: IAssessmentItem = {
-      ...(current?.id ? { id: current.id } : {}),
-      code: v.code.trim(),
-      title: cleanOptional(v.title),
-      kind: v.kind,
-      maxScore: v.maxScore as number,
-      bloomLevel: v.bloomLevel,
-      topic: cleanOptional(v.topic),
-      externalRef: cleanOptional(v.externalRef),
-      outcomeMappings: v.mappings.map(m => ({ cloId: m.cloId, weight: m.weight as number })),
-      rubric: rubricLevels.length > 0 ? { levels: rubricLevels } : undefined,
+      ...(this.item()?.id ? { id: this.item()!.id } : {}),
+      code: raw.code.trim(),
+      orderIndex: this.item()?.orderIndex ?? null,
+      bloomLevel: Number(raw.bloomLevel),
+      outcomeMappings,
     };
+
     this.saved.emit(result);
     this.visibleChange.emit(false);
   }
 
-  private reset(current: IAssessmentItem | null): void {
-    this.attempted.set(false);
-    this.hadRubric.set(!!current?.rubric?.levels?.length);
-    this.mappings.clear();
-    const mappings = current?.outcomeMappings?.length ? current.outcomeMappings : [{ cloId: '', weight: null }];
-    mappings.forEach(m => this.mappings.push(this.newMapping(m.cloId, m.weight)));
-    this.rubric.controls.forEach(row => {
-      const found = current?.rubric?.levels?.find(l => l.level === row.controls.level.value);
-      row.patchValue({ description: found?.description ?? '', score: found?.score ?? null });
-    });
-    this.form.patchValue({
-      code: current?.code ?? nextItemCode(this.otherCodes()),
-      title: current?.title ?? '',
-      kind: current?.kind ?? 'QUESTION',
-      maxScore: current?.maxScore ?? null,
-      bloomLevel: current?.bloomLevel ?? null,
-      topic: current?.topic ?? '',
-      externalRef: current?.externalRef ?? '',
-    });
-    this.form.markAsPristine();
-    // Bài đã khóa: mở để xem, mọi ô bị vô hiệu hóa (đặt sau khi nạp để issues() vẫn đọc đủ giá trị)
-    if (this.disabled()) {
-      this.form.disable({ emitEvent: false });
-    } else {
-      this.form.enable({ emitEvent: false });
-    }
-  }
-
-  private newMapping(cloId = '', weight: number | null = null) {
+  private newMapping(cloId = '', maxScore: number | null = null) {
     return this.fb.group({
       cloId: [cloId, [Validators.required]],
-      weight: [weight, [Validators.required, Validators.min(0.0001), Validators.max(1)]],
-    });
-  }
-
-  private newRubricRow(level: number) {
-    return this.fb.group({
-      level: [level],
-      description: ['', [Validators.maxLength(500)]],
-      score: [null as number | null, [Validators.min(0)]],
+      maxScore: [maxScore, [Validators.required, Validators.min(0.01)]],
     });
   }
 }

@@ -5,7 +5,6 @@ import { INLINE_ERRORS } from '@interceptors/http-context.token';
 import {
   IAssessment,
   IAssessmentItemsRequest,
-  IAssessmentRejectRequest,
   IAssessmentRequest,
   IAssessmentUpdateRequest,
   ICoverage,
@@ -13,9 +12,9 @@ import {
 import { Observable } from 'rxjs';
 
 /**
- * Bài đánh giá (F04 US-15, US-16, NEW-01). Khung theo đề cương do LECTURER/DEPARTMENT_HEAD trong phạm vi soạn;
- * bản lớp do LECTURER của lớp soạn và gửi duyệt; duyệt/từ chối do DEPARTMENT_HEAD đúng phạm vi. Mọi quyền do
- * backend kiểm tra; UI chỉ ẩn nút cho tiện dùng và hiển thị lỗi 403/409/422 mà backend trả.
+ * Bài đánh giá (F04 US-15, US-16, NEW-01, ADR 0014).
+ * Khung theo đề cương do LECTURER/DEPARTMENT_HEAD trong phạm vi soạn;
+ * bản lớp do LECTURER của lớp soạn và quản lý khóa/mở khóa ma trận.
  */
 @Injectable({
   providedIn: 'root',
@@ -56,7 +55,7 @@ export class AssessmentService {
     return this.http.put<IAssessment>(UrlConstant.API.ASSESSMENT_DETAIL(id), model, { context: this.inlineErrors() });
   }
 
-  /** Thay TOÀN BỘ items[]; bị từ chối (422) khi cấu trúc đã khóa hoặc đang chờ duyệt. */
+  /** Thay TOÀN BỘ items[]; bị từ chối (422) khi cấu trúc đã khóa (LOCKED hoặc SCORE_ENTERED). */
   replaceItems(id: string, model: IAssessmentItemsRequest): Observable<IAssessment> {
     return this.http.put<IAssessment>(UrlConstant.API.ASSESSMENT_ITEMS(id), model, { context: this.inlineErrors() });
   }
@@ -65,16 +64,18 @@ export class AssessmentService {
     return this.http.get<ICoverage>(UrlConstant.API.ASSESSMENT_COVERAGE(id), { context: this.inlineErrors() });
   }
 
-  submit(id: string): Observable<IAssessment> {
-    return this.http.post<IAssessment>(UrlConstant.API.ASSESSMENT_SUBMIT(id), null, { context: this.inlineErrors() });
+  /** Khóa ma trận đánh giá: DRAFT -> LOCKED */
+  lock(id: string): Observable<IAssessment> {
+    return this.http.post<IAssessment>(UrlConstant.API.ASSESSMENT_LOCK(id), null, { context: this.inlineErrors() });
   }
 
-  approve(id: string): Observable<IAssessment> {
-    return this.http.post<IAssessment>(UrlConstant.API.ASSESSMENT_APPROVE(id), null, { context: this.inlineErrors() });
+  /** Mở lại ma trận để chỉnh sửa: LOCKED -> DRAFT (chỉ khi chưa nhập điểm) */
+  unlock(id: string): Observable<IAssessment> {
+    return this.http.post<IAssessment>(UrlConstant.API.ASSESSMENT_UNLOCK(id), null, { context: this.inlineErrors() });
   }
 
-  reject(id: string, model: IAssessmentRejectRequest): Observable<IAssessment> {
-    return this.http.post<IAssessment>(UrlConstant.API.ASSESSMENT_REJECT(id), model, { context: this.inlineErrors() });
+  deleteAssessment(id: string): Observable<void> {
+    return this.http.delete<void>(UrlConstant.API.ASSESSMENT_DETAIL(id), { context: this.inlineErrors() });
   }
 
   private inlineErrors(): HttpContext {
