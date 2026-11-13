@@ -1,6 +1,5 @@
 import { Routes } from '@angular/router';
 import { SystemConstant } from '@constants/system.constant';
-import { canActiveGuard } from '@guards/can-active.guard';
 
 export const curriculumRoutes: Routes = [
   {
@@ -16,17 +15,5 @@ export const curriculumRoutes: Routes = [
       m => m.DetailCurriculumVersionComponent,
     ),
     title: `Khung Chuẩn đầu ra PLO · PI | ${SystemConstant.WEB_NAME}`,
-  },
-  {
-    path: 'versions/:versionId/edit',
-    canActivate: [canActiveGuard],
-    data: {
-      listRoles: [SystemConstant.MNG_ROLE.PROGRAM_MANAGER],
-      rolesRelation: 'OR',
-    },
-    loadComponent: () => import('./form-curriculum-version/form-curriculum-version.component').then(
-      m => m.FormCurriculumVersionComponent,
-    ),
-    title: `Soạn thảo Khung CTĐT & CĐR | ${SystemConstant.WEB_NAME}`,
   },
 ];

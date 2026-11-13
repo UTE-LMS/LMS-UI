@@ -3,10 +3,9 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { TestBed } from '@angular/core/testing';
 import { UrlConstant } from '@constants/url.constant';
 import { INLINE_ERRORS } from '@interceptors/http-context.token';
-import { ISyllabusRequest } from '@models/course/syllabus.model';
 import { SyllabusService } from './syllabus.service';
 
-describe('SyllabusService (F03 US-10, ADR 0010)', () => {
+describe('SyllabusService (F03 Import CSV & Status)', () => {
   let service: SyllabusService;
   let http: HttpTestingController;
   const courseId = '671dcba5f123456789abcde1';
@@ -37,17 +36,22 @@ describe('SyllabusService (F03 US-10, ADR 0010)', () => {
     req.flush({});
   });
 
-  it('createSyllabus gửi POST /api/v1/courses/{courseId}/syllabi', () => {
-    const body: ISyllabusRequest = {
-      version: '2026-v1',
-      effectiveFromTermId: '671dcba5f123456789abcde0',
-      effectiveToTermId: null,
-    };
-    service.createSyllabus(courseId, body).subscribe();
-    const req = http.expectOne(UrlConstant.API.COURSE_SYLLABI(courseId));
+  it('importSyllabusCsv gửi POST multipart tới /import', () => {
+    const file = new File(['code,bloomLevel\nCLO1,3'], 'syllabus.csv', { type: 'text/csv' });
+    service.importSyllabusCsv(courseId, '2026-v1', 'pv_1', file).subscribe();
+    const req = http.expectOne(UrlConstant.API.COURSE_SYLLABI_IMPORT(courseId));
     expect(req.request.method).toBe('POST');
-    expect(req.request.body).toEqual(body);
-    expect(req.request.context.get(INLINE_ERRORS)).toBe(true);
+    expect(req.request.body instanceof FormData).toBe(true);
+    const body = req.request.body as FormData;
+    expect(body.get('version')).toBe('2026-v1');
+    expect(body.get('programVersionId')).toBe('pv_1');
+    req.flush({});
+  });
+
+  it('confirmImport gửi POST tới /syllabi/{id}/confirm-import', () => {
+    service.confirmImport(syllabusId).subscribe();
+    const req = http.expectOne(UrlConstant.API.SYLLABUS_CONFIRM_IMPORT(syllabusId));
+    expect(req.request.method).toBe('POST');
     req.flush({});
   });
 

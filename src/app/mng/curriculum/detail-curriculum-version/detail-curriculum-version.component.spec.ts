@@ -183,7 +183,6 @@ describe('DetailCurriculumVersionComponent (F02 US-06, US-07, US-08 UI.pdf Trang
     expect(component.plos().length).toBe(2);
     expect(component.pis().length).toBe(2);
     expect(component.courses().length).toBe(1);
-    expect(component.contributions().length).toBe(1);
   });
 
   it('sắp xếp danh sách PLO theo displayOrder (bất biến nghiệp vụ)', () => {
@@ -201,33 +200,5 @@ describe('DetailCurriculumVersionComponent (F02 US-06, US-07, US-08 UI.pdf Trang
     expect(rows[1].isPlo).toBe(false);
     expect(rows[2].code).toBe('PLO6');
     expect(rows[3].code).toBe('PI6.1');
-  });
-
-  it('isQaOfficer = true khi user có vai trò QA', () => {
-    expect(component.isQaOfficer()).toBe(true);
-  });
-
-  it('click vào ô chưa có đóng góp sẽ gọi API tạo I', () => {
-    component.onCellClick('course_1', 'pi_6_1');
-    expect(ploPiSvc.createContribution).toHaveBeenCalledWith(
-      '671dcba5f123456789abcdef',
-      expect.objectContaining({
-        courseId: 'course_1',
-        piId: 'pi_6_1',
-        contribution: 'I',
-      }),
-    );
-  });
-
-  it('tổng hợp danh sách chỉ số PI đóng góp theo học phần', () => {
-    expect(component.getCourseContributions('course_1')).toEqual([
-      { piCode: 'PI1.1', contribution: 'I' },
-    ]);
-  });
-
-  it('ADMIN không có quyền sửa chương trình hay ma trận I/R/M và không có quyền duyệt ĐBCL', () => {
-    component.userRoles.set([SystemConstant.ROLE.ADMIN]);
-    expect(component.canEdit()).toBe(false);
-    expect(component.isQaOfficer()).toBe(false);
   });
 });

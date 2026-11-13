@@ -4,7 +4,7 @@ import { UrlConstant } from '@constants/url.constant';
 import { INLINE_ERRORS } from '@interceptors/http-context.token';
 import {
   ISyllabus,
-  ISyllabusRequest,
+  ISyllabusCsvImportResponse,
   ISyllabusStatusUpdateRequest,
   SyllabusStatus,
 } from '@models/course/syllabus.model';
@@ -12,8 +12,7 @@ import { Observable } from 'rxjs';
 
 /**
  * Quản lý Phiên bản Đề cương Học phần (F03 US-10, ADR 0014).
- * Tạo đề cương DRAFT: LECTURER / PROGRAM_MANAGER trong scope.
- * Phê duyệt CONFIRMED / ARCHIVED: PROGRAM_MANAGER trong scope.
+ * Import CSV & phê duyệt CONFIRMED / ARCHIVED: PROGRAM_MANAGER trong scope.
  */
 @Injectable({
   providedIn: 'root',
@@ -31,10 +30,40 @@ export class SyllabusService {
     });
   }
 
-  createSyllabus(courseId: string, model: ISyllabusRequest): Observable<ISyllabus> {
-    return this.http.post<ISyllabus>(UrlConstant.API.COURSE_SYLLABI(courseId), model, {
+  downloadImportTemplate(courseId: string): Observable<Blob> {
+    return this.http.get(UrlConstant.API.COURSE_SYLLABI_IMPORT_TEMPLATE(courseId), {
+      responseType: 'blob',
       context: this.inlineErrors(),
     });
+  }
+
+  importSyllabusCsv(
+    courseId: string,
+    version: string,
+    programVersionId: string,
+    file: File,
+    effectiveFromTermId?: string | null,
+  ): Observable<ISyllabusCsvImportResponse> {
+    const formData = new FormData();
+    formData.append('version', version);
+    formData.append('programVersionId', programVersionId);
+    if (effectiveFromTermId) {
+      formData.append('effectiveFromTermId', effectiveFromTermId);
+    }
+    formData.append('file', file);
+    return this.http.post<ISyllabusCsvImportResponse>(
+      UrlConstant.API.COURSE_SYLLABI_IMPORT(courseId),
+      formData,
+      { context: this.inlineErrors() },
+    );
+  }
+
+  confirmImport(id: string): Observable<ISyllabusCsvImportResponse> {
+    return this.http.post<ISyllabusCsvImportResponse>(
+      UrlConstant.API.SYLLABUS_CONFIRM_IMPORT(id),
+      {},
+      { context: this.inlineErrors() },
+    );
   }
 
   updateSyllabusStatus(id: string, status: SyllabusStatus): Observable<ISyllabus> {

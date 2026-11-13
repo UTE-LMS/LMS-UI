@@ -65,8 +65,9 @@ describe('ListCurriculumVersionsComponent (F02 US-05, ADR 0005 UI.pdf Trang 3)',
       totalPages: 1,
       last: true,
     })),
-    createProgramVersion: vi.fn(() => of(mockVersions[1])),
-    updateProgramVersion: vi.fn(() => of(mockVersions[0])),
+    importProgramCsv: vi.fn(),
+    confirmImport: vi.fn(),
+    downloadImportTemplate: vi.fn(),
     updateProgramVersionStatus: vi.fn(() => of(mockVersions[0])),
   };
 
@@ -119,16 +120,11 @@ describe('ListCurriculumVersionsComponent (F02 US-05, ADR 0005 UI.pdf Trang 3)',
     expect(component.canManage()).toBe(true);
   });
 
-  it('mở modal tạo phiên bản mới reset đúng form', () => {
-    component.openCreateModal();
-    expect(component.isModalVisible()).toBe(true);
-    expect(component.modalTitle()).toBe('Tạo phiên bản CTĐT mới');
-  });
-
-  it('mở modal clone từ phiên bản active gợi ý tên phiên bản nháp mới', () => {
-    component.openCloneModal(mockVersions[0]);
-    expect(component.isModalVisible()).toBe(true);
-    expect(component.versionForm.get('version')?.value).toBe('BM7A-2.7-Updated-2026-Draft');
+  it('mở modal Import CSV CTĐT reset về bước 1', () => {
+    component.openImportModal();
+    expect(component.isImportModalVisible()).toBe(true);
+    expect(component.importStep()).toBe(0);
+    expect(component.importVersion()).toBe('');
   });
 
   it('formatCohorts trả về dấu gạch — khi không có dữ liệu khóa', () => {
@@ -145,18 +141,8 @@ describe('ListCurriculumVersionsComponent (F02 US-05, ADR 0005 UI.pdf Trang 3)',
     );
   });
 
-  it('QA có quyền mở modal thẩm định ĐBCL', () => {
-    component.userRoles.set([SystemConstant.ROLE.QA]);
-    expect(component.isQaOfficer()).toBe(true);
-
-    component.openVerifyModal(mockVersions[1]);
-    expect(component.isVerifyModalVisible()).toBe(true);
-    expect(component.selectedVersionForVerify()?.id).toBe(mockVersions[1].id);
-  });
-
-  it('ADMIN chỉ được xem, không có quyền sửa phiên bản (canManage = false) và không có quyền duyệt ĐBCL (isQaOfficer = false)', () => {
+  it('ADMIN chỉ được xem, không có quyền quản lý phiên bản (canManage = false)', () => {
     component.userRoles.set([SystemConstant.ROLE.ADMIN]);
     expect(component.canManage()).toBe(false);
-    expect(component.isQaOfficer()).toBe(false);
   });
 });

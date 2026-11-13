@@ -1,0 +1,90 @@
+<nz-modal
+  [(nzVisible)]="visible"
+  nzTitle="Truy vết ngược kết quả đo lường (US-34)"
+  [nzWidth]="820"
+  [nzFooter]="null"
+  (nzOnCancel)="close()">
+  <ng-container *nzModalContent>
+    <nz-spin [nzSpinning]="loading()">
+      @if (error()) {
+        <nz-alert nzType="error" [nzMessage]="error()!" nzShowIcon class="mb-4" />
+      }
+
+      @for (node of traceChain(); track node.id; let idx = $index) {
+        <div class="mb-4 rounded-lg border border-slate-200 p-3 bg-slate-50/50">
+          <div class="flex items-center justify-between mb-2">
+            <div class="flex items-center gap-2">
+              <nz-tag nzColor="blue">Bước {{ idx + 1 }}: {{ node.level }}</nz-tag>
+              <span class="font-semibold text-slate-800">{{ node.subjectCode || node.subjectId }}</span>
+              <span class="text-xs text-slate-500">SV: {{ node.studentRef || node.studentId }}</span>
+            </div>
+            <div>
+              @if (node.status === 'COMPUTED') {
+                <nz-tag [nzColor]="node.passed ? 'green' : 'red'">
+                  {{ (node.value ?? 0) * 100 | number: '1.1-1' }}% ({{ node.passed ? 'Đạt' : 'Chưa đạt' }})
+                </nz-tag>
+              } @else {
+                <nz-tag nzColor="orange">{{ node.status }}</nz-tag>
+              }
+            </div>
+          </div>
+
+          @if (node.inputs.length > 0) {
+            <nz-table [nzData]="node.inputs" nzSize="small" [nzShowPagination]="false">
+              <thead>
+                <tr>
+                  <th>Nguồn</th>
+                  <th>Mô tả</th>
+                  <th>Giá trị chuẩn hóa</th>
+                  <th>Trọng số / Max</th>
+                  <th nzWidth="120px">Thao tác</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (inp of node.inputs; track inp.refId) {
+                  <tr>
+                    <td>
+                      <nz-tag [nzColor]="inp.sourceType === 'SCORE' ? 'purple' : 'geekblue'">
+                        {{ inp.sourceType }}
+                      </nz-tag>
+                    </td>
+                    <td>{{ inp.label }}</td>
+                    <td>{{ inp.normalizedValue !== undefined ? (inp.normalizedValue * 100 | number: '1.1-1') + '%' : '—' }}</td>
+                    <td>{{ inp.weight ?? '—' }}</td>
+                    <td>
+                      @if (inp.sourceType === 'STUDENT_RESULT') {
+                        <button nz-button nzType="link" nzSize="small" (click)="drillDownStudentResult(inp.refId)">
+                          Truy tiếp
+                        </button>
+                      } @else {
+                        <button nz-button nzType="link" nzSize="small" (click)="drillDownScore(inp.refId)">
+                          Xem tệp CSV gốc
+                        </button>
+                      }
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </nz-table>
+          } @else {
+            <div class="text-xs text-slate-500">Không có dữ liệu đầu vào.</div>
+          }
+        </div>
+      }
+
+      @if (scoreTrace(); as st) {
+        <div class="rounded-lg border border-emerald-200 bg-emerald-50/40 p-3">
+          <div class="font-semibold text-emerald-800 mb-2">Nguồn gốc điểm trong tệp CSV nhập</div>
+          <nz-descriptions nzBordered nzSize="small" [nzColumn]="2">
+            <nz-descriptions-item nzTitle="Sinh viên">{{ st.studentRef }}</nz-descriptions-item>
+            <nz-descriptions-item nzTitle="Câu / CLO">{{ st.itemCode }} / {{ st.cloCode }}</nz-descriptions-item>
+            <nz-descriptions-item nzTitle="Điểm thực / Tối đa">{{ st.rawScore }} / {{ st.maxScore }}</nz-descriptions-item>
+            <nz-descriptions-item nzTitle="Dòng CSV (sourceRow)">Dòng {{ st.sourceRow ?? '—' }}</nz-descriptions-item>
+            <nz-descriptions-item nzTitle="Tên tệp">{{ st.fileName || '—' }}</nz-descriptions-item>
+            <nz-descriptions-item nzTitle="Hệ thống nguồn">{{ st.sourceSystem || '—' }}</nz-descriptions-item>
+          </nz-descriptions>
+        </div>
+      }
+    </nz-spin>
+  </ng-container>
+</nz-modal>

@@ -1,0 +1,216 @@
+<div class="space-y-6">
+  <div class="flex items-center justify-between">
+    <div>
+      <h1 class="text-2xl font-bold text-slate-800 m-0">Đo lường chuẩn đầu ra 4 cấp độ (F06)</h1>
+      <p class="text-sm text-slate-500 mt-1 mb-0">
+        Tính toán và lưu trữ kết quả từ bài đánh giá (ASSESSMENT_CLO) đến CLO, PI và PLO.
+      </p>
+    </div>
+  </div>
+
+  <nz-card nzTitle="Khởi chạy lượt đo lường mới" class="rounded-xl shadow-sm">
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div>
+        <label class="block text-xs font-medium text-slate-600 mb-1">Phạm vi (Scope)</label>
+        <nz-select [ngModel]="selectedScope()" (ngModelChange)="selectedScope.set($event)" class="w-full">
+          <nz-option nzValue="SECTION" nzLabel="Theo lớp học phần (SECTION)" />
+          <nz-option nzValue="COHORT" nzLabel="Theo khóa (COHORT)" />
+          <nz-option nzValue="PROGRAM" nzLabel="Theo toàn CTĐT (PROGRAM)" />
+        </nz-select>
+      </div>
+
+      <div>
+        <label class="block text-xs font-medium text-slate-600 mb-1">Phiên bản CTĐT (để tính PI/PLO)</label>
+        <nz-select
+          [ngModel]="selectedProgramVersionId()"
+          (ngModelChange)="selectedProgramVersionId.set($event)"
+          nzAllowClear
+          nzPlaceHolder="Chọn phiên bản CTĐT"
+          class="w-full">
+          @for (pv of programVersions(); track pv.id) {
+            <nz-option [nzValue]="pv.id" [nzLabel]="pv.version + ' (' + pv.status + ')'" />
+          }
+        </nz-select>
+      </div>
+
+      <div>
+        <label class="block text-xs font-medium text-slate-600 mb-1">Lớp học phần</label>
+        <nz-select
+          nzMode="multiple"
+          [ngModel]="selectedSectionIds()"
+          (ngModelChange)="selectedSectionIds.set($event)"
+          nzPlaceHolder="Chọn lớp học phần"
+          class="w-full">
+          @for (sec of sections(); track sec.id) {
+            <nz-option [nzValue]="sec.id" [nzLabel]="sec.code" />
+          }
+        </nz-select>
+      </div>
+
+      <div>
+        <label class="block text-xs font-medium text-slate-600 mb-1">Học kỳ (tùy chọn)</label>
+        <nz-select
+          [ngModel]="selectedTermId()"
+          (ngModelChange)="selectedTermId.set($event)"
+          nzAllowClear
+          nzPlaceHolder="Tất cả học kỳ"
+          class="w-full">
+          @for (t of terms(); track t.id) {
+            <nz-option [nzValue]="t.id" [nzLabel]="t.code" />
+          }
+        </nz-select>
+      </div>
+    </div>
+
+    <div class="mt-4 flex flex-wrap items-center justify-between gap-4">
+      <div class="flex items-center gap-4">
+        <div class="w-56">
+          <input
+            nz-input
+            [ngModel]="cohortsText()"
+            (ngModelChange)="cohortsText.set($event)"
+            placeholder="Khóa (VD: K2023, K2024)" />
+        </div>
+        <label nz-checkbox [ngModel]="isOfficial()" (ngModelChange)="isOfficial.set($event)">
+          Lượt chạy chính thức (isOfficial)
+        </label>
+      </div>
+      <button nz-button nzType="primary" [nzLoading]="running()" (click)="triggerRun()">
+        Chạy đo lường 4 cấp độ
+      </button>
+    </div>
+  </nz-card>
+
+  <nz-card nzTitle="Lịch sử lượt tính toán" class="rounded-xl shadow-sm">
+    <nz-table [nzData]="runs()" nzSize="small" [nzPageSize]="5">
+      <thead>
+        <tr>
+          <th>Phạm vi</th>
+          <th>Trạng thái</th>
+          <th>Chế độ</th>
+          <th>KQ Sinh viên</th>
+          <th>KQ Tổng hợp</th>
+          <th>Thời gian</th>
+          <th>Thao tác</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (r of runs(); track r.id) {
+          <tr [class.bg-blue-50]="selectedRun()?.id === r.id">
+            <td><nz-tag>{{ r.scope }}</nz-tag></td>
+            <td>
+              <nz-tag [nzColor]="r.status === 'SUCCESS' ? 'green' : r.status === 'FAILED' ? 'red' : 'blue'">
+                {{ r.status }}
+              </nz-tag>
+              @if (r.stale) {
+                <nz-tag nzColor="orange">Cần tính lại</nz-tag>
+              }
+            </td>
+            <td>{{ r.official ? 'Chính thức' : 'Thử nghiệm' }}</td>
+            <td>{{ r.studentResultCount }}</td>
+            <td>{{ r.aggregateResultCount }}</td>
+            <td class="text-xs text-slate-500">{{ r.startedAt | date: 'dd/MM/yyyy HH:mm' }}</td>
+            <td>
+              <button nz-button nzType="link" nzSize="small" (click)="selectRun(r)">Xem kết quả</button>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </nz-table>
+  </nz-card>
+
+  @if (selectedRun(); as run) {
+    <nz-card [nzTitle]="'Kết quả chi tiết lượt tính #' + run.id" class="rounded-xl shadow-sm">
+      <div class="mb-4 flex items-center gap-3">
+        <span class="text-sm font-medium text-slate-600">Lọc cấp độ:</span>
+        <nz-select [ngModel]="selectedLevel()" (ngModelChange)="onLevelFilterChange($event)" class="w-56">
+          <nz-option nzValue="" nzLabel="Tất cả 4 cấp độ" />
+          <nz-option nzValue="ASSESSMENT_CLO" nzLabel="Cấp 1: ASSESSMENT_CLO" />
+          <nz-option nzValue="CLO" nzLabel="Cấp 2: CLO toàn học phần" />
+          <nz-option nzValue="PI" nzLabel="Cấp 3: PI" />
+          <nz-option nzValue="PLO" nzLabel="Cấp 4: PLO" />
+        </nz-select>
+      </div>
+
+      <nz-tabs>
+        <nz-tab nzTitle="Tổng hợp (Aggregate Results)">
+          <nz-table [nzData]="aggregateResults()" [nzLoading]="loadingDetails()" nzSize="small" [nzPageSize]="10">
+            <thead>
+              <tr>
+                <th>Cấp độ</th>
+                <th>Mã CĐR</th>
+                <th>Ghi danh</th>
+                <th>Đủ DL</th>
+                <th>Đạt</th>
+                <th>Chưa đạt</th>
+                <th>Thiếu DL</th>
+                <th>TB</th>
+                <th>Tỷ lệ đạt (đủ DL)</th>
+                <th>Tỷ lệ đạt / Ghi danh</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (agg of aggregateResults(); track agg.id) {
+                <tr>
+                  <td><nz-tag nzColor="blue">{{ agg.level }}</nz-tag></td>
+                  <td class="font-semibold">{{ agg.subjectCode || agg.subjectId }}</td>
+                  <td>{{ agg.counts?.enrolled ?? 0 }}</td>
+                  <td>{{ agg.evaluated }}</td>
+                  <td class="text-emerald-600 font-medium">{{ agg.counts?.passed ?? 0 }}</td>
+                  <td class="text-rose-600 font-medium">{{ agg.counts?.failed ?? 0 }}</td>
+                  <td>{{ agg.insufficientData }}</td>
+                  <td>{{ agg.mean !== undefined && agg.mean !== null ? ((agg.mean * 100) | number: '1.1-1') + '%' : '—' }}</td>
+                  <td>{{ agg.passRate !== undefined && agg.passRate !== null ? ((agg.passRate * 100) | number: '1.1-1') + '%' : 'Không có DL' }}</td>
+                  <td>{{ agg.passRateOfEnrolled !== undefined && agg.passRateOfEnrolled !== null ? ((agg.passRateOfEnrolled * 100) | number: '1.1-1') + '%' : '—' }}</td>
+                </tr>
+              }
+            </tbody>
+          </nz-table>
+        </nz-tab>
+
+        <nz-tab nzTitle="Kết quả Sinh viên (Student Results)">
+          <nz-table [nzData]="studentResults()" [nzLoading]="loadingDetails()" nzSize="small" [nzPageSize]="10">
+            <thead>
+              <tr>
+                <th>Cấp độ</th>
+                <th>Mã CĐR</th>
+                <th>Sinh viên</th>
+                <th>Giá trị</th>
+                <th>Ngưỡng</th>
+                <th>Trạng thái</th>
+                <th>Truy vết</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (sr of studentResults(); track sr.id) {
+                <tr>
+                  <td><nz-tag>{{ sr.level }}</nz-tag></td>
+                  <td class="font-semibold">{{ sr.subjectCode || sr.subjectId }}</td>
+                  <td>{{ sr.studentRef || sr.studentId }}</td>
+                  <td>{{ sr.value !== undefined && sr.value !== null ? ((sr.value * 100) | number: '1.1-1') + '%' : '—' }}</td>
+                  <td>{{ sr.passThreshold !== undefined ? ((sr.passThreshold * 100) | number: '1.0-0') + '%' : '—' }}</td>
+                  <td>
+                    @if (sr.status === 'COMPUTED') {
+                      <nz-tag [nzColor]="sr.passed ? 'green' : 'red'">
+                        {{ sr.passed ? 'Đạt' : 'Chưa đạt' }}
+                      </nz-tag>
+                    } @else {
+                      <nz-tag nzColor="orange">{{ sr.status }}</nz-tag>
+                    }
+                  </td>
+                  <td>
+                    <button nz-button nzType="link" nzSize="small" (click)="openTrace(sr.id)">
+                      Truy vết ngược
+                    </button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </nz-table>
+        </nz-tab>
+      </nz-tabs>
+    </nz-card>
+  }
+</div>
+
+<app-trace-modal [(visible)]="traceVisible" [studentResultId]="traceStudentResultId()" />

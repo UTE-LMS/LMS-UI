@@ -33,3 +33,17 @@ export interface IProgramVersionUpdateRequest {
 export interface IProgramVersionStatusUpdateRequest {
   status: ProgramVersionStatus;
 }
+
+export interface IProgramCsvImportResponse {
+  programVersionId: string;
+  programId: string;
+  version: string;
+  status: ProgramVersionStatus;
+  verificationStatus: string;
+  ploCount: number;
+  piCount: number;
+  courseCount: number;
+  warnings: string[];
+  plos: unknown[];
+  pis: unknown[];
+}
