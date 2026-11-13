@@ -7,6 +7,17 @@ import tseslint from "typescript-eslint";
 
 export default defineConfig([
   {
+    ignores: [
+      "dist/**",
+      "coverage/**",
+      "e2e/**",
+      "scripts/**",
+      "*.config.js",
+      "*.config.mjs",
+      "*.config.ts",
+    ],
+  },
+  {
     files: ["**/*.{js,mjs,cjs,ts,mts,cts}"],
     plugins: {
       js,
