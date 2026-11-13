@@ -23,3 +23,16 @@ export interface ISyllabusRequest {
 export interface ISyllabusStatusUpdateRequest {
   status: SyllabusStatus;
 }
+
+export interface ISyllabusCsvImportResponse {
+  syllabusId: string;
+  courseId: string;
+  version: string;
+  status: SyllabusStatus;
+  verificationStatus: string;
+  cloCount: number;
+  linkCount: number;
+  warnings: string[];
+  clos: { id: string; code: string; bloomLevel: number; contentOriginal?: string | null; }[];
+  links: unknown[];
+}

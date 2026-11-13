@@ -8,30 +8,22 @@ import {
   signal,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import {
-  AbstractControl,
-  FormBuilder,
-  FormGroup,
-  FormsModule,
-  ReactiveFormsModule,
-  ValidationErrors,
-  Validators,
-} from '@angular/forms';
+import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { SystemConstant } from '@constants/system.constant';
 import { ICourse } from '@models/course/course.model';
-import { ISyllabus, ISyllabusRequest } from '@models/course/syllabus.model';
+import { ISyllabus, ISyllabusCsvImportResponse } from '@models/course/syllabus.model';
 import { ITerm } from '@models/course/term.model';
+import { IProgramVersion } from '@models/program/program-version.model';
 import { IRoleAssignment } from '@models/user/user.model';
 import { AuthService } from '@services/auth/auth.service';
 import { toApiError } from '@services/common/api-error.util';
 import { CourseService } from '@services/course/course.service';
 import { SyllabusService } from '@services/course/syllabus.service';
 import { TermService } from '@services/course/term.service';
+import { ProgramVersionService } from '@services/program/program-version.service';
 import { StatusChipComponent } from '@widget/status-chip/status-chip.component';
-import { VerificationBadgeComponent } from '@widget/verification-badge/verification-badge.component';
 import { NzButtonModule } from 'ng-zorro-antd/button';
-import { NzFormModule } from 'ng-zorro-antd/form';
 import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzModalModule } from 'ng-zorro-antd/modal';
 import { NzSelectModule } from 'ng-zorro-antd/select';
@@ -46,7 +38,6 @@ import {
   Subject,
   switchMap,
 } from 'rxjs';
-import { AssignCourseModalComponent } from '../assign-course-modal/assign-course-modal.component';
 
 @Component({
   selector: 'app-list-syllabi',
@@ -55,26 +46,22 @@ import { AssignCourseModalComponent } from '../assign-course-modal/assign-course
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     FormsModule,
-    ReactiveFormsModule,
     RouterLink,
     NzTableModule,
     NzButtonModule,
     NzSelectModule,
     NzModalModule,
-    NzFormModule,
     NzInputModule,
     StatusChipComponent,
-    VerificationBadgeComponent,
-    AssignCourseModalComponent,
   ],
 })
 export class ListSyllabiComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly courseSvc = inject(CourseService);
   private readonly syllabusSvc = inject(SyllabusService);
+  private readonly programVersionSvc = inject(ProgramVersionService);
   private readonly termSvc = inject(TermService);
   private readonly authSvc = inject(AuthService);
-  private readonly fb = inject(FormBuilder);
   private readonly alert = inject(ToastrService);
   private readonly destroyRef = inject(DestroyRef);
 
@@ -90,22 +77,28 @@ export class ListSyllabiComponent implements OnInit {
 
   readonly userRoles = signal<string[]>([]);
   readonly scopeCourseIds = signal<string[]>([]);
+  readonly scopeProgramIds = signal<string[]>([]);
   readonly showAllCourses = signal(false);
 
   readonly allCourses = signal<ICourse[]>([]);
   readonly scopedCourses = signal<ICourse[]>([]);
   readonly terms = signal<ITerm[]>([]);
+  readonly programVersions = signal<IProgramVersion[]>([]);
   readonly selectedCourseId = signal<string>('');
   readonly syllabi = signal<ISyllabus[]>([]);
   readonly isLoadingSyllabi = signal(false);
   readonly hasError = signal(false);
 
-  /** Modal tạo phiên bản đề cương mới */
-  readonly isCreateModalVisible = signal(false);
-  readonly isSubmitting = signal(false);
-
-  /** Modal Trưởng bộ môn phân công giảng viên */
-  readonly isAssignModalVisible = signal(false);
+  /** Modal Import CSV Đề cương 3 bước (Chọn tệp -> Kiểm tra -> Lưu và xác nhận) */
+  readonly isImportModalVisible = signal(false);
+  readonly importStep = signal<1 | 2 | 3>(1);
+  readonly importVersion = signal('');
+  readonly importProgramVersionId = signal('');
+  readonly importEffectiveFromTermId = signal<string | null>(null);
+  readonly selectedFile = signal<File | null>(null);
+  readonly importPreview = signal<ISyllabusCsvImportResponse | null>(null);
+  readonly isImporting = signal(false);
+  readonly isConfirmingImport = signal(false);
 
   readonly isAdmin = computed(() => this.userRoles().includes(SystemConstant.ROLE.ADMIN));
 
@@ -133,56 +126,33 @@ export class ListSyllabiComponent implements OnInit {
     );
   });
 
-  /** Kiểm tra môn đang chọn có nằm trong scope.courseIds của người dùng không */
+  /** Kiểm tra môn đang chọn có nằm trong scope của người dùng không */
   readonly isCourseInScope = computed(() => {
     const cid = this.selectedCourseId();
-    return !!cid && this.scopeCourseIds().includes(cid);
+    return !!cid && (this.scopeCourseIds().includes(cid) || this.scopeProgramIds().length > 0);
   });
 
   /**
-   * Quyền phân công giảng viên: Chỉ duy nhất PROGRAM_MANAGER có môn học trong scope.courseIds (ADR 0014).
+   * Quyền Import CSV đề cương: chỉ PROGRAM_MANAGER (không còn phân công GV bộ môn).
    */
-  readonly canAssignCourse = computed(() => {
+  readonly canImportSyllabus = computed(() => {
     if (!this.selectedCourseId() || this.isAdmin()) {
       return false;
     }
-    return (
-      this.userRoles().includes(SystemConstant.ROLE.PROGRAM_MANAGER) && this.isCourseInScope()
-    );
+    return this.userRoles().includes(SystemConstant.ROLE.PROGRAM_MANAGER);
   });
-
-  /**
-   * Quyền tạo phiên bản đề cương DRAFT: LECTURER hoặc PROGRAM_MANAGER trong scope (ADR 0014).
-   * ADMIN không có thẩm quyền học thuật để biên soạn đề cương.
-   */
-  readonly canCreateSyllabus = computed(() => {
-    if (!this.selectedCourseId() || this.isAdmin()) {
-      return false;
-    }
-    const roles = this.userRoles();
-    const isAuthorRole =
-      roles.includes(SystemConstant.ROLE.LECTURER)
-      || roles.includes(SystemConstant.ROLE.PROGRAM_MANAGER);
-    return isAuthorRole && this.isCourseInScope();
-  });
-
-  readonly syllabusForm: FormGroup = this.fb.group(
-    {
-      version: ['', [Validators.required]],
-      effectiveFromTermId: [null as string | null],
-      effectiveToTermId: [null as string | null],
-    },
-    { validators: [this.termOrderValidator.bind(this)] },
-  );
 
   ngOnInit(): void {
     this.userRoles.set(this.authSvc.getRoles());
     const assignments = this.authSvc.getRoleAssignments();
     const courseIds = new Set<string>();
+    const programIds = new Set<string>();
     assignments.forEach((a: IRoleAssignment) => {
       (a.scope?.courseIds ?? []).forEach(id => courseIds.add(id));
+      (a.scope?.programIds ?? []).forEach(id => programIds.add(id));
     });
     this.scopeCourseIds.set(Array.from(courseIds));
+    this.scopeProgramIds.set(Array.from(programIds));
 
     const queryCourseId = this.route.snapshot.queryParamMap.get('courseId');
     if (queryCourseId) {
@@ -231,26 +201,14 @@ export class ListSyllabiComponent implements OnInit {
     this.loadInitialCatalog(queryCourseId);
   }
 
-  private termOrderValidator(group: AbstractControl): ValidationErrors | null {
-    const fromId = group.get('effectiveFromTermId')?.value as string | null;
-    const toId = group.get('effectiveToTermId')?.value as string | null;
-    if (!fromId || !toId) {
-      return null;
-    }
-    const termList = this.terms();
-    const fromTerm = termList.find(t => t.id === fromId);
-    const toTerm = termList.find(t => t.id === toId);
-    if (fromTerm?.startDate && toTerm?.startDate) {
-      if (new Date(toTerm.startDate).getTime() < new Date(fromTerm.startDate).getTime()) {
-        return { termOrderInvalid: true };
-      }
-    }
-    return null;
-  }
-
   loadInitialCatalog(preferredCourseId: string | null): void {
     this.termSvc.getTerms().subscribe({
       next: list => this.terms.set(list || []),
+      error: () => undefined,
+    });
+
+    this.programVersionSvc.getProgramVersions(0, 100).subscribe({
+      next: page => this.programVersions.set(page.content || []),
       error: () => undefined,
     });
 
@@ -440,51 +398,94 @@ export class ListSyllabiComponent implements OnInit {
       });
   }
 
-  openCreateSyllabusModal(): void {
-    this.syllabusForm.reset({
-      version: '',
-      effectiveFromTermId: null,
-      effectiveToTermId: null,
-    });
-    this.isCreateModalVisible.set(true);
+  openImportModal(): void {
+    this.importStep.set(1);
+    this.importVersion.set('');
+    this.importProgramVersionId.set(this.programVersions()[0]?.id ?? '');
+    this.importEffectiveFromTermId.set(null);
+    this.selectedFile.set(null);
+    this.importPreview.set(null);
+    this.isImportModalVisible.set(true);
   }
 
-  submitCreateSyllabus(): void {
+  closeImportModal(): void {
+    this.isImportModalVisible.set(false);
+  }
+
+  downloadCsvTemplate(): void {
     const courseId = this.selectedCourseId();
     if (!courseId) {
       return;
     }
-    if (this.syllabusForm.invalid) {
-      Object.values(this.syllabusForm.controls).forEach(c => {
-        c.markAsDirty();
-        c.updateValueAndValidity({ onlySelf: true });
-      });
+    this.syllabusSvc.downloadImportTemplate(courseId).subscribe({
+      next: blob => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `syllabus-template-${this.selectedCourse()?.code ?? 'course'}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+      },
+      error: () => {
+        this.alert.error('Không thể tải tệp CSV mẫu đề cương');
+      },
+    });
+  }
+
+  onFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement | null;
+    const file = input?.files?.[0] ?? null;
+    this.selectedFile.set(file);
+  }
+
+  runImportStep(): void {
+    const courseId = this.selectedCourseId();
+    const version = this.importVersion().trim();
+    const pvId = this.importProgramVersionId();
+    const file = this.selectedFile();
+    if (!courseId || !version || !pvId || !file) {
+      this.alert.warning('Vui lòng chọn Phiên bản CTĐT, nhập mã phiên bản đề cương và chọn tệp CSV');
       return;
     }
 
-    const raw = this.syllabusForm.getRawValue() as {
-      version: string;
-      effectiveFromTermId: string | null;
-      effectiveToTermId: string | null;
-    };
-    const payload: ISyllabusRequest = {
-      version: raw.version.trim(),
-      effectiveFromTermId: raw.effectiveFromTermId ?? null,
-      effectiveToTermId: raw.effectiveToTermId ?? null,
-    };
+    this.isImporting.set(true);
+    this.syllabusSvc
+      .importSyllabusCsv(courseId, version, pvId, file, this.importEffectiveFromTermId())
+      .subscribe({
+        next: res => {
+          this.isImporting.set(false);
+          this.importPreview.set(res);
+          this.importStep.set(2);
+        },
+        error: err => {
+          this.isImporting.set(false);
+          const apiErr = toApiError(err);
+          this.alert.error(apiErr?.message ?? 'Import CSV đề cương thất bại');
+        },
+      });
+  }
 
-    this.isSubmitting.set(true);
-    this.syllabusSvc.createSyllabus(courseId, payload).subscribe({
+  proceedToConfirmStep(): void {
+    this.importStep.set(3);
+  }
+
+  confirmImportStep(): void {
+    const preview = this.importPreview();
+    if (!preview) {
+      return;
+    }
+    this.isConfirmingImport.set(true);
+    this.syllabusSvc.confirmImport(preview.syllabusId).subscribe({
       next: () => {
-        this.isSubmitting.set(false);
-        this.isCreateModalVisible.set(false);
-        this.alert.success('Khởi tạo phiên bản đề cương DRAFT thành công');
-        this.loadSyllabi(courseId);
+        this.isConfirmingImport.set(false);
+        this.isImportModalVisible.set(false);
+        this.alert.success('Import và xác nhận đề cương thành công');
+        this.loadSyllabi(this.selectedCourseId());
       },
       error: err => {
-        this.isSubmitting.set(false);
+        this.isConfirmingImport.set(false);
         const apiErr = toApiError(err);
-        this.alert.error(apiErr?.message ?? 'Không thể tạo phiên bản đề cương');
+        this.alert.error(apiErr?.message ?? 'Không thể xác nhận dữ liệu import đề cương');
       },
     });
   }

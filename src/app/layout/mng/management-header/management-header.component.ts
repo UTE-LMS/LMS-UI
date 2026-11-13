@@ -10,6 +10,8 @@ import { curriculumMngMenu } from '@mng/curriculum/curriculum.menu';
 import { programsMngMenu } from '@mng/programs/programs.menu';
 import { sectionsMngMenu } from '@mng/sections/sections.menu';
 import { syllabiMngMenu } from '@mng/syllabi/syllabi.menu';
+import { calculationsMngMenu } from '@mng/calculations/calculations.menu';
+import { reportsMngMenu } from '@mng/reports/reports.menu';
 import { usersMngMenu } from '@mng/users/users.menu';
 import { AuthService } from '@services/auth/auth.service';
 import { NzButtonModule } from 'ng-zorro-antd/button';
@@ -66,6 +68,8 @@ export class ManagementHeaderComponent implements OnInit {
     ...coursesMngMenu,
     ...syllabiMngMenu,
     ...sectionsMngMenu,
+    ...calculationsMngMenu,
+    ...reportsMngMenu,
     ...programsMngMenu,
     ...usersMngMenu,
   ];
@@ -93,6 +97,10 @@ export class ManagementHeaderComponent implements OnInit {
       ...byRoute(UrlConstant.ROUTE.MANAGEMENT.SYLLABI),
       ...byRoute(UrlConstant.ROUTE.MANAGEMENT.SECTIONS),
     ];
+    const measurement = [
+      ...byRoute(UrlConstant.ROUTE.MANAGEMENT.CALCULATIONS),
+      ...byRoute(UrlConstant.ROUTE.MANAGEMENT.REPORTS),
+    ];
     const system = [
       ...byRoute(UrlConstant.ROUTE.MANAGEMENT.PROGRAMS),
       ...byRoute(UrlConstant.ROUTE.MANAGEMENT.USERS),
@@ -104,6 +112,9 @@ export class ManagementHeaderComponent implements OnInit {
     }
     if (setup.length > 0) {
       groups.push({ label: 'THIẾT LẬP', items: setup });
+    }
+    if (measurement.length > 0) {
+      groups.push({ label: 'ĐO LƯỜNG & BÁO CÁO', items: measurement });
     }
     if (system.length > 0) {
       groups.push({ label: 'HỆ THỐNG', items: system });

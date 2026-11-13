@@ -30,17 +30,15 @@ export const UrlConstant = {
     // F02 - Chương trình đào tạo và phiên bản (API-CONTRACT.md §6.1)
     PROGRAMS: environment.serverUrl + 'api/v1/programs',
     PROGRAM_VERSIONS: environment.serverUrl + 'api/v1/program-versions',
+    PROGRAM_VERSION_IMPORT_TEMPLATE: environment.serverUrl + 'api/v1/program-versions/import-template',
+    PROGRAM_VERSION_IMPORT: environment.serverUrl + 'api/v1/program-versions/import',
+    PROGRAM_VERSION_CONFIRM_IMPORT: (id: string) => `${environment.serverUrl}api/v1/program-versions/${id}/confirm-import`,
     PROGRAM_VERSION_DETAIL: (id: string) => `${environment.serverUrl}api/v1/program-versions/${id}`,
     PROGRAM_VERSION_STATUS: (id: string) => `${environment.serverUrl}api/v1/program-versions/${id}/status`,
-    PROGRAM_VERSION_VERIFY: (id: string) => `${environment.serverUrl}api/v1/program-versions/${id}/verification`,
     PLOS: (pvId: string) => `${environment.serverUrl}api/v1/program-versions/${pvId}/plos`,
     PLO_DETAIL: (pvId: string, id: string) => `${environment.serverUrl}api/v1/program-versions/${pvId}/plos/${id}`,
-    PLO_VERIFY: (pvId: string, id: string) => `${environment.serverUrl}api/v1/program-versions/${pvId}/plos/${id}/verification`,
     PIS: (pvId: string) => `${environment.serverUrl}api/v1/program-versions/${pvId}/pis`,
     PI_DETAIL: (pvId: string, id: string) => `${environment.serverUrl}api/v1/program-versions/${pvId}/pis/${id}`,
-    PI_VERIFY: (pvId: string, id: string) => `${environment.serverUrl}api/v1/program-versions/${pvId}/pis/${id}/verification`,
-    PI_CONTRIBUTIONS: (pvId: string) => `${environment.serverUrl}api/v1/program-versions/${pvId}/pi-contributions`,
-    PI_CONTRIBUTION_DETAIL: (pvId: string, id: string) => `${environment.serverUrl}api/v1/program-versions/${pvId}/pi-contributions/${id}`,
     PROGRAM_COURSES: (pvId: string) => `${environment.serverUrl}api/v1/program-versions/${pvId}/courses`,
 
     // F03 & F05a (Terms, Courses, Syllabi, CLOs, CLO-PI Links)
@@ -53,11 +51,10 @@ export const UrlConstant = {
     COURSE_DETAIL: (id: string) => `${environment.serverUrl}api/v1/courses/${id}`,
     PROGRAM_COURSE_DETAIL: (pvId: string, courseId: string) => `${environment.serverUrl}api/v1/program-versions/${pvId}/courses/${courseId}`,
 
-    DEPARTMENT_LECTURERS: environment.serverUrl + 'api/v1/departments/lecturers',
-    DEPARTMENT_ASSIGN_COURSE: environment.serverUrl + 'api/v1/departments/assign-course',
-    DEPARTMENT_UNASSIGN_COURSE: environment.serverUrl + 'api/v1/departments/unassign-course',
-
     COURSE_SYLLABI: (courseId: string) => `${environment.serverUrl}api/v1/courses/${courseId}/syllabi`,
+    COURSE_SYLLABI_IMPORT_TEMPLATE: (courseId: string) => `${environment.serverUrl}api/v1/courses/${courseId}/syllabi/import-template`,
+    COURSE_SYLLABI_IMPORT: (courseId: string) => `${environment.serverUrl}api/v1/courses/${courseId}/syllabi/import`,
+    SYLLABUS_CONFIRM_IMPORT: (id: string) => `${environment.serverUrl}api/v1/syllabi/${id}/confirm-import`,
     SYLLABUS_DETAIL: (id: string) => `${environment.serverUrl}api/v1/syllabi/${id}`,
     SYLLABUS_STATUS: (id: string) => `${environment.serverUrl}api/v1/syllabi/${id}/status`,
 
@@ -67,7 +64,6 @@ export const UrlConstant = {
     SYLLABUS_CLO_PI_LINKS: (syllabusId: string) => `${environment.serverUrl}api/v1/syllabi/${syllabusId}/clo-pi-links`,
     SYLLABUS_CLO_PI_MATRIX: (syllabusId: string) => `${environment.serverUrl}api/v1/syllabi/${syllabusId}/clo-pi-matrix`,
     CLO_PI_LINK_DETAIL: (id: string) => `${environment.serverUrl}api/v1/clo-pi-links/${id}`,
-    CLO_PI_LINK_VERIFY: (id: string) => `${environment.serverUrl}api/v1/clo-pi-links/${id}/verification`,
 
     // F05a - Lớp học phần, ghi danh, nhập danh sách lớp (API-CONTRACT.md §6.4)
     SECTIONS: environment.serverUrl + 'api/v1/sections',
@@ -95,6 +91,19 @@ export const UrlConstant = {
     IMPORT_BATCH_VALIDATE: (id: string) => `${environment.serverUrl}api/v1/import-batches/${id}/validate`,
     IMPORT_BATCH_CONFIRM: (id: string) => `${environment.serverUrl}api/v1/import-batches/${id}/confirm`,
     IMPORT_BATCH_ROLLBACK: (id: string) => `${environment.serverUrl}api/v1/import-batches/${id}/rollback`,
+
+    // F06 - Engine đo lường chuẩn đầu ra 4 cấp độ
+    CALCULATION_RUNS: environment.serverUrl + 'api/v1/calculation-runs',
+    CALCULATION_RUN_DETAIL: (id: string) => `${environment.serverUrl}api/v1/calculation-runs/${id}`,
+    CALCULATION_RUN_STUDENT_RESULTS: (id: string) => `${environment.serverUrl}api/v1/calculation-runs/${id}/student-results`,
+    CALCULATION_RUN_AGGREGATE_RESULTS: (id: string) => `${environment.serverUrl}api/v1/calculation-runs/${id}/aggregate-results`,
+
+    // F07 - Báo cáo QA & Truy vết ngược
+    REPORTS: environment.serverUrl + 'api/v1/reports',
+    REPORT_DETAIL: (id: string) => `${environment.serverUrl}api/v1/reports/${id}`,
+    REPORT_EXPORT: (id: string) => `${environment.serverUrl}api/v1/reports/${id}/export`,
+    TRACE_STUDENT_RESULT: (id: string) => `${environment.serverUrl}api/v1/trace/student-results/${id}`,
+    TRACE_SCORE: (id: string) => `${environment.serverUrl}api/v1/trace/scores/${id}`,
 
     // Categories
     DEMO_API: environment.serverUrl + 'rest/demo',
@@ -136,6 +145,9 @@ export const UrlConstant = {
       ASSESSMENT_DETAIL: (assessmentId: string) => `/mng/assessments/${assessmentId}`,
       ASSESSMENT_REVIEW: (assessmentId: string) => `/mng/assessments/${assessmentId}/review`,
       ASSESSMENT_SCORE_IMPORT: (assessmentId: string) => `/mng/assessments/${assessmentId}/score-import`,
+
+      CALCULATIONS: '/mng/calculations',
+      REPORTS: '/mng/reports',
 
       CATEGORIES: '/mng/categories',
       ACADEMIC_RANKS: '/mng/categories/academic-ranks',

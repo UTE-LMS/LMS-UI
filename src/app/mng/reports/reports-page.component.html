@@ -1,0 +1,176 @@
+<div class="space-y-6">
+  <div>
+    <h1 class="text-2xl font-bold text-slate-800 m-0">Báo cáo QA & Truy vết ngược (F07)</h1>
+    <p class="text-sm text-slate-500 mt-1 mb-0">
+      Sinh báo cáo từ kết quả đã tính, hiển thị mẫu số và giới hạn dữ liệu, hỗ trợ xuất CSV và truy vết về dòng tệp điểm gốc.
+    </p>
+  </div>
+
+  <nz-card nzTitle="Sinh báo cáo mới" class="rounded-xl shadow-sm">
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div>
+        <label class="block text-xs font-medium text-slate-600 mb-1">Loại báo cáo</label>
+        <nz-select [ngModel]="selectedType()" (ngModelChange)="selectedType.set($event)" class="w-full">
+          <nz-option nzValue="SECTION_CLO" nzLabel="CLO theo lớp học phần (SECTION_CLO)" />
+          <nz-option nzValue="COURSE_PI" nzLabel="PI theo học phần/khóa (COURSE_PI)" />
+          <nz-option nzValue="PROGRAM_PLO" nzLabel="PLO theo CTĐT (PROGRAM_PLO)" />
+          <nz-option nzValue="DATA_COMPLETENESS" nzLabel="Độ đầy đủ dữ liệu (DATA_COMPLETENESS)" />
+        </nz-select>
+      </div>
+
+      <div>
+        <label class="block text-xs font-medium text-slate-600 mb-1">Lượt tính toán (SUCCESS)</label>
+        <nz-select
+          [ngModel]="selectedRunId()"
+          (ngModelChange)="selectedRunId.set($event)"
+          nzPlaceHolder="Chọn lượt tính"
+          class="w-full">
+          @for (r of successRuns(); track r.id) {
+            <nz-option [nzValue]="r.id" [nzLabel]="r.scope + ' - ' + (r.startedAt | date: 'dd/MM HH:mm')" />
+          }
+        </nz-select>
+      </div>
+
+      <div>
+        <label class="block text-xs font-medium text-slate-600 mb-1">Lớp học phần (cho SECTION_CLO)</label>
+        <nz-select
+          [ngModel]="selectedSectionId()"
+          (ngModelChange)="selectedSectionId.set($event)"
+          nzAllowClear
+          nzPlaceHolder="Chọn lớp học phần"
+          class="w-full">
+          @for (sec of sections(); track sec.id) {
+            <nz-option [nzValue]="sec.id" [nzLabel]="sec.code" />
+          }
+        </nz-select>
+      </div>
+
+      <div>
+        <label class="block text-xs font-medium text-slate-600 mb-1">Tiêu đề báo cáo (tùy chọn)</label>
+        <input
+          nz-input
+          [ngModel]="reportTitle()"
+          (ngModelChange)="reportTitle.set($event)"
+          placeholder="Nhập tiêu đề..." />
+      </div>
+    </div>
+
+    <div class="mt-4 flex justify-end">
+      <button nz-button nzType="primary" [nzLoading]="generating()" (click)="generate()">
+        Sinh & Lưu báo cáo
+      </button>
+    </div>
+  </nz-card>
+
+  <nz-card nzTitle="Danh sách báo cáo đã lưu" class="rounded-xl shadow-sm">
+    <nz-table [nzData]="reports()" nzSize="small" [nzPageSize]="5">
+      <thead>
+        <tr>
+          <th>Loại</th>
+          <th>Tiêu đề</th>
+          <th>Giới hạn dữ liệu</th>
+          <th>Ngày tạo</th>
+          <th>Thao tác</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (rep of reports(); track rep.id) {
+          <tr [class.bg-blue-50]="activeReport()?.id === rep.id">
+            <td><nz-tag nzColor="geekblue">{{ rep.type }}</nz-tag></td>
+            <td class="font-medium">{{ rep.title }}</td>
+            <td class="text-xs text-amber-700">{{ rep.limitations || 'Đầy đủ' }}</td>
+            <td class="text-xs text-slate-500">{{ rep.createdAt | date: 'dd/MM/yyyy HH:mm' }}</td>
+            <td class="space-x-2">
+              <button nz-button nzType="link" nzSize="small" (click)="selectReport(rep)">Xem</button>
+              <button nz-button nzType="link" nzSize="small" (click)="exportCsv(rep)">Xuất CSV</button>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </nz-table>
+  </nz-card>
+
+  @if (activeReport(); as rep) {
+    <nz-card [nzTitle]="rep.title" class="rounded-xl shadow-sm">
+      @if (rep.limitations) {
+        <nz-alert
+          nzType="warning"
+          nzShowIcon
+          nzMessage="Lưu ý & Giới hạn dữ liệu"
+          [nzDescription]="rep.limitations"
+          class="mb-4" />
+      }
+
+      @if (rep.type === 'DATA_COMPLETENESS') {
+        <div class="mb-3 flex flex-wrap gap-3 text-sm">
+          <nz-tag nzColor="blue">Tổng bản ghi: {{ rep.summary.totalRecords ?? 0 }}</nz-tag>
+          <nz-tag nzColor="green">Đủ dữ liệu: {{ rep.summary.computedRecords ?? 0 }}</nz-tag>
+          <nz-tag nzColor="orange">Thiếu dữ liệu: {{ rep.summary.insufficientRecords ?? 0 }}</nz-tag>
+          <nz-tag>Độ đầy đủ: {{ ((rep.summary.dataCompleteness ?? 0) * 100) | number: '1.1-1' }}%</nz-tag>
+        </div>
+
+        <nz-table [nzData]="rep.summary.missingEntries ?? []" nzSize="small" [nzPageSize]="8">
+          <thead>
+            <tr>
+              <th>Sinh viên</th>
+              <th>Cấp</th>
+              <th>Trạng thái</th>
+              <th>Lý do</th>
+              <th>Truy vết</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (entry of rep.summary.missingEntries ?? []; track entry.studentResultId) {
+              <tr>
+                <td class="font-medium">{{ entry.studentRef }}</td>
+                <td><nz-tag>{{ entry.level }}</nz-tag></td>
+                <td><nz-tag nzColor="orange">{{ entry.status }}</nz-tag></td>
+                <td>{{ entry.reason }}</td>
+                <td>
+                  <button nz-button nzType="link" nzSize="small" (click)="openTrace(entry.studentResultId)">
+                    Truy vết
+                  </button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </nz-table>
+      } @else {
+        <nz-table [nzData]="rep.summary.items ?? []" nzSize="small" [nzPageSize]="10">
+          <thead>
+            <tr>
+              <th>Cấp</th>
+              <th>Mã CĐR</th>
+              <th>Ghi danh</th>
+              <th>Đủ DL</th>
+              <th>Đạt</th>
+              <th>Chưa đạt</th>
+              <th>Thiếu DL</th>
+              <th>TB</th>
+              <th>Tỷ lệ đạt (đủ DL)</th>
+              <th>Tỷ lệ đạt / Ghi danh</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of rep.summary.items ?? []; track row.subjectId + '-' + (row.assessmentId || '')) {
+              <tr>
+                <td><nz-tag nzColor="blue">{{ row.level }}</nz-tag></td>
+                <td class="font-semibold">{{ row.subjectCode }}</td>
+                <td>{{ row.enrolled }}</td>
+                <td>{{ row.evaluated }}</td>
+                <td class="text-emerald-600 font-medium">{{ row.passed }}</td>
+                <td class="text-rose-600 font-medium">{{ row.failed }}</td>
+                <td>{{ row.insufficientData }}</td>
+                <td>{{ row.mean !== undefined && row.mean !== null ? ((row.mean * 100) | number: '1.1-1') + '%' : '—' }}</td>
+                <td>{{ row.passRate !== undefined && row.passRate !== null ? ((row.passRate * 100) | number: '1.1-1') + '%' : 'Không có DL' }}</td>
+                <td>{{ row.passRateOfEnrolled !== undefined && row.passRateOfEnrolled !== null ? ((row.passRateOfEnrolled * 100) | number: '1.1-1') + '%' : '—' }}</td>
+              </tr>
+            }
+          </tbody>
+        </nz-table>
+      }
+    </nz-card>
+  }
+</div>
+
+<app-trace-modal [(visible)]="traceVisible" [studentResultId]="traceStudentResultId()" />

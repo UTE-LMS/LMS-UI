@@ -89,6 +89,26 @@ export const mngRoutes: Routes = [
         title: `Bài đánh giá | ${SystemConstant.WEB_NAME}`,
       },
       {
+        path: 'calculations',
+        canActivate: [canActiveGuard],
+        data: {
+          listRoles: ALL_MNG_ROLES,
+          rolesRelation: 'OR',
+        },
+        loadChildren: () => import('./calculations/calculations.routes').then(m => m.calculationsRoutes),
+        title: `Đo lường chuẩn đầu ra | ${SystemConstant.WEB_NAME}`,
+      },
+      {
+        path: 'reports',
+        canActivate: [canActiveGuard],
+        data: {
+          listRoles: ALL_MNG_ROLES,
+          rolesRelation: 'OR',
+        },
+        loadChildren: () => import('./reports/reports.routes').then(m => m.reportsRoutes),
+        title: `Báo cáo QA & Truy vết | ${SystemConstant.WEB_NAME}`,
+      },
+      {
         // Không đặt listRoles: ai đã đăng nhập cũng xem được trang giải thích này
         path: 'forbidden',
         loadComponent: () => import('./forbidden/forbidden.component').then(m => m.ForbiddenComponent),

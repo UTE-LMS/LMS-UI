@@ -32,10 +32,11 @@
         nz-button
         nzType="primary"
         class="bg-blue-600 hover:bg-blue-700 text-white rounded-md px-4 py-2 font-medium flex items-center gap-2"
-        (click)="openCreateModal()"
+        [disabled]="!selectedProgramId()"
+        (click)="openImportModal()"
       >
-        <i class="fa-solid fa-plus text-sm"></i>
-        <span>Phiên bản mới</span>
+        <i class="fa-solid fa-file-csv text-sm"></i>
+        <span>Import CSV CTĐT</span>
       </button>
     </div>
     }
@@ -60,13 +61,12 @@
     >
       <thead>
         <tr>
-          <th nzWidth="24%">Phiên bản</th>
-          <th nzWidth="12%">Trạng thái</th>
-          <th nzWidth="16%">Thẩm định ĐBCL</th>
-          <th nzWidth="12%">Áp dụng từ</th>
-          <th nzWidth="10%" nzAlign="center">Số PLO</th>
-          <th nzWidth="10%" nzAlign="center">Số PI</th>
-          <th nzWidth="16%" nzAlign="right">Thao tác</th>
+          <th nzWidth="28%">Phiên bản</th>
+          <th nzWidth="14%">Trạng thái</th>
+          <th nzWidth="16%">Áp dụng từ</th>
+          <th nzWidth="12%" nzAlign="center">Số PLO</th>
+          <th nzWidth="12%" nzAlign="center">Số PI</th>
+          <th nzWidth="18%" nzAlign="right">Thao tác</th>
         </tr>
       </thead>
       <tbody>
@@ -117,12 +117,6 @@
             }
           </td>
           <td>
-            <app-verification-badge
-              [status]="item.verification?.status"
-              [note]="item.verification?.note"
-            />
-          </td>
-          <td>
             <span>{{ formatCohorts(item.applicableCohorts) }}</span>
           </td>
           <td nzAlign="center">
@@ -141,47 +135,12 @@
                   Xem
                 </a>
                 @if (canManage()) {
-                <a
-                  class="table-action-link"
-                  [routerLink]="['/mng/curriculum/versions', item.id, 'edit']"
-                >
-                  Sửa
-                </a>
-                @if (item.verification?.status === 'VERIFIED') {
                 <button
                   type="button"
                   class="table-action-link text-emerald-600 hover:text-emerald-800"
                   (click)="confirmActivateVersion(item)"
                 >
                   Áp dụng
-                </button>
-                } @else if (!isQaOfficer()) {
-                <span class="text-xs text-slate-400 italic">Chờ QA duyệt</span>
-                }
-                }
-                @if (isQaOfficer()) {
-                <button
-                  type="button"
-                  class="table-action-link text-indigo-600 hover:text-indigo-800"
-                  (click)="openVerifyModal(item)"
-                >
-                  Duyệt ĐBCL
-                </button>
-                }
-              } @else if (item.status === 'ACTIVE') {
-                <a
-                  class="table-action-link"
-                  [routerLink]="['/mng/curriculum/versions', item.id]"
-                >
-                  Xem
-                </a>
-                @if (canManage()) {
-                <button
-                  type="button"
-                  class="table-action-link"
-                  (click)="openCloneModal(item)"
-                >
-                  Tạo bản nháp mới từ bản này
                 </button>
                 }
               } @else {
@@ -220,83 +179,120 @@
   </div>
 </div>
 
-<!-- Modal Tạo phiên bản mới / Clone phiên bản -->
+<!-- Modal Import CSV Phiên bản CTĐT 3 bước -->
 <nz-modal
-  [(nzVisible)]="isModalVisible"
-  [nzTitle]="modalTitle()"
-  (nzOnCancel)="closeModal()"
-  (nzOnOk)="submitVersionForm()"
-  [nzOkLoading]="isSubmitting()"
-  [nzOkText]="'Lưu phiên bản'"
-  [nzCancelText]="'Hủy'"
+  [(nzVisible)]="isImportModalVisible"
+  nzTitle="Import phiên bản CTĐT từ CSV"
+  [nzWidth]="640"
+  (nzOnCancel)="closeImportModal()"
+  [nzFooter]="null"
 >
   <ng-container *nzModalContent>
-    <form [formGroup]="versionForm" nz-form nzLayout="vertical">
-      <nz-form-item>
-        <nz-form-label nzRequired nzFor="version">Mã / Tên phiên bản</nz-form-label>
-        <nz-form-control nzErrorTip="Vui lòng nhập tên phiên bản (tối đa 100 ký tự)">
-          <input
-            nz-input
-            id="version"
-            formControlName="version"
-            placeholder="Ví dụ: BM7A-2.8-Draft"
-          />
-        </nz-form-control>
-      </nz-form-item>
+    <nz-steps [nzCurrent]="importStep()" nzSize="small" class="mb-6">
+      <nz-step nzTitle="Chọn tệp"></nz-step>
+      <nz-step nzTitle="Kiểm tra"></nz-step>
+      <nz-step nzTitle="Lưu và xác nhận"></nz-step>
+    </nz-steps>
 
-      <div class="grid grid-cols-2 gap-4">
-        <nz-form-item>
-          <nz-form-label nzFor="totalCredits">Tổng số tín chỉ</nz-form-label>
-          <nz-form-control nzErrorTip="Số tín chỉ không được âm">
-            <nz-input-number
-              id="totalCredits"
-              class="w-full"
-              formControlName="totalCredits"
-              [nzMin]="0"
-              [nzMax]="500"
-              [nzStep]="1"
-              nzPlaceHolder="Ví dụ: 132"
-            />
-          </nz-form-control>
-        </nz-form-item>
-
-        <nz-form-item>
-          <nz-form-label nzFor="durationYears">Thời gian đào tạo (năm)</nz-form-label>
-          <nz-form-control nzErrorTip="Thời gian đào tạo không được âm">
-            <nz-input-number
-              id="durationYears"
-              class="w-full"
-              formControlName="durationYears"
-              [nzMin]="0"
-              [nzMax]="10"
-              [nzStep]="0.5"
-              nzPlaceHolder="Ví dụ: 4.0"
-            />
-          </nz-form-control>
-        </nz-form-item>
+    @if (importStep() === 0) {
+    <div class="space-y-4">
+      <div>
+        <label for="importVersionInput" class="block text-sm font-medium text-slate-700 mb-1">
+          Mã / Tên phiên bản CTĐT <span class="text-rose-500">*</span>
+        </label>
+        <input
+          nz-input
+          id="importVersionInput"
+          [ngModel]="importVersion()"
+          (ngModelChange)="importVersion.set($event)"
+          placeholder="Ví dụ: 2026.1"
+        />
       </div>
 
-      <nz-form-item>
-        <nz-form-label nzFor="applicableCohorts">Khóa áp dụng</nz-form-label>
-        <nz-form-control nzExtra="Nhập khóa áp dụng (ví dụ 2026-HK1, K26) rồi nhấn Enter">
-          <nz-select
-            id="applicableCohorts"
-            nzMode="tags"
-            formControlName="applicableCohorts"
-            nzPlaceHolder="Ví dụ: 2026-HK1, K26"
-          />
-        </nz-form-control>
-      </nz-form-item>
-    </form>
+      <div class="flex items-center justify-between p-3 rounded-lg bg-slate-50 border border-slate-200">
+        <span class="text-xs text-slate-600">Tải tệp CSV mẫu đúng định dạng PLO, PI, Học phần:</span>
+        <button nz-button nzType="default" nzSize="small" type="button" (click)="downloadImportTemplate()">
+          <i class="fa-solid fa-download mr-1.5"></i> Tải tệp mẫu
+        </button>
+      </div>
+
+      <div>
+        <label for="programCsvFile" class="block text-sm font-medium text-slate-700 mb-1">
+          Chọn tệp CSV <span class="text-rose-500">*</span>
+        </label>
+        <input
+          id="programCsvFile"
+          type="file"
+          accept=".csv,text/csv"
+          class="block w-full text-sm text-slate-600 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+          (change)="onFileSelected($event)"
+        />
+      </div>
+
+      <div class="flex justify-end gap-2 pt-3 border-t border-slate-100">
+        <button nz-button type="button" (click)="closeImportModal()">Hủy</button>
+        <button
+          nz-button
+          nzType="primary"
+          type="button"
+          [nzLoading]="isImporting()"
+          [disabled]="!importVersion().trim() || !selectedFile()"
+          (click)="submitImportCheck()"
+        >
+          Kiểm tra CSV
+        </button>
+      </div>
+    </div>
+    } @else if (importStep() === 1) {
+    @if (importResult(); as res) {
+    <div class="space-y-4">
+      <div class="p-4 rounded-lg bg-blue-50 border border-blue-200 text-sm text-blue-900">
+        Đã nạp tạm phiên bản <strong>{{ res.version }}</strong> (trạng thái: <code>{{ res.verificationStatus }}</code>):
+        <ul class="list-disc pl-5 mt-2 space-y-1">
+          <li>Số PLO: <strong>{{ res.ploCount }}</strong></li>
+          <li>Số PI: <strong>{{ res.piCount }}</strong></li>
+          <li>Số Học phần gắn vào CTĐT: <strong>{{ res.courseCount }}</strong></li>
+        </ul>
+      </div>
+
+      @if (res.warnings.length > 0) {
+      <div class="p-3 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-900">
+        <div class="font-semibold mb-1">Cảnh báo:</div>
+        <ul class="list-disc pl-5 space-y-0.5">
+          @for (w of res.warnings; track w) {
+          <li>{{ w }}</li>
+          }
+        </ul>
+      </div>
+      }
+
+      <div class="flex justify-end gap-2 pt-3 border-t border-slate-100">
+        <button nz-button type="button" (click)="importStep.set(0)">Chọn lại tệp</button>
+        <button
+          nz-button
+          nzType="primary"
+          type="button"
+          [nzLoading]="isImporting()"
+          (click)="confirmImportSave()"
+        >
+          Lưu và xác nhận
+        </button>
+      </div>
+    </div>
+    }
+    } @else {
+    <div class="space-y-4 text-center py-4">
+      <i class="fa-solid fa-circle-check text-4xl text-emerald-500"></i>
+      <div class="text-base font-semibold text-slate-900">
+        Đã lưu và xác nhận phiên bản CTĐT [{{ importResult()?.version }}]!
+      </div>
+      <div class="text-xs text-slate-500">
+        Phiên bản hiện ở trạng thái Bản nháp (DRAFT) và sẵn sàng để phê duyệt áp dụng.
+      </div>
+      <div class="pt-2">
+        <button nz-button nzType="primary" type="button" (click)="closeImportModal()">Đóng</button>
+      </div>
+    </div>
+    }
   </ng-container>
 </nz-modal>
-
-<!-- Modal Thẩm định ĐBCL cho QA Officer (US-08) -->
-<app-verification-action-modal
-  [versionId]="selectedVersionForVerify()?.id ?? ''"
-  [isVisible]="isVerifyModalVisible()"
-  [currentStatus]="selectedVersionForVerify()?.verification?.status ?? 'UNVERIFIED'"
-  [currentNote]="selectedVersionForVerify()?.verification?.note ?? ''"
-  (visibleChange)="isVerifyModalVisible.set($event)"
-  (verifiedSuccess)="loadVersions()"
-/>

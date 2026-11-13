@@ -35,35 +35,10 @@
         }
       </div>
     </div>
-
-    <div class="flex items-center gap-3">
-      @if (canEdit() && version()?.status === 'DRAFT') {
-      <a
-        nz-button
-        class="bg-white border-slate-300 text-slate-700 hover:text-blue-600 hover:border-blue-500 rounded-md px-4 py-2 font-medium flex items-center gap-2"
-        [routerLink]="['/mng/curriculum/versions', versionId(), 'edit']"
-      >
-        <i class="fa-solid fa-pen-to-square text-sm"></i>
-        <span>Sửa chương trình</span>
-      </a>
-      }
-
-      @if (isQaOfficer()) {
-      <button
-        nz-button
-        nzType="primary"
-        class="bg-indigo-600 hover:bg-indigo-700 text-white rounded-md px-4 py-2 font-medium flex items-center gap-2"
-        (click)="openVerifyModal()"
-      >
-        <i class="fa-solid fa-clipboard-check text-sm"></i>
-        <span>Duyệt nội dung (ĐBCL)</span>
-      </button>
-      }
-    </div>
   </div>
 
-  <!-- Khối Thông tin tổng quan Phiên bản CTĐT (4 thẻ tóm tắt) -->
-  <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+  <!-- Khối Thông tin tổng quan Phiên bản CTĐT (3 thẻ tóm tắt) -->
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
     <div class="bg-white border border-slate-200 rounded-lg p-4">
       <div class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
         Ngành / Chương trình
@@ -96,33 +71,8 @@
         {{ plos().length }} PLO · {{ pis().length }} PI
       </div>
       <div class="text-xs text-slate-500 mt-1">
-        {{ courses().length }} học phần · {{ contributions().length }} liên kết I/R/M
+        {{ courses().length }} học phần thuộc khung CTĐT
       </div>
-    </div>
-
-    <div class="bg-slate-50 border border-slate-200 rounded-lg p-4">
-      <div class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
-        Trạng thái thẩm định ĐBCL
-      </div>
-      <div class="mb-1">
-        <app-verification-badge
-          [status]="version()?.verification?.status"
-          [note]="version()?.verification?.note"
-        />
-      </div>
-      @if (version()?.verification?.verifiedBy) {
-      <div class="text-xs text-slate-500">
-        Duyệt bởi <strong class="text-slate-700">{{ version()?.verification?.verifiedBy }}</strong>
-        @if (version()?.verification?.verifiedAt) {
-        ({{ version()?.verification?.verifiedAt | date: 'dd/MM/yyyy HH:mm' }})
-        }
-      </div>
-      }
-      @if (version()?.verification?.note) {
-      <div class="text-xs text-slate-600 mt-1 italic">
-        "{{ version()?.verification?.note }}"
-      </div>
-      }
     </div>
   </div>
 
@@ -280,194 +230,11 @@
       * Xếp theo thứ tự của Khoa. Mức năng lực lưu đúng như tài liệu, không tính lại từ PI. Dữ liệu chưa có hiển thị —.
     </div>
   </div>
-
-  <!-- PHẦN B: Ma trận Học phần đóng góp vào PI (I/R/M Matrix) -->
-  <div class="section-card">
-    <div class="section-header">
-      <div>
-        <h2 class="section-title">Ma trận đóng góp vào Chuẩn đầu ra (I / R / M)</h2>
-        <div class="section-description">
-          Ma trận sư phạm liên kết từng học phần với các chỉ số hiệu năng PI
-        </div>
-      </div>
-      @if (canEdit()) {
-      <div class="text-xs text-blue-600 font-medium">
-        * Click vào từng ô để đổi mức đóng góp: I → R → M → Xóa
-      </div>
-      }
-    </div>
-
-    <div class="irm-matrix-wrapper">
-      <table class="irm-table">
-        <thead>
-          <!-- Hàng header 1: Tên học phần + Các nhóm PLO -->
-          <tr>
-            <th rowspan="2" class="w-72 min-w-56 text-left pl-4">Học phần</th>
-            @for (plo of sortedPlos(); track plo.id) {
-              @if (getPisOfPlo(plo.id).length > 0) {
-              <th [attr.colspan]="getPisOfPlo(plo.id).length" class="bg-blue-50/50">
-                {{ plo.code }}
-              </th>
-              }
-            }
-          </tr>
-          <!-- Hàng header 2: Các PI tương ứng -->
-          <tr>
-            @for (plo of sortedPlos(); track plo.id) {
-              @for (pi of getPisOfPlo(plo.id); track pi.id) {
-              <th class="min-w-12 text-xs">
-                {{ pi.code }}
-              </th>
-              }
-            }
-          </tr>
-        </thead>
-        <tbody>
-          @for (pc of courses(); track pc.id) {
-          <tr>
-            <td class="course-cell">
-              <span class="font-bold text-slate-900">{{ pc.course?.code ?? '—' }}</span>
-              <span class="text-slate-600 text-xs block truncate" [title]="pc.course?.name">
-                {{ pc.course?.name ?? '—' }}
-              </span>
-            </td>
-            @for (plo of sortedPlos(); track plo.id) {
-              @for (pi of getPisOfPlo(plo.id); track pi.id) {
-              <td
-                class="irm-cell"
-                [class.readonly]="!canEdit()"
-                (click)="onCellClick(pc.courseId, pi.id)"
-                [title]="canEdit() ? 'Click để chuyển mức đóng góp' : ''"
-              >
-                @if (getContribution(pc.courseId, pi.id); as contrib) {
-                  @if (contrib.contribution === 'I') {
-                  <span class="irm-chip irm-chip-i">I</span>
-                  } @else if (contrib.contribution === 'R') {
-                  <span class="irm-chip irm-chip-r">R</span>
-                  } @else if (contrib.contribution === 'M') {
-                  <span class="irm-chip irm-chip-m">M</span>
-                  }
-                }
-              </td>
-              }
-            }
-          </tr>
-          } @empty {
-          <tr>
-            <td [attr.colspan]="pis().length + 1" class="text-center py-8 text-slate-400">
-              Chưa có học phần nào trong chương trình đào tạo hoặc chưa có PI nào được tạo
-            </td>
-          </tr>
-          }
-        </tbody>
-      </table>
-    </div>
-
-    <!-- Chú giải Legend -->
-    <div class="irm-legend">
-      <span class="font-semibold text-slate-700">Chú giải:</span>
-      <div class="flex items-center gap-1.5">
-        <span class="irm-chip irm-chip-i">I</span>
-        <span class="text-slate-600">Introduce (Giới thiệu)</span>
-      </div>
-      <div class="flex items-center gap-1.5">
-        <span class="irm-chip irm-chip-r">R</span>
-        <span class="text-slate-600">Reinforce (Củng cố)</span>
-      </div>
-      <div class="flex items-center gap-1.5">
-        <span class="irm-chip irm-chip-m">M</span>
-        <span class="text-slate-600">Master (Thành thạo)</span>
-      </div>
-      <div class="text-slate-400 ml-auto">
-        Ô trống là chưa có bản ghi (không quy đổi thành số 0)
-      </div>
-    </div>
-
-    <div class="section-footer-note">
-      * I giới thiệu, R củng cố, M thành thạo: mô tả mức đóng góp dự kiến, không phải trọng số và không phải kết quả của sinh viên. Ô trống là chưa có bản ghi.
-    </div>
-  </div>
-
-  <!-- PHẦN C: Danh sách Học phần trong phiên bản CTĐT -->
-  <div class="section-card">
-    <div class="section-header">
-      <div>
-        <h2 class="section-title">Danh sách Học phần trong phiên bản CTĐT</h2>
-        <div class="section-description">
-          Các học phần thuộc khung chương trình đào tạo và các chỉ số PI học phần đóng góp
-        </div>
-      </div>
-      <div class="text-xs text-slate-500">
-        {{ courses().length }} học phần
-      </div>
-    </div>
-
-    <nz-table
-      #courseTable
-      [nzData]="courses()"
-      [nzLoading]="isLoading()"
-      [nzShowPagination]="false"
-      [nzFrontPagination]="false"
-      class="plo-tree-table"
-    >
-      <thead>
-        <tr>
-          <th nzWidth="16%">Mã học phần</th>
-          <th nzWidth="34%">Tên học phần</th>
-          <th nzWidth="12%" nzAlign="center">Số tín chỉ</th>
-          <th nzWidth="12%" nzAlign="center">Học kỳ</th>
-          <th nzWidth="26%">Đóng góp vào PI (I / R / M)</th>
-        </tr>
-      </thead>
-      <tbody>
-        @for (pc of courses(); track pc.id) {
-        <tr>
-          <td>
-            <span class="font-bold text-slate-900">{{ pc.course?.code ?? '—' }}</span>
-          </td>
-          <td>
-            <span class="text-slate-800 font-medium">{{ pc.course?.name ?? '—' }}</span>
-          </td>
-          <td nzAlign="center">
-            <span>{{ pc.credits ?? pc.course?.credits ?? '—' }}</span>
-          </td>
-          <td nzAlign="center">
-            <span>{{ pc.semester !== undefined ? 'HK ' + pc.semester : '—' }}</span>
-          </td>
-          <td>
-            <div class="flex flex-wrap gap-1.5">
-              @for (item of getCourseContributions(pc.courseId); track item.piCode) {
-              <span class="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded border bg-slate-50 border-slate-200">
-                <strong class="text-slate-700">{{ item.piCode }}:</strong>
-                @if (item.contribution === 'I') {
-                <span class="font-bold text-blue-700">I</span>
-                } @else if (item.contribution === 'R') {
-                <span class="font-bold text-purple-700">R</span>
-                } @else {
-                <span class="font-bold text-orange-700">M</span>
-                }
-              </span>
-              } @empty {
-              <span class="text-slate-400 text-xs">—</span>
-              }
-            </div>
-          </td>
-        </tr>
-        } @empty {
-        <tr>
-          <td colspan="5" class="text-center py-8 text-slate-400">
-            Chưa có học phần nào được gắn vào phiên bản chương trình đào tạo này
-          </td>
-        </tr>
-        }
-      </tbody>
-    </nz-table>
-  </div>
   } @else if (activeTab() === 'PROGRAM_COURSES') {
   <app-program-courses-table
     [versionId]="versionId()"
     [programCourses]="courses()"
-    [canManage]="canManageCoursesAndLinks()"
+    [canManage]="false"
     (changed)="loadData()"
     (openCloPiMatrix)="openCloPiMatrixForCourse($event)"
   />
@@ -476,18 +243,7 @@
     [versionId]="versionId()"
     [programCourses]="courses()"
     [initialCourseId]="selectedMatrixCourseId()"
-    [canManageLinks]="canManageCoursesAndLinks()"
-    [isQaOfficer]="isQaOfficer()"
+    [canManageLinks]="false"
   />
   }
 </div>
-
-<!-- Modal Thẩm định ĐBCL cho QA Officer -->
-<app-verification-action-modal
-  [versionId]="versionId()"
-  [isVisible]="isVerifyModalVisible()"
-  [currentStatus]="version()?.verification?.status ?? 'UNVERIFIED'"
-  [currentNote]="version()?.verification?.note ?? ''"
-  (visibleChange)="isVerifyModalVisible.set($event)"
-  (verifiedSuccess)="loadData()"
-/>

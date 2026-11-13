@@ -4,19 +4,16 @@ import { UrlConstant } from '@constants/url.constant';
 import { INLINE_ERRORS } from '@interceptors/http-context.token';
 import { IPagedResults } from '@models/common/response-data.model';
 import {
+  IProgramCsvImportResponse,
   IProgramVersion,
-  IProgramVersionRequest,
   IProgramVersionStatusUpdateRequest,
-  IProgramVersionUpdateRequest,
 } from '@models/program/program-version.model';
-import { IVerificationRequest } from '@models/program/program-verification.model';
 import { Observable } from 'rxjs';
 
 /**
- * Quản lý Phiên bản CTĐT (F02, US-05, ADR 0005).
- * Quyền tạo/sửa: PROGRAM_MANAGER trong scope.
+ * Quản lý Phiên bản CTĐT (F02, ADR 0005, ADR 0014).
+ * Import CSV & đổi trạng thái: PROGRAM_MANAGER trong scope.
  * Đọc: Mọi vai trò đã đăng nhập.
- * Duyệt: QA.
  */
 @Injectable({
   providedIn: 'root',
@@ -46,16 +43,29 @@ export class ProgramVersionService {
     });
   }
 
-  createProgramVersion(model: IProgramVersionRequest): Observable<IProgramVersion> {
-    return this.http.post<IProgramVersion>(this.apiUrl, model, {
+  downloadImportTemplate(): Observable<Blob> {
+    return this.http.get(UrlConstant.API.PROGRAM_VERSION_IMPORT_TEMPLATE, {
+      responseType: 'blob',
       context: this.inlineErrors(),
     });
   }
 
-  updateProgramVersion(id: string, model: IProgramVersionUpdateRequest): Observable<IProgramVersion> {
-    return this.http.put<IProgramVersion>(UrlConstant.API.PROGRAM_VERSION_DETAIL(id), model, {
+  importProgramCsv(programId: string, version: string, file: File): Observable<IProgramCsvImportResponse> {
+    const formData = new FormData();
+    formData.append('programId', programId);
+    formData.append('version', version);
+    formData.append('file', file);
+    return this.http.post<IProgramCsvImportResponse>(UrlConstant.API.PROGRAM_VERSION_IMPORT, formData, {
       context: this.inlineErrors(),
     });
+  }
+
+  confirmImport(id: string): Observable<IProgramCsvImportResponse> {
+    return this.http.post<IProgramCsvImportResponse>(
+      UrlConstant.API.PROGRAM_VERSION_CONFIRM_IMPORT(id),
+      {},
+      { context: this.inlineErrors() },
+    );
   }
 
   updateProgramVersionStatus(
@@ -63,12 +73,6 @@ export class ProgramVersionService {
     model: IProgramVersionStatusUpdateRequest,
   ): Observable<IProgramVersion> {
     return this.http.put<IProgramVersion>(UrlConstant.API.PROGRAM_VERSION_STATUS(id), model, {
-      context: this.inlineErrors(),
-    });
-  }
-
-  verifyProgramVersion(id: string, model: IVerificationRequest): Observable<IProgramVersion> {
-    return this.http.put<IProgramVersion>(UrlConstant.API.PROGRAM_VERSION_VERIFY(id), model, {
       context: this.inlineErrors(),
     });
   }

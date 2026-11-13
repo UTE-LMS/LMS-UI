@@ -4,13 +4,11 @@ import { provideHttpClient } from '@angular/common/http';
 import { UrlConstant } from '@constants/url.constant';
 import {
   IProgramVersion,
-  IProgramVersionRequest,
   IProgramVersionStatusUpdateRequest,
-  IProgramVersionUpdateRequest,
 } from '@models/program/program-version.model';
 import { ProgramVersionService } from './program-version.service';
 
-describe('ProgramVersionService (F02 US-05, ADR 0005)', () => {
+describe('ProgramVersionService (F02 Import CSV & Status)', () => {
   let service: ProgramVersionService;
   let httpMock: HttpTestingController;
 
@@ -45,37 +43,30 @@ describe('ProgramVersionService (F02 US-05, ADR 0005)', () => {
     });
   });
 
-  it('tạo phiên bản mới gửi method POST', () => {
-    const payload: IProgramVersionRequest = {
-      programId: 'prog_123',
-      version: 'BM7A-2.8-Draft',
-      totalCredits: 132,
-      durationYears: 4,
-    };
+  it('importProgramCsv gửi POST multipart tới /import', () => {
+    const file = new File(['code\nPLO1'], 'program.csv', { type: 'text/csv' });
 
-    service.createProgramVersion(payload).subscribe(res => {
-      expect(res.version).toBe('BM7A-2.8-Draft');
+    service.importProgramCsv('prog_123', '2026-v1', file).subscribe(res => {
+      expect(res.version).toBe('2026-v1');
     });
 
-    const req = httpMock.expectOne(UrlConstant.API.PROGRAM_VERSIONS);
+    const req = httpMock.expectOne(UrlConstant.API.PROGRAM_VERSION_IMPORT);
     expect(req.request.method).toBe('POST');
-    expect(req.request.body).toEqual(payload);
-    req.flush({ id: 'ver_new', ...payload, status: 'DRAFT' });
+    expect(req.request.body instanceof FormData).toBe(true);
+    const body = req.request.body as FormData;
+    expect(body.get('programId')).toBe('prog_123');
+    expect(body.get('version')).toBe('2026-v1');
+    req.flush({ programVersionId: 'ver_new', programId: 'prog_123', version: '2026-v1', status: 'DRAFT' });
   });
 
-  it('cập nhật thông tin phiên bản gửi method PUT', () => {
-    const payload: IProgramVersionUpdateRequest = {
-      version: 'BM7A-2.8-Updated',
-      totalCredits: 130,
-    };
-
-    service.updateProgramVersion('ver_1', payload).subscribe(res => {
-      expect(res.version).toBe('BM7A-2.8-Updated');
+  it('confirmImport gửi POST tới endpoint confirm-import', () => {
+    service.confirmImport('ver_1').subscribe(res => {
+      expect(res.verificationStatus).toBe('VERIFIED');
     });
 
-    const req = httpMock.expectOne(UrlConstant.API.PROGRAM_VERSION_DETAIL('ver_1'));
-    expect(req.request.method).toBe('PUT');
-    req.flush({ id: 'ver_1', ...payload });
+    const req = httpMock.expectOne(UrlConstant.API.PROGRAM_VERSION_CONFIRM_IMPORT('ver_1'));
+    expect(req.request.method).toBe('POST');
+    req.flush({ programVersionId: 'ver_1', verificationStatus: 'VERIFIED' });
   });
 
   it('cập nhật trạng thái phiên bản gửi PUT tới endpoint status', () => {

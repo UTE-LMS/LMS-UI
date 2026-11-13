@@ -1,11 +1,9 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { CourseService } from '@services/course/course.service';
-import { NzModalService } from 'ng-zorro-antd/modal';
-import { ToastrService } from 'ngx-toastr';
 import { of } from 'rxjs';
 import { ProgramCoursesTableComponent } from './program-courses-table.component';
 
-describe('ProgramCoursesTableComponent (F03 US-09/AC-2, AC-3)', () => {
+describe('ProgramCoursesTableComponent (Read-only)', () => {
   let fixture: ComponentFixture<ProgramCoursesTableComponent>;
   let component: ProgramCoursesTableComponent;
 
@@ -21,9 +19,6 @@ describe('ProgramCoursesTableComponent (F03 US-09/AC-2, AC-3)', () => {
       totalPages: 1,
       last: true,
     })),
-    addCourseToProgramVersion: vi.fn(),
-    updateProgramCourse: vi.fn(),
-    removeCourseFromProgramVersion: vi.fn(),
   };
 
   beforeEach(async () => {
@@ -31,47 +26,45 @@ describe('ProgramCoursesTableComponent (F03 US-09/AC-2, AC-3)', () => {
       imports: [ProgramCoursesTableComponent],
       providers: [
         { provide: CourseService, useValue: courseSvc },
-        { provide: ToastrService, useValue: { success: vi.fn(), error: vi.fn() } },
-        { provide: NzModalService, useValue: { confirm: vi.fn() } },
       ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(ProgramCoursesTableComponent);
     fixture.componentRef.setInput('versionId', '671dcba5f123456789abcdef');
-    fixture.componentRef.setInput('canManage', true);
+    fixture.componentRef.setInput('programCourses', [
+      {
+        id: 'pc_1',
+        programVersionId: '671dcba5f123456789abcdef',
+        courseId: '671dcba5f123456789abcde1',
+        type: 'COMPULSORY',
+        category: 'MAJOR_FOUNDATION',
+        semester: 2,
+        credits: 3,
+      },
+      {
+        id: 'pc_2',
+        programVersionId: '671dcba5f123456789abcdef',
+        courseId: '671dcba5f123456789abcde2',
+        type: 'ELECTIVE',
+        category: 'FOUNDATION',
+        semester: 1,
+        credits: 3,
+      },
+    ]);
     component = fixture.componentInstance;
     fixture.detectChanges();
   });
 
-  it('chặn chọn một học phần vừa làm tiên quyết vừa làm học trước (prereqPrevConflict)', () => {
-    component.openCreateModal();
-    component.pcForm.patchValue({
-      courseId: '671dcba5f123456789abcde1',
-      prerequisiteCourseIds: ['671dcba5f123456789abcde2'],
-      previousCourseIds: ['671dcba5f123456789abcde2'],
-    });
-    expect(component.pcForm.hasError('prereqPrevConflict')).toBe(true);
-    expect(component.pcForm.valid).toBe(false);
-  });
+  it('hiển thị danh sách học phần và lọc theo học kỳ, khối kiến thức', () => {
+    expect(component.filteredProgramCourses().length).toBe(2);
 
-  it('chặn học phần tự làm tiên quyết của chính nó (selfReferenceConflict)', () => {
-    component.openCreateModal();
-    component.pcForm.patchValue({
-      courseId: '671dcba5f123456789abcde1',
-      prerequisiteCourseIds: ['671dcba5f123456789abcde1'],
-      previousCourseIds: [],
-    });
-    expect(component.pcForm.hasError('selfReferenceConflict')).toBe(true);
-    expect(component.pcForm.valid).toBe(false);
-  });
+    component.filterSemester.set(2);
+    expect(component.filteredProgramCourses().length).toBe(1);
+    expect(component.getCourseCode(component.filteredProgramCourses()[0])).toBe('OOPR230279');
 
-  it('hợp lệ khi học phần tiên quyết và học trước tách biệt nhau', () => {
-    component.openCreateModal();
-    component.pcForm.patchValue({
-      courseId: '671dcba5f123456789abcde1',
-      prerequisiteCourseIds: ['671dcba5f123456789abcde2'],
-      previousCourseIds: [],
-    });
-    expect(component.pcForm.valid).toBe(true);
+    component.filterSemester.set(null);
+    component.filterCategory.set('FOUNDATION');
+    expect(component.filteredProgramCourses().length).toBe(1);
+    expect(component.getCourseCode(component.filteredProgramCourses()[0])).toBe('INTR130185');
   });
 });

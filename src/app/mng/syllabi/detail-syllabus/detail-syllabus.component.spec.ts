@@ -134,47 +134,31 @@ describe('DetailSyllabusComponent (F03 US-10, US-11, TD-27, ADR 0010)', () => {
     expect(sorted.map(c => c.code)).toEqual(['CLO1', 'CLO2']);
   });
 
-  it('PROGRAM_MANAGER trong scope được phép duyệt CONFIRMED và sửa CLO khi đề cương đang ở DRAFT (ADR 0014)', () => {
+  it('PROGRAM_MANAGER trong scope được phép duyệt CONFIRMED (ADR 0014)', () => {
     expect(component.canApproveSyllabus()).toBe(true);
-    expect(component.canEditClo()).toBe(true);
   });
 
-  it('LECTURER trong scope được sửa CLO khi DRAFT nhưng KHÔNG có quyền duyệt CONFIRMED (ADR 0014)', () => {
+  it('LECTURER KHÔNG có quyền duyệt CONFIRMED (ADR 0014)', () => {
     component.userRoles.set([SystemConstant.ROLE.LECTURER]);
     fixture.detectChanges();
 
-    expect(component.canEditClo()).toBe(true);
     expect(component.canApproveSyllabus()).toBe(false);
   });
 
-  it('ADMIN không có thẩm quyền học thuật để sửa CLO hoặc duyệt CONFIRMED đề cương (ADR 0010)', () => {
+  it('ADMIN không có thẩm quyền học thuật để duyệt CONFIRMED đề cương (ADR 0010)', () => {
     component.userRoles.set([SystemConstant.ROLE.ADMIN]);
     fixture.detectChanges();
 
-    expect(component.canEditClo()).toBe(false);
     expect(component.canApproveSyllabus()).toBe(false);
   });
 
-  it('khóa cứng 100% thao tác thêm/sửa/xóa CLO khi đề cương ở trạng thái CONFIRMED (TD-27)', () => {
+  it('khóa đề cương khi ở trạng thái CONFIRMED (TD-27)', () => {
     component.changeStatus('CONFIRMED');
     fixture.detectChanges();
 
     expect(component.syllabus()?.status).toBe('CONFIRMED');
-    expect(component.canEditClo()).toBe(false);
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.textContent).toContain('TD-27');
-    expect(compiled.textContent).not.toContain('Thêm chuẩn đầu ra (CLO)');
-  });
-
-  it('validate regex mã CLO (^CLO[0-9]+$) và giới hạn mức Bloom (1–6)', () => {
-    component.openCreateCloModal();
-    component.cloForm.patchValue({ code: 'INVALID_1', bloomLevel: 7 });
-    expect(component.cloForm.get('code')?.valid).toBe(false);
-    expect(component.cloForm.get('bloomLevel')?.valid).toBe(false);
-
-    component.cloForm.patchValue({ code: 'CLO3', bloomLevel: 5 });
-    expect(component.cloForm.get('code')?.valid).toBe(true);
-    expect(component.cloForm.get('bloomLevel')?.valid).toBe(true);
   });
 
   it('F04: có liên kết sang khung bài đánh giá của đề cương (mở được ở mọi trạng thái đề cương)', () => {
