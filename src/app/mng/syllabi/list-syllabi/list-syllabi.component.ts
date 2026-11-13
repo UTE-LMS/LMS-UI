@@ -140,21 +140,20 @@ export class ListSyllabiComponent implements OnInit {
   });
 
   /**
-   * Quyền phân công giảng viên: Chỉ duy nhất DEPARTMENT_HEAD có môn học trong scope.courseIds (ADR 0010).
-   * Thu hồi quyền ADMIN khỏi các endpoint phân công bộ môn.
+   * Quyền phân công giảng viên: Chỉ duy nhất PROGRAM_MANAGER có môn học trong scope.courseIds (ADR 0014).
    */
   readonly canAssignCourse = computed(() => {
     if (!this.selectedCourseId() || this.isAdmin()) {
       return false;
     }
     return (
-      this.userRoles().includes(SystemConstant.ROLE.DEPARTMENT_HEAD) && this.isCourseInScope()
+      this.userRoles().includes(SystemConstant.ROLE.PROGRAM_MANAGER) && this.isCourseInScope()
     );
   });
 
   /**
-   * Quyền tạo phiên bản đề cương DRAFT: LECTURER hoặc DEPARTMENT_HEAD trong scope.courseIds (ADR 0010).
-   * ADMIN không có thẩm quyền học thuật để biên soạn đề cương (Thu hồi quyền ADMIN theo ADR 0010).
+   * Quyền tạo phiên bản đề cương DRAFT: LECTURER hoặc PROGRAM_MANAGER trong scope (ADR 0014).
+   * ADMIN không có thẩm quyền học thuật để biên soạn đề cương.
    */
   readonly canCreateSyllabus = computed(() => {
     if (!this.selectedCourseId() || this.isAdmin()) {
@@ -163,7 +162,7 @@ export class ListSyllabiComponent implements OnInit {
     const roles = this.userRoles();
     const isAuthorRole =
       roles.includes(SystemConstant.ROLE.LECTURER)
-      || roles.includes(SystemConstant.ROLE.DEPARTMENT_HEAD);
+      || roles.includes(SystemConstant.ROLE.PROGRAM_MANAGER);
     return isAuthorRole && this.isCourseInScope();
   });
 

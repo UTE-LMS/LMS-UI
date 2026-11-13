@@ -1,68 +1,98 @@
-<header class="header-navbar">
-  <!-- Bên trái: Logo trường + Tên hệ thống + Menu điều hướng -->
-  <div class="header-left">
-    <a [routerLink]="urlConst.ROUTE.MANAGEMENT.DASHBOARD" class="header-brand">
-      <img src="assets/img/logo/ute_logo.png" alt="HCMUTE" class="header-logo" />
-      <span class="brand-title">OBE</span>
+<!-- Thanh top bar trên thiết bị nhỏ (< 1024px) -->
+<div class="loms-mobile-bar">
+  <a [routerLink]="urlConst.ROUTE.MANAGEMENT.DASHBOARD" class="sidebar-brand">
+    <span class="loms-mark" aria-hidden="true"><span></span><span></span><span></span><span></span></span>
+    <span class="flex flex-col leading-tight">
+      <span class="brand-title">LOMS</span>
+      <span class="brand-sub">ĐO LƯỜNG CHUẨN ĐẦU RA</span>
+    </span>
+  </a>
+  <button type="button" class="mobile-menu-btn" (click)="toggleMobileMenu()" [attr.aria-label]="mobileMenuOpen() ? 'Đóng menu' : 'Mở menu'">
+    <i class="fa-solid" [class.fa-bars]="!mobileMenuOpen()" [class.fa-xmark]="mobileMenuOpen()"></i>
+  </button>
+</div>
+
+@if (mobileMenuOpen()) {
+  <div class="sidebar-backdrop" (click)="closeMobileMenu()" aria-hidden="true"></div>
+}
+
+<!-- Sidebar LOMS bên trái (khớp doc/UI.pdf) -->
+<aside class="loms-sidebar" [class.is-open]="mobileMenuOpen()" aria-label="Điều hướng chính">
+  <div class="p-4 pb-3 flex flex-col gap-3.5">
+    <a [routerLink]="urlConst.ROUTE.MANAGEMENT.DASHBOARD" class="sidebar-brand" (click)="closeMobileMenu()">
+      <span class="loms-mark" aria-hidden="true"><span></span><span></span><span></span><span></span></span>
+      <span class="flex flex-col leading-tight">
+        <span class="brand-title">LOMS</span>
+        <span class="brand-sub">ĐO LƯỜNG CHUẨN ĐẦU RA</span>
+      </span>
     </a>
 
-    <!-- Menu điều hướng các chức năng đang có (khớp bố cục UI.pdf) -->
-    <nav class="header-nav" aria-label="Main Navigation">
-      @for (item of visibleNavItems(); track item.routerLink) {
-      <a
-        [routerLink]="item.routerLink"
-        routerLinkActive="nav-active"
-        [routerLinkActiveOptions]="{ exact: item.routerLink === urlConst.ROUTE.MANAGEMENT.DASHBOARD }"
-        class="nav-link"
-      >
-        <span class="nav-dot" aria-hidden="true">•</span>
-        <span class="nav-text">{{ item.title }}</span>
-      </a>
-      }
-    </nav>
+    <a [routerLink]="urlConst.ROUTE.MANAGEMENT.CURRICULUM" class="program-context-box" (click)="closeMobileMenu()">
+      <div class="flex flex-col min-w-0">
+        <span class="text-[11px] text-slate-400 leading-tight">Hệ thống OBE</span>
+        <span class="text-[13px] font-semibold text-slate-50 truncate mt-0.5">HCM-UTE · CNTT</span>
+      </div>
+      <span class="program-status-pill">Đang áp dụng</span>
+    </a>
   </div>
 
-  <!-- Bên phải: Nhãn thử nghiệm + Thông tin người dùng đăng nhập & Đăng xuất -->
-  <div class="header-right">
-    <!-- Người dùng đăng nhập: Bấm vào hiển thị dropdown menu chứa nút Đăng xuất -->
+  <nav class="flex-1 overflow-y-auto px-3 pb-4" aria-label="Main Navigation">
+    @for (group of navSections(); track $index) {
+      @if (group.label) {
+        <div class="nav-group-label">{{ group.label }}</div>
+      }
+      <div class="flex flex-col gap-0.5">
+        @for (item of group.items; track item.routerLink) {
+          <a
+            [routerLink]="item.routerLink"
+            routerLinkActive="nav-active"
+            [routerLinkActiveOptions]="{ exact: item.routerLink === urlConst.ROUTE.MANAGEMENT.DASHBOARD }"
+            class="sidebar-nav-link"
+            (click)="closeMobileMenu()"
+          >
+            <i class="w-[18px] text-center text-sm" [class]="item.icon" aria-hidden="true"></i>
+            <span>{{ item.title }}</span>
+          </a>
+        }
+      </div>
+    }
+  </nav>
+
+  <!-- Footer tài khoản & đăng xuất -->
+  <div class="sidebar-footer">
     <div
       class="user-profile-trigger"
       nz-dropdown
       [nzDropdownMenu]="menuUser"
       [nzTrigger]="'click'"
-      [nzPlacement]="'bottomRight'"
+      [nzPlacement]="'topLeft'"
       role="button"
       tabindex="0"
       [attr.aria-label]="'Tài khoản ' + username()"
     >
-      <div class="role-avatar-circle" [title]="roleTitle()">
-        {{ roleBadgeText() }}
+      <div class="role-avatar-square" [title]="roleTitle()">{{ roleBadgeText() }}</div>
+      <div class="min-w-0 flex flex-col">
+        <div class="text-[13px] font-semibold text-slate-50 truncate">{{ username() || 'user' }}</div>
+        <div class="text-[11px] text-slate-400 truncate">{{ roleTitle() }}</div>
       </div>
-      <span class="user-name-label">{{ username() || 'user' }}</span>
-      <i class="fa-solid fa-chevron-down text-xs text-sky-200/70 ml-1"></i>
     </div>
 
-    <!-- Dropdown Menu tài khoản -->
+    <button type="button" class="logout-icon-btn" title="Đăng xuất" aria-label="Đăng xuất" (click)="doLogout()">
+      <i class="fa-solid fa-arrow-right-from-bracket"></i>
+    </button>
+
     <nz-dropdown-menu #menuUser="nzDropdownMenu">
       <ul nz-menu class="user-menu-dropdown shadow-lg rounded-md border border-gray-100 min-w-56">
         <li class="px-4 py-2.5 bg-gray-50/80 border-b border-gray-100">
-          <div class="font-semibold text-gray-900 leading-tight">
-            {{ fullName() || username() }}
-          </div>
-          <div class="text-xs text-gray-500 mt-0.5">
-            {{ roleTitle() }} · {{ username() }}
-          </div>
+          <div class="font-semibold text-gray-900 leading-tight">{{ fullName() || username() }}</div>
+          <div class="text-xs text-gray-500 mt-0.5">{{ roleTitle() }} · {{ username() }}</div>
         </li>
         <li nz-menu-divider></li>
-        <li
-          nz-menu-item
-          class="logout-menu-item px-4 py-2 text-sm text-red-600 hover:bg-red-50 cursor-pointer flex items-center gap-2"
-          (click)="doLogout()"
-        >
+        <li nz-menu-item class="px-4 py-2 text-sm text-red-600 hover:bg-red-50 cursor-pointer flex items-center gap-2" (click)="doLogout()">
           <i class="fa-solid fa-arrow-right-from-bracket"></i>
           <span>Đăng xuất</span>
         </li>
       </ul>
     </nz-dropdown-menu>
   </div>
-</header>
+</aside>

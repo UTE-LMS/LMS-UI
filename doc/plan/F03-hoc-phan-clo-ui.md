@@ -8,58 +8,56 @@
 
 ---
 
-## 1. Phân định Trách nhiệm Nghiệp vụ (Separation of Concerns theo ADR 0010)
+## 1. Phân định Trách nhiệm Nghiệp vụ (Separation of Concerns theo ADR 0010 & ADR 0014)
 
-Theo mô hình phân quyền học thuật phân cấp tại **ADR 0010** (thay thế hoàn toàn ADR 0009) và **ADR 0004**, luồng nghiệp vụ F03 tách bạch rõ ràng giữa 5 vai trò:
+Theo mô hình phân quyền 4 vai trò cốt lõi (**ADR 0014**), luồng nghiệp vụ F03 tách bạch rõ ràng giữa 4 vai trò:
 
 ```mermaid
 flowchart LR
     subgraph ADMIN_SPACE["1. Khu vực Admin (/mng/courses & /mng/terms)"]
-        A1["Quản trị Kho Học phần cấp trường<br/>(courses — Master Catalog)"]
+        A1["Quản trị Kho Học phần cấp trường<br/>(courses — CRUD & Import CSV)"]
         A2["Quản trị Danh mục Học kỳ<br/>(terms — Hiệu lực đề cương)"]
     end
 
-    subgraph DH_LEC_SPACE["2. Khu vực Bộ môn & Giảng viên (/mng/syllabi)"]
-        D1["Trưởng bộ môn (DEPARTMENT_HEAD)<br/>Phân công GV biên soạn theo scope.courseIds"]
-        L1["Giảng viên (LECTURER)<br/>Tạo đề cương DRAFT & biên soạn CLO"]
-        D2["Trưởng bộ môn (DEPARTMENT_HEAD)<br/>Thẩm định & duyệt đề cương CONFIRMED"]
+    subgraph PM_LEC_SPACE["2. Khu vực Bộ môn / Ngành & Giảng viên (/mng/syllabi)"]
+        D1["Quản lý CTĐT (PROGRAM_MANAGER)<br/>Phân công GV biên soạn theo scope.courseIds"]
+        L1["Giảng viên (LECTURER) / PM<br/>Tạo đề cương DRAFT & biên soạn CLO"]
+        D2["Quản lý CTĐT (PROGRAM_MANAGER)<br/>Thẩm định & duyệt đề cương CONFIRMED"]
         D1 --> L1 --> D2
     end
 
-    subgraph PM_SPACE["3. Khu vực Trưởng CTĐT (/mng/curriculum)"]
+    subgraph PM_SPACE["3. Khu vực Liên kết CTĐT (/mng/curriculum)"]
         P1["Gán học phần vào Phiên bản CTĐT<br/>(program_courses: HK, Tiên quyết, Học trước)"]
-        P2["Thiết lập Liên kết & Ma trận CLO × PI<br/>(clo_pi_links theo scope.programIds)"]
+        P2["Thiết lập Liên kết & Ma trận CLO × PI<br/>(clo_pi_links: bắt buộc weight)"]
         P1 --> P2
     end
 
-    subgraph QA_SPACE["4. Thẩm định ĐBCL (QA_OFFICER)"]
+    subgraph QA_SPACE["4. Thẩm định ĐBCL (QA)"]
         Q1["Xác nhận độc lập từng liên kết CLO–PI<br/>(PUT /clo-pi-links/{id}/verification)"]
     end
 
-    ADMIN_SPACE -- "Cung cấp học phần & học kỳ" --> DH_LEC_SPACE
+    ADMIN_SPACE -- "Cung cấp học phần & học kỳ" --> PM_LEC_SPACE
     ADMIN_SPACE -- "Cung cấp kho học phần" --> PM_SPACE
-    DH_LEC_SPACE -- "Đề cương đã duyệt" --> PM_SPACE
+    PM_LEC_SPACE -- "Đề cương đã duyệt" --> PM_SPACE
     PM_SPACE -- "Nộp ma trận CLO–PI" --> QA_SPACE
 ```
 
 1. **Quản trị viên (`ADMIN`):**
-   - Quản lý độc quyền Danh mục Học phần cấp trường (`courses` — Master Catalog): Tạo mới (`POST /api/v1/courses`), cập nhật (`PUT /api/v1/courses/{id}`), xóa học phần chưa có tham chiếu (`DELETE /api/v1/courses/{id}`).
-   - Quản lý Danh mục Học kỳ (`terms` — thuộc F05a, đã triển khai trước làm cơ sở cho thời hạn hiệu lực đề cương): Tạo/sửa/đổi trạng thái học kỳ (`UPCOMING`, `ACTIVE`, `CLOSED`).
-   - Quản lý tài khoản và phân quyền phạm vi (`/mng/users`): Cấp `scope.courseIds` và `scope.programIds` cho Trưởng bộ môn, Giảng viên.
-   - **Thu hồi quyền học thuật & bộ môn:** ADMIN không có thẩm quyền sư phạm/học thuật để tạo đề cương DRAFT, chỉnh sửa CLO, phê duyệt CONFIRMED đề cương, hoặc phân công giảng viên tại các endpoint bộ môn (`/api/v1/departments/**`). ADMIN có quyền chỉ đọc (Read-only) trên toàn bộ phân hệ Đề cương theo cập nhật ADR 0010.
-2. **Trưởng bộ môn (`DEPARTMENT_HEAD`):**
-   - Phụ trách các môn học nằm trong `scope.courseIds` được Admin cấp.
-   - Phân công hoặc thu hồi quyền biên soạn đề cương cho Giảng viên trong bộ môn: `POST /api/v1/departments/assign-course`, `POST /api/v1/departments/unassign-course`.
+   - Quản lý độc quyền Danh mục Học phần cấp trường (`courses` — Master Catalog): Tạo mới (`POST /api/v1/courses`), cập nhật (`PUT /api/v1/courses/{id}`), xóa học phần chưa có tham chiếu (`DELETE /api/v1/courses/{id}`), và **nhập hàng loạt từ CSV** (`POST /api/v1/courses/import`).
+   - Quản lý Danh mục Học kỳ (`terms` — thuộc F05a, đã triển khai trước làm cơ sở cho thời hạn hiệu lực đề cương).
+   - Quản lý tài khoản và phân quyền phạm vi (`/mng/users`): Cấp `scope.courseIds` và `scope.programIds` cho `PROGRAM_MANAGER`, `LECTURER`, `QA`.
+   - **Thu hồi quyền học thuật:** ADMIN không có thẩm quyền tạo đề cương DRAFT, chỉnh sửa CLO, phê duyệt CONFIRMED đề cương, hoặc phân công giảng viên tại `/api/v1/departments/**`.
+2. **Trưởng chương trình đào tạo (`PROGRAM_MANAGER`):**
+   - Phụ trách khung CTĐT nằm trong `scope.programIds` và các học phần trong `scope.courseIds`.
+   - Phân công hoặc thu hồi quyền biên soạn đề cương cho Giảng viên: `GET /api/v1/departments/lecturers`, `POST /api/v1/departments/assign-course`, `POST /api/v1/departments/unassign-course`.
    - Rà soát nội dung đề cương + danh sách CLO và phê duyệt chuyển trạng thái đề cương từ `DRAFT` $\to$ `CONFIRMED` (`PUT /api/v1/syllabi/{id}/status`).
+   - Đưa học phần từ kho trường vào phiên bản CTĐT (`program_courses`): cấu hình học kỳ dự kiến (`semester`), số tín chỉ (`credits`), loại học phần (`COMPULSORY`/`ELECTIVE`), phân loại khối kiến thức (`category`), học phần tiên quyết (`prerequisiteCourseIds`) và học phần học trước (`previousCourseIds`).
+   - Thiết lập liên kết chuẩn đầu ra $CLO \to PI$ (`POST /api/v1/syllabi/{syllabusId}/clo-pi-links`, **bắt buộc `weight` ∈ `(0, 1]`**, tổng = `1.0` theo PI) và tra cứu ma trận $CLO \times PI$.
 3. **Giảng viên (`LECTURER`):**
    - Phụ trách biên soạn đề cương cho các môn học được phân công trong `scope.courseIds`.
    - Khởi tạo phiên bản đề cương mới ở trạng thái `DRAFT` (`POST /api/v1/courses/{courseId}/syllabi`).
    - Thêm, sửa, xóa các chuẩn đầu ra học phần (`clos`) khi đề cương đang ở `DRAFT` (`POST /api/v1/syllabi/{syllabusId}/clos`, `PUT /api/v1/clos/{id}`, `DELETE /api/v1/clos/{id}`).
-4. **Trưởng chương trình đào tạo (`PROGRAM_MANAGER`):**
-   - Phụ trách khung CTĐT nằm trong `scope.programIds`.
-   - Đưa học phần từ kho trường vào phiên bản CTĐT (`program_courses`): cấu hình học kỳ dự kiến (`semester`), số tín chỉ (`credits`), loại học phần (`COMPULSORY`/`ELECTIVE`), phân loại khối kiến thức (`category`), học phần tiên quyết (`prerequisiteCourseIds`) và học phần học trước (`previousCourseIds`).
-   - Thiết lập liên kết chuẩn đầu ra $CLO \to PI$ (`POST /api/v1/syllabi/{syllabusId}/clo-pi-links`, `DELETE /api/v1/clo-pi-links/{id}`) và tra cứu bảng ma trận $CLO \times PI$ (`GET /api/v1/syllabi/{syllabusId}/clo-pi-matrix`).
-5. **Cán bộ Đảm bảo chất lượng (`QA_OFFICER`):**
+4. **Cán bộ Đảm bảo chất lượng (`QA`):**
    - Thẩm định chất lượng độc lập từng liên kết $CLO \to PI$ thuộc phạm vi `scope.programIds` (`PUT /api/v1/clo-pi-links/{id}/verification` — US-12/AC-3).
 
 ---
@@ -84,18 +82,18 @@ Hệ thống mở rộng layout quản lý `/mng` với các phân khu khớp th
 
 ```mermaid
 flowchart TD
-    MngRoot["/mng (Layout Quản lý Chung)"] --> AdminCourses["1. Kho Học phần & Học kỳ: /mng/courses<br/>(ADMIN quản trị; các vai trò khác tra cứu)"]
-    MngRoot --> SyllabiSpace["2. Đề cương & CLO: /mng/syllabi<br/>(DEPARTMENT_HEAD phân công/duyệt; LECTURER biên soạn)"]
+    MngRoot["/mng (Layout Quản lý Chung)"] --> AdminCourses["1. Kho Học phần & Học kỳ: /mng/courses<br/>(ADMIN quản trị & import CSV; các vai trò khác tra cứu)"]
+    MngRoot --> SyllabiSpace["2. Đề cương & CLO: /mng/syllabi<br/>(PROGRAM_MANAGER phân công/duyệt; LECTURER biên soạn)"]
     MngRoot --> CurriculumSpace["3. Mở rộng Khung CTĐT: /mng/curriculum/versions/:versionId<br/>(Tab Học phần CTĐT & Tab Liên kết CLO–PI)"]
 
     AdminCourses --> CourseTab["Tab 1: Danh mục Học phần cấp trường (courses)"]
     AdminCourses --> TermTab["Tab 2: Danh mục Học kỳ (terms - F05a)"]
 
-    SyllabiSpace --> SyllabiCourseList["/mng/syllabi<br/>Danh sách Học phần trong Scope Bộ môn / Giảng viên"]
-    SyllabiSpace --> AssignModal["Modal: Trưởng bộ môn phân công Giảng viên (assign-course)"]
+    SyllabiSpace --> SyllabiCourseList["/mng/syllabi<br/>Danh sách Học phần trong Scope Ngành / Giảng viên"]
+    SyllabiSpace --> AssignModal["Modal: PM phân công Giảng viên (assign-course)"]
     SyllabiSpace --> SyllabusDetail["/mng/syllabi/:syllabusId<br/>Chi tiết Đề cương, Danh sách CLO & Duyệt CONFIRMED"]
 
-    CurriculumSpace --> TabPloPi["Tab 1 (Đã có F02): Khung PLO · PI & Ma trận I/R/M"]
+    CurriculumSpace --> TabPloPi["Tab 1 (Đã có F02): Khung PLO · PI"]
     CurriculumSpace --> TabProgCourses["Tab 2 (F03 - US-09): Kế hoạch Học phần trong CTĐT (program_courses)"]
     CurriculumSpace --> TabCloPiMatrix["Tab 3 (F03 - US-12): Ma trận Liên kết CLO × PI & Thẩm định QA"]
 ```
@@ -151,14 +149,14 @@ flowchart TD
 ---
 
 ### 4.2. Phân hệ Đề cương & Chuẩn đầu ra Học phần (`/mng/syllabi`)
-*Không gian làm việc chuyên môn của Trưởng bộ môn (`DEPARTMENT_HEAD`) và Giảng viên (`LECTURER`) theo ADR 0010.*
+*Không gian làm việc chuyên môn của Quản lý CTĐT (`PROGRAM_MANAGER`) và Giảng viên (`LECTURER`) theo ADR 0010 & ADR 0014.*
 
 #### Màn hình 1: Danh sách Học phần & Phiên bản Đề cương (`/mng/syllabi`)
 - **Bộ lọc đầu trang:**
-  - Chọn học phần (mặc định lọc các môn nằm trong `scope.courseIds` đối với `DEPARTMENT_HEAD` và `LECTURER`; hoặc xem toàn bộ khi bật chế độ tra cứu).
-- **Khu vực Phân công Giảng viên (Dành cho `DEPARTMENT_HEAD` và `ADMIN`):**
+  - Chọn học phần (mặc định lọc các môn nằm trong `scope.courseIds` hoặc ngành `scope.programIds`; hoặc xem toàn bộ khi bật chế độ tra cứu).
+- **Khu vực Phân công Giảng viên (Dành cho `PROGRAM_MANAGER`):**
   - Nút `Phân công giảng viên biên soạn` mở `AssignCourseModalComponent`:
-    - Tải danh sách giảng viên thuộc phạm vi Khoa/Ngành (`scope.programIds`) của Trưởng bộ môn thông qua `GET /api/v1/departments/lecturers?courseId={courseId}` (Trưởng bộ môn chỉ thấy các `LECTURER` đang `ACTIVE` có cùng `scope.programIds` hoặc đã được gán sẵn môn học đó; `ADMIN` thấy toàn bộ).
+    - Tải danh sách giảng viên thuộc phạm vi Khoa/Ngành (`scope.programIds`) thông qua `GET /api/v1/departments/lecturers?courseId={courseId}`.
     - Chọn giảng viên (`LECTURER`) và gọi `POST /api/v1/departments/assign-course` (hoặc gỡ phân công qua `POST /api/v1/departments/unassign-course`).
 - **Bảng danh sách các phiên bản Đề cương của học phần đang chọn (`GET /api/v1/courses/{courseId}/syllabi`):**
   - **Phiên bản (`version`):** Ví dụ `2026-v1`.
@@ -167,14 +165,14 @@ flowchart TD
   - **Hiệu lực đến học kỳ (`effectiveToTermId`):** Hiển thị mã học kỳ hoặc `—` (Còn hiệu lực).
   - **Thao tác:**
     - Nút `Mở chi tiết & CLO` (dẫn tới `/mng/syllabi/:syllabusId`).
-    - Nút `+ Tạo phiên bản đề cương mới` (hiển thị khi người dùng là `ADMIN`, hoặc `LECTURER` / `DEPARTMENT_HEAD` có môn học trong `scope.courseIds`).
+    - Nút `+ Tạo phiên bản đề cương mới` (hiển thị khi người dùng là `LECTURER` hoặc `PROGRAM_MANAGER` có quyền ghi học phần).
 
 #### Màn hình 2: Chi tiết Đề cương & Soạn thảo CLO (`/mng/syllabi/:syllabusId`)
 - **Header thông tin Đề cương:**
   - Hiển thị Mã & Tên học phần, Phiên bản đề cương, Học kỳ hiệu lực, Trạng thái `status`, và Thông tin phê duyệt (`verification.verifiedBy`, `verifiedAt`).
   - **Cảnh báo khóa (Banner):** Nếu `status !== 'DRAFT'`, hiển thị `nz-alert` thông báo: *"Đề cương đã được phê duyệt chính thức (CONFIRMED) hoặc lưu trữ. Danh sách CLO đã bị khóa để bảo toàn dữ liệu đo lường lịch sử."*
   - **Nút hành động trên Header:**
-    - Với `DEPARTMENT_HEAD` (trong scope) hoặc `ADMIN`:
+    - Với `PROGRAM_MANAGER` (trong scope):
       - Khi `status === 'DRAFT'`: Nút **`Phê duyệt Đề cương (CONFIRMED)`** (gọi `PUT /api/v1/syllabi/{id}/status` với `{ status: 'CONFIRMED' }`).
       - Khi `status === 'CONFIRMED'`: Nút `Chuyển vào Lưu trữ (ARCHIVED)`.
 - **Bảng Danh sách Chuẩn đầu ra Học phần (`clos` — US-11):**
@@ -183,7 +181,7 @@ flowchart TD
   - Cột 3 — **Mức nhận thức Bloom (`bloomLevel` 1–6):** Hiển thị bằng widget `app-level-label` kèm ghi chú `bloomNote` (ví dụ: `Mức 3 - Áp dụng`).
   - Cột 4 — **Cấu hình đo lường mặc định (`measurement`):**
     - Tỷ trọng mặc định (`defaultWeight`) và Ngưỡng đạt (`defaultPassThreshold`). Nếu `null` thì hiển thị `—` (Chờ Khoa xác nhận - Q12).
-  - Cột 5 — **Thao tác** (Chỉ hiển thị khi `syllabus.status === 'DRAFT'` và người dùng là `ADMIN` hoặc `LECTURER`/`DEPARTMENT_HEAD` trong scope môn học):
+  - Cột 5 — **Thao tác** (Chỉ hiển thị khi `syllabus.status === 'DRAFT'` và người dùng là `LECTURER` hoặc `PROGRAM_MANAGER` có quyền ghi học phần; `ADMIN` chỉ đọc):
     - Nút `Sửa CLO`, Nút `Xóa CLO`.
 - **Modal Thêm/Sửa CLO (`CloModalComponent`):**
   - `code`: Bắt buộc, validate regex `^CLO[0-9]+$` (ví dụ `CLO1`, `CLO2`).
@@ -195,7 +193,7 @@ flowchart TD
 ---
 
 ### 4.3. Mở rộng Không gian Khung CTĐT của Program Manager (`/mng/curriculum/versions/:versionId`)
-*Tích hợp 2 Tab mới trực tiếp vào màn hình chi tiết phiên bản CTĐT (`detail-curriculum-version`) để `PROGRAM_MANAGER` và `QA_OFFICER` làm việc liền mạch.*
+*Tích hợp 2 Tab mới trực tiếp vào màn hình chi tiết phiên bản CTĐT (`detail-curriculum-version`) để `PROGRAM_MANAGER` và `QA` làm việc liền mạch.*
 
 #### Tab 2: Kế hoạch Học phần trong CTĐT (`program_courses` — US-09/AC-2, AC-3)
 - **Mục đích:** Quản lý danh sách các môn học thuộc phiên bản CTĐT, học kỳ dự kiến và điều kiện tiên quyết / học trước.
@@ -233,7 +231,7 @@ flowchart TD
     - **Nếu đã có liên kết (`CloPiLinkCellDto`):**
       - Hiển thị biểu tượng đã nối $\checkmark$, giá trị `weight` (nếu có, hoặc `—`), và huy hiệu trạng thái thẩm định `app-verification-badge` (`VERIFIED` xanh lá / `NEEDS_CLARIFICATION` cam / `UNVERIFIED` xám).
       - Với `PROGRAM_MANAGER` (khi đề cương `DRAFT`): Nút xóa liên kết (`DELETE /api/v1/clo-pi-links/{linkId}`).
-      - Với `QA_OFFICER` (trong `scope.programIds`): Click vào ô liên kết mở **`VerificationActionModalComponent`** để thẩm định độc lập liên kết đó (`PUT /api/v1/clo-pi-links/{linkId}/verification` — US-12/AC-3).
+      - Với `QA` (trong `scope.programIds`): Click vào ô liên kết mở **`VerificationActionModalComponent`** để thẩm định độc lập liên kết đó (`PUT /api/v1/clo-pi-links/{linkId}/verification` — US-12/AC-3).
 
 ---
 
@@ -299,7 +297,7 @@ src/app/
     │   ├── syllabi.menu.ts                  <-- Menu item "Đề cương & CLO"
     │   ├── syllabi.routes.ts
     │   ├── list-syllabi/                    <-- Danh sách học phần theo scope & các phiên bản đề cương
-    │   ├── assign-course-modal/             <-- Modal Trưởng bộ môn phân công môn cho Giảng viên (ADR 0010)
+    │   ├── assign-course-modal/             <-- Modal PM phân công môn cho Giảng viên (ADR 0010 / ADR 0014)
     │   └── detail-syllabus/                 <-- Chi tiết đề cương, duyệt CONFIRMED, danh sách & modal Thêm/Sửa CLO
     │
     └── curriculum/
@@ -320,10 +318,10 @@ src/app/
 - **Chặng 2 — Phân hệ Kho Học phần & Học kỳ (`/mng/courses`):**
   - Xây dựng giao diện quản lý `courses` (Admin CRUD, các vai trò khác tra cứu) và `terms` (quản lý học kỳ).
 - **Chặng 3 — Phân hệ Đề cương, Phân công GV & Biên soạn CLO (`/mng/syllabi`):**
-  - Xây dựng màn hình danh sách đề cương theo môn, chức năng Trưởng bộ môn phân công môn học cho Giảng viên (`assign-course`), màn hình chi tiết đề cương + CRUD CLO (khi `DRAFT`) và nút Trưởng bộ môn duyệt `CONFIRMED`.
+  - Xây dựng màn hình danh sách đề cương theo môn, chức năng `PROGRAM_MANAGER` phân công môn học cho Giảng viên (`assign-course`), màn hình chi tiết đề cương + CRUD CLO (khi `DRAFT`) và nút `PROGRAM_MANAGER` duyệt `CONFIRMED`.
 - **Chặng 4 — Tích hợp vào Khung CTĐT (`/mng/curriculum/versions/:versionId`):**
   - Bổ sung Tab **Học phần CTĐT (`program_courses`)** kèm kiểm tra xung đột tiên quyết/học trước.
-  - Bổ sung Tab **Ma trận Liên kết CLO × PI (`clo-pi-matrix`)** cho `PROGRAM_MANAGER` nối chuẩn đầu ra và `QA_OFFICER` thẩm định từng ô liên kết.
+  - Bổ sung Tab **Ma trận Liên kết CLO × PI (`clo-pi-matrix`)** cho `PROGRAM_MANAGER` nối chuẩn đầu ra (bắt buộc `weight`) và `QA` thẩm định từng ô liên kết.
 
 ---
 
@@ -337,10 +335,10 @@ src/app/
    - `ProgramCourseModal`: Kiểm tra validator chặn chọn 1 môn vừa làm học phần tiên quyết vừa làm học phần học trước.
    - `detail-syllabus.component.spec.ts`:
      - Kiểm tra khi `syllabus.status === 'CONFIRMED'`, toàn bộ nút Thêm/Sửa/Xóa CLO bị ẩn/vô hiệu hóa (bất biến TD-27).
-     - Kiểm tra nút "Phê duyệt Đề cương (CONFIRMED)" chỉ hiển thị cho `DEPARTMENT_HEAD` (trong scope) hoặc `ADMIN`, ẩn với `LECTURER` và `PROGRAM_MANAGER`.
+     - Kiểm tra nút "Phê duyệt Đề cương (CONFIRMED)" chỉ hiển thị cho `PROGRAM_MANAGER` (trong scope), ẩn với `LECTURER` và `ADMIN`.
      - Kiểm tra regex mã CLO (`^CLO[0-9]+$`) và giới hạn `bloomLevel` (1–6).
    - `clo-pi-matrix-table.component.spec.ts`:
-     - Kiểm tra ô trống không hiển thị số `0`; quyền tạo/xóa liên kết thuộc về `PROGRAM_MANAGER` (khi đề cương `DRAFT`); quyền duyệt `VERIFIED` thuộc về `QA_OFFICER`.
+     - Kiểm tra ô trống không hiển thị số `0`; quyền tạo/xóa liên kết (kèm `weight`) thuộc về `PROGRAM_MANAGER`; quyền duyệt `VERIFIED` thuộc về `QA`.
 3. **Lệnh kiểm chứng bắt buộc trước khi hoàn tất:**
    ```bash
    cd D:\Code\Project\LMS-UI
@@ -354,10 +352,10 @@ src/app/
 ## 8. Nội dung Chuẩn bị Vấn đáp Bảo vệ (Rubric Mục 6.2)
 
 1. **Mã vừa tạo làm gì?**
-   - Xây dựng giao diện quản lý trọn vẹn phân hệ F03 theo kiến trúc phân quyền ADR 0010: Quản trị kho học phần & học kỳ cấp trường (`ADMIN`), phân công giảng viên và phê duyệt đề cương theo Bộ môn (`DEPARTMENT_HEAD`), biên soạn đề cương & chuẩn đầu ra học phần CLO (`LECTURER`), lắp ghép học phần vào CTĐT và thiết lập ma trận ánh xạ $CLO \times PI$ (`PROGRAM_MANAGER`), cùng cơ chế thẩm định độc lập từng liên kết ($CLO, PI$) của Cán bộ ĐBCL (`QA_OFFICER`).
+   - Xây dựng giao diện quản lý trọn vẹn phân hệ F03 theo kiến trúc phân quyền 4 vai trò (ADR 0010 & ADR 0014): Quản trị kho học phần (CRUD & import CSV) và học kỳ cấp trường (`ADMIN`), phân công giảng viên và phê duyệt đề cương (`PROGRAM_MANAGER`), biên soạn đề cương & chuẩn đầu ra học phần CLO (`LECTURER`), lắp ghép học phần vào CTĐT và thiết lập ma trận ánh xạ $CLO \times PI$ (`PROGRAM_MANAGER`), cùng cơ chế thẩm định độc lập từng liên kết ($CLO, PI$) của Cán bộ ĐBCL (`QA`).
 2. **Vì sao có trong đề tài?**
    - Là mắt xích trung gian bắt buộc nối giữa **Chuẩn đầu ra cấp Chương trình (PLO/PI ở F02)** với **Bài đánh giá & Câu hỏi thi (F04–F06)**. Nếu không có đề cương phiên bản hóa và bảng liên kết `clo_pi_links` đã được QA xác nhận (`VERIFIED`), hệ thống đo lường sẽ không biết điểm câu hỏi của một môn học đóng góp hợp lệ vào chỉ số PI nào của CTĐT.
 3. **Các tham số, ràng buộc và thư viện đến từ đâu?**
-   - Toàn bộ quy tắc biểu thức chính quy mã CLO (`^CLO[0-9]+$`), thang nhận thức Bloom 1–6, quy tắc không tự gán trọng số mặc định (Q12, Q22), khóa đề cương `CONFIRMED` (TD-27), kiểm tra môn thuộc CTĐT (TD-28) và phân quyền Bộ môn – Giảng viên đều bám sát 100% thiết kế CSDL v0.5 (`GiaiThich_CoSoDuLieu.md`), `F03-hoc-phan-clo.md` và `ADR 0010`.
+   - Toàn bộ quy tắc biểu thức chính quy mã CLO (`^CLO[0-9]+$`), thang nhận thức Bloom 1–6, trọng số `weight` ∈ `(0, 1]`, khóa đề cương `CONFIRMED` (TD-27), kiểm tra môn thuộc CTĐT (TD-28) và phân quyền tinh gọn 4 vai trò đều bám sát 100% thiết kế CSDL v0.7 (`GiaiThich_CoSoDuLieu.md`), `F03-hoc-phan-clo.md`, ADR 0010 và ADR 0014.
 4. **Nếu bỏ mô-đun này đi thì hệ thống bị ảnh hưởng gì?**
    - Hệ thống sẽ đứt gãy hoàn toàn đường ống truy vết chuẩn đầu ra (Outcome Traceability Pipeline): Giảng viên ở F04 không có danh mục CLO để gắn vào câu hỏi thi, hoặc có thể gán tùy tiện một câu hỏi vào bất kỳ PI nào không liên quan đến môn học, làm sai lệch hoàn toàn kết quả đo lường chuẩn đầu ra chương trình đào tạo ở F06.

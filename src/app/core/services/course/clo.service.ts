@@ -52,7 +52,7 @@ export class CloService {
     });
   }
 
-  // ========== Liên kết CLO–PI & Ma trận (PROGRAM_MANAGER / QA_OFFICER) ==========
+  // ========== Liên kết CLO–PI & Ma trận (PROGRAM_MANAGER / QA) ==========
 
   getCloPiLinks(syllabusId: string): Observable<ICloPiLink[]> {
     return this.http.get<ICloPiLink[]>(UrlConstant.API.SYLLABUS_CLO_PI_LINKS(syllabusId));

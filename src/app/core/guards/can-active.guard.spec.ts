@@ -52,14 +52,14 @@ describe('canActiveGuard', () => {
 
   it('rolesRelation OR: một trong các vai trò là đủ', () => {
     authenticated = true;
-    roles = ['VIEWER'];
-    expect(run({ listRoles: ['ADMIN', 'VIEWER'], rolesRelation: 'OR' })).toBe(true);
+    roles = ['QA'];
+    expect(run({ listRoles: ['ADMIN', 'QA'], rolesRelation: 'OR' })).toBe(true);
   });
 
   it('rolesRelation AND: thiếu một vai trò là bị chặn', () => {
     authenticated = true;
     roles = ['ADMIN'];
-    const result = run({ listRoles: ['ADMIN', 'VIEWER'], rolesRelation: 'AND' });
+    const result = run({ listRoles: ['ADMIN', 'QA'], rolesRelation: 'AND' });
     expect(result).toBeInstanceOf(UrlTree);
   });
 

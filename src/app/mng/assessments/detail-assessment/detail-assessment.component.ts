@@ -102,7 +102,7 @@ export class DetailAssessmentComponent implements OnInit {
     const roles = this.roles();
     if (!a) return false;
     const lecturer = roles.includes(SystemConstant.ROLE.LECTURER);
-    return a.scope === 'SYLLABUS_TEMPLATE' ? lecturer || roles.includes(SystemConstant.ROLE.DEPARTMENT_HEAD) : lecturer;
+    return a.scope === 'SYLLABUS_TEMPLATE' ? lecturer || roles.includes(SystemConstant.ROLE.PROGRAM_MANAGER) : lecturer;
   });
 
   readonly editable = computed(() => {

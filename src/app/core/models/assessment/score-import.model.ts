@@ -5,14 +5,9 @@ export type ImportBatchStatus =
   | 'CONFIRMED'
   | 'ROLLED_BACK';
 
-export type ImportSourceSystem =
-  | 'MOODLE'
-  | 'CANVAS'
-  | 'GOOGLE_CLASSROOM'
-  | 'SPREADSHEET'
-  | 'CUSTOM';
+export type ImportSourceSystem = 'CSV' | 'MOODLE_EXPORT' | 'EXCEL';
 
-export type ReimportPolicy = 'SKIP_EXISTING' | 'OVERWRITE';
+export type ReimportPolicy = 'REJECT_ON_CONFLICT' | 'OVERWRITE' | 'UPDATE_BLANK_ONLY';
 
 export interface IImportColumnMappingItem {
   column: string;

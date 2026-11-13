@@ -90,9 +90,9 @@ export class DetailCurriculumVersionComponent implements OnInit {
     SPECIALIZED: 'Chuyên ngành',
   };
 
-  /** Kiểm tra vai trò QA_OFFICER (ADR 0004: chỉ QA_OFFICER mới có quyền duyệt ĐBCL) */
+  /** Kiểm tra vai trò QA (ADR 0014: chỉ QA mới có quyền thẩm định ĐBCL) */
   readonly isQaOfficer = computed(() => {
-    return this.userRoles().includes(SystemConstant.ROLE.QA_OFFICER);
+    return this.userRoles().includes(SystemConstant.ROLE.QA);
   });
 
   /** Kiểm tra quyền sửa ma trận I/R/M & chỉnh sửa chương trình (ADR 0005: chỉ PROGRAM_MANAGER trong scope, ADMIN không có quyền sửa) */

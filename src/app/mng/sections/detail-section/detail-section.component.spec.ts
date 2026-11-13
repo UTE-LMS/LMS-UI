@@ -117,7 +117,7 @@ describe('DetailSectionComponent (F05a US-19, US-20)', () => {
   });
 
   it('ẩn thao tác rút/ghi danh lại và nhập danh sách với vai trò không phải ADMIN hoặc giảng viên của lớp', async () => {
-    await setup([SystemConstant.ROLE.VIEWER]);
+    await setup([SystemConstant.ROLE.QA]);
     expect(component.canEditRoster()).toBe(false);
     expect(buttonByLabel('Rút SV-0001 khỏi lớp')).toBeUndefined();
     expect(el().textContent).not.toContain('Nhập danh sách lớp');
@@ -158,7 +158,7 @@ describe('DetailSectionComponent (F05a US-19, US-20)', () => {
 
   it('403 khi tải lớp: hiện trạng thái hết quyền và không hiện dữ liệu', async () => {
     vi.clearAllMocks();
-    authSvc.getRoles.mockReturnValue([SystemConstant.ROLE.VIEWER]);
+    authSvc.getRoles.mockReturnValue([SystemConstant.ROLE.QA]);
     sectionSvc.getSection.mockReturnValue(throwError(() => new HttpErrorResponse({
       status: 403, error: { status: 403, code: 'FORBIDDEN', message: 'Bạn không có quyền truy cập tài nguyên này' },
     })));

@@ -145,8 +145,8 @@ describe('ListCurriculumVersionsComponent (F02 US-05, ADR 0005 UI.pdf Trang 3)',
     );
   });
 
-  it('QA Officer có quyền mở modal thẩm định ĐBCL', () => {
-    component.userRoles.set([SystemConstant.ROLE.QA_OFFICER]);
+  it('QA có quyền mở modal thẩm định ĐBCL', () => {
+    component.userRoles.set([SystemConstant.ROLE.QA]);
     expect(component.isQaOfficer()).toBe(true);
 
     component.openVerifyModal(mockVersions[1]);

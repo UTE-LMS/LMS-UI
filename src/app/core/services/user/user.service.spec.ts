@@ -54,7 +54,7 @@ describe('UserService (API-CONTRACT.md §5.3)', () => {
   });
 
   it('update dùng PUT /users/{id}', () => {
-    service.update({ email: 'a@b.vn', fullName: 'A', roleAssignments: [{ role: 'VIEWER', scope: null }] }, userId).subscribe();
+    service.update({ email: 'a@b.vn', fullName: 'A', roleAssignments: [{ role: 'QA', scope: null }] }, userId).subscribe();
     const req = http.expectOne(`${base}/${userId}`);
     expect(req.request.method).toBe('PUT');
     expect(req.request.context.get(INLINE_ERRORS)).toBe(true);

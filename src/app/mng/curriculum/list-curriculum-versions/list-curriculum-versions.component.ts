@@ -110,10 +110,10 @@ export class ListCurriculumVersionsComponent implements OnInit {
     return scopeProgramIds.includes(this.selectedProgramId());
   });
 
-  /** Kiểm tra vai trò Cán bộ ĐBCL (QA Officer): Người duy nhất có quyền thẩm định ĐBCL (ADR 0004) */
+  /** Kiểm tra vai trò QA: Người duy nhất có quyền thẩm định ĐBCL (ADR 0014) */
   readonly isQaOfficer = computed(() => {
     const roles = this.userRoles();
-    return roles.includes(SystemConstant.ROLE.QA_OFFICER);
+    return roles.includes(SystemConstant.ROLE.QA);
   });
 
   // Modal tạo / clone

@@ -114,7 +114,7 @@ export class CourseService {
     );
   }
 
-  // ========== Phân công Giảng viên biên soạn Đề cương (ADR 0010 - DEPARTMENT_HEAD / ADMIN) ==========
+  // ========== Phân công Giảng viên biên soạn Đề cương (ADR 0014 - PROGRAM_MANAGER) ==========
 
   getDepartmentLecturers(courseId?: string): Observable<IUser[]> {
     let params = new HttpParams();

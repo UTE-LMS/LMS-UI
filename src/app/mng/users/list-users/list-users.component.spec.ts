@@ -23,7 +23,7 @@ const makeUser = (id: string, username: string, status: 'ACTIVE' | 'LOCKED', rol
 
 const ME = makeUser('me', 'admin', 'ACTIVE', 'ADMIN');
 const OTHER = makeUser('other', 'gv.oop01', 'ACTIVE');
-const LOCKED = makeUser('locked', 'qa.01', 'LOCKED', 'QA_OFFICER');
+const LOCKED = makeUser('locked', 'qa.01', 'LOCKED', 'QA');
 
 const page = (content: IUser[]): IPagedResults<IUser> => ({
   content, page: 0, size: 10, totalElements: content.length, totalPages: content.length ? 1 : 0, last: true,
@@ -86,7 +86,7 @@ describe('ListUsersComponent (F01 US-02)', () => {
     const content = text();
     expect(content).toContain('gv.oop01');
     expect(content).toContain('Giảng viên');
-    expect(content).toContain('Cán bộ đảm bảo chất lượng');
+    expect(content).toContain('Cán bộ ĐBCL & Khảo thí');
     expect(content).toContain('(bạn)');
     expect(content).toContain('Bị khóa');
     // Không hiển thị ô nào có thể chứa băm mật khẩu

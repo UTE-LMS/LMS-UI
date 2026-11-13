@@ -1,16 +1,16 @@
-# Kế hoạch Thiết kế & Hiện thực UI cho F02: Quản lý CTĐT (Admin) & Chuẩn đầu ra PLO/PI/I-R-M (Program Manager)
+# Kế hoạch Thiết kế & Hiện thực UI cho F02: Quản lý CTĐT (Admin) & Chuẩn đầu ra PLO/PI (Program Manager)
 
 > **Tài liệu Kế hoạch Kỹ thuật UI Angular**  
 > **Dự án Frontend:** `LMS-UI` (Angular 21, TypeScript, Ng-Zorro-Antd)  
-> **Dự án Backend:** `LMS-API` (Java 25, Spring Boot 4.1.0, MongoDB)  
-> **Căn cứ kiến trúc:** [ADR 0005](file:///D:/Code/Project/LMS-API/doc/adr/0005-phan-quyen-khoi-tao-danh-muc-ctdt.md), [ADR 0004](file:///D:/Code/Project/LMS-API/doc/adr/0004-qa-xac-nhan-ctdt-plo.md), [F02-ctdt-plo-pi.md](file:///D:/Code/Project/LMS-API/doc/plan/F02-ctdt-plo-pi.md)  
+> **Dự án Backend:** `LMS-API` (Java 25, Spring Boot 4.1.2, MongoDB, Schema v0.7)  
+> **Căn cứ kiến trúc:** [ADR 0005](file:///D:/Code/Project/LMS-API/doc/adr/0005-phan-quyen-khoi-tao-danh-muc-ctdt.md), [ADR 0004](file:///D:/Code/Project/LMS-API/doc/adr/0004-qa-xac-nhan-ctdt-plo.md), [ADR 0012](file:///D:/Code/Project/LMS-API/doc/adr/0012-bo-quy-doi-irm.md), [ADR 0014](file:///D:/Code/Project/LMS-API/doc/adr/0014-tinh-gon-vai-tro-va-quy-trinh-obe-v07.md)  
 > **Giao diện tham khảo:** [`doc/UI.pdf`](file:///D:/Code/Project/LMS-UI/doc/UI.pdf) (Trang 3, 4, 9, 10, 36)
 
 ---
 
 ## 1. Phân định Trách nhiệm Nghiệp vụ (Separation of Concerns)
 
-Theo mô hình quản trị đại học chuẩn tắc (Master Data Governance) và quyết định kiến trúc tại **ADR 0005**:
+Theo mô hình quản trị đại học chuẩn tắc (Master Data Governance) và các quyết định kiến trúc **ADR 0004, 0005, 0012, 0014**:
 
 ```mermaid
 flowchart LR
@@ -20,12 +20,11 @@ flowchart LR
     end
 
     subgraph PM_SPACE["2. Khu vực Program Manager (/mng/curriculum)"]
-        P1["Lọc CTĐT theo phạm vi scope.programIds"] --> P2["Quản lý Vòng đời Phiên bản CTĐT<br/>(DRAFT -> ACTIVE -> ARCHIVED)"]
-        P2 --> P3["Soạn thảo danh mục chuẩn đầu ra:<br/>7 PLO & 17 PI"]
-        P3 --> P4["Thiết lập Ma trận Học phần đóng góp PI<br/>(I / R / M Matrix)"]
+        P1["Lọc CTĐT theo phạm vi scope.programIds"] --> P2["Quản lý Vòng đời Phiên bản CTĐT<br/>(PUT .../status: DRAFT -> ACTIVE -> ARCHIVED)"]
+        P2 --> P3["Soạn thảo danh mục chuẩn đầu ra:<br/>PLO (passThreshold) & PI (weight, passThreshold)"]
     end
 
-    subgraph QA_SPACE["3. Thẩm định độc lập (QA Officer)"]
+    subgraph QA_SPACE["3. Thẩm định độc lập (QA)"]
         Q1["Cán bộ ĐBCL kiểm tra & duyệt nội dung<br/>(PUT .../verification - US-08)"]
     end
 
@@ -36,19 +35,19 @@ flowchart LR
 1. **Quản trị viên (`ADMIN`):**
    - Chịu trách nhiệm khởi tạo danh mục Ngành đào tạo cấp trường (`programs`).
    - Quyền API: `POST /api/v1/programs`, `PUT /api/v1/programs/{id}`, `GET /api/v1/programs`.
-   - **Tuyệt đối không can thiệp chuyên môn:** Admin không soạn thảo phiên bản, không thêm/sửa PLO, PI hay ma trận I/R/M.
+   - **Tuyệt đối không can thiệp chuyên môn:** Admin không soạn thảo phiên bản, không thêm/sửa PLO, PI.
 
 2. **Quản lý CTĐT (`PROGRAM_MANAGER`):**
    - Chịu trách nhiệm toàn bộ nội dung học thuật chuyên môn của CTĐT được phân công (`scope.programIds`).
    - Quyền API:
-     - Tạo/sửa phiên bản CTĐT: `POST/PUT /api/v1/program-versions` (có kiểm tra `canAccessProgram`).
-     - Quản lý danh mục PLO: `GET/POST/PUT/DELETE /api/v1/program-versions/{pvId}/plos`.
-     - Quản lý chỉ số PI: `GET/POST/PUT/DELETE /api/v1/program-versions/{pvId}/pis`.
-     - Cấu hình ma trận I/R/M: `GET/POST/DELETE /api/v1/program-versions/{pvId}/pi-contributions`.
+     - Tạo/sửa metadata phiên bản CTĐT: `POST/PUT /api/v1/program-versions`.
+     - Chuyển trạng thái vòng đời (`DRAFT -> ACTIVE -> ARCHIVED`): `PUT /api/v1/program-versions/{id}/status`.
+     - Quản lý danh mục PLO: `GET/POST/PUT/DELETE /api/v1/program-versions/{pvId}/plos` (bắt buộc `passThreshold`).
+     - Quản lý chỉ số PI: `GET/POST/PUT/DELETE /api/v1/plos/{ploId}/pis`, `PUT/DELETE /api/v1/pis/{id}` (bắt buộc `passThreshold` và `weight`).
    - **Tách bạch thẩm định:** PM soạn thảo nội dung nhưng **không tự duyệt** trạng thái ĐBCL (`verification`).
 
-3. **Cán bộ Đảm bảo chất lượng (`QA_OFFICER`):**
-   - Độc lập thẩm định và cập nhật trạng thái xác thực nội dung: `PUT .../verification` (US-08).
+3. **Cán bộ Đảm bảo chất lượng (`QA`):**
+   - Độc lập thẩm định và cập nhật trạng thái xác thực nội dung: `PUT /api/v1/program-versions/{id}/verification` (US-08).
 
 ---
 
@@ -56,8 +55,9 @@ flowchart LR
 
 | Bất biến nghiệp vụ | Hiện thực trên giao diện Angular |
 |---|---|
-| **Dữ liệu thiếu ≠ 0** | Khi dữ liệu đo lường, nội dung hoặc chỉ số chưa có, hiển thị dấu gạch `—` ("Chưa có dữ liệu" / "Chưa nhập"). Cấm tuyệt đối việc hiển thị số `0` hoặc 0%. |
-| **I/R/M không phải là trọng số** | Ma trận sư phạm chỉ ghi nhận giá trị chuỗi `I` (Introduce), `R` (Reinforce), `M` (Master). Cấm quy đổi sang số (như I=1, R=2, M=3). Ô trống của ma trận biểu thị **không có bản ghi** đóng góp. |
+| **Dữ liệu thiếu ≠ 0** | Khi dữ liệu đo lường hoặc nội dung chưa có, hiển thị dấu gạch `—` ("Chưa có dữ liệu" / "Chưa nhập"). Cấm tuyệt đối việc hiển thị số `0` hoặc 0%. |
+| **Bỏ ma trận I/R/M (ADR 0012)** | Đã gỡ bỏ hoàn toàn ma trận `I/R/M` (`/pi-contributions`). Việc tính toán PI dựa trực tiếp vào liên kết `CLO -> PI` (kèm trọng số `weight`) và trọng số của từng PI trong PLO. |
+| **Bắt buộc `passThreshold` & `weight` (v0.7)** | - **PLO:** Bắt buộc nhập `passThreshold` ∈ `[0.0, 1.0]` (mặc định gợi ý `0.5`).<br>- **PI:** Bắt buộc nhập `passThreshold` ∈ `[0.0, 1.0]` và `weight` ∈ `(0.0, 1.0]`. Tổng `weight` các PI trong cùng một PLO phải bằng `1.0` (100%). |
 | **Thứ tự hiển thị PLO** | Danh sách PLO bắt buộc sắp theo `displayOrder` của Khoa quy định (`PLO1, PLO6, PLO7, PLO4, PLO5, PLO2, PLO3`), không sắp theo mã chuỗi hay thứ tự chèn. |
 | **Khóa phiên bản `ACTIVE`** | Phiên bản đã ở trạng thái `ACTIVE` (Đang áp dụng) thì bị khóa không cho sửa đè. Người dùng muốn thay đổi phải bấm nút tạo phiên bản nháp mới kế thừa từ bản `ACTIVE`. |
 | **Thang năng lực `capabilityLevelRaw`** | Hiển thị nguyên gốc giá trị từ 1 đến 6, không suy diễn hoặc đổi sang thang Bloom (thang Bloom chỉ dùng cho CLO ở F03). |
@@ -73,15 +73,15 @@ Trong layout quản lý `/mng`, hệ thống chia thành 2 phân hệ rõ ràng:
 ```mermaid
 flowchart TD
     MngRoot["/mng (Layout Quản lý Chung)"] --> AdminSection["1. Phân hệ Admin: /mng/programs<br/>(Chỉ vai trò ADMIN)"]
-    MngRoot --> PMSection["2. Phân hệ Program Manager: /mng/curriculum<br/>(Vai trò PROGRAM_MANAGER, QA_OFFICER,...)"]
+    MngRoot --> PMSection["2. Phân hệ Program Manager: /mng/curriculum<br/>(Vai trò PROGRAM_MANAGER, QA, LECTURER)"]
 
     AdminSection --> AdminList["/mng/programs<br/>Danh sách CTĐT cấp trường & Thống kê phiên bản"]
     AdminSection --> AdminNew["Modal/Drawer: Thêm CTĐT mới (Mã, Tên, Bậc, Hệ)"]
     AdminSection --> AdminEdit["Modal/Drawer: Sửa thông tin CTĐT"]
 
     PMSection --> PMVersionList["/mng/curriculum<br/>Danh sách Phiên bản CTĐT trong Scope (UI.pdf Trang 3)"]
-    PMSection --> PMDetail["/mng/curriculum/versions/:versionId<br/>Không gian PLO, PI & Ma trận I/R/M (UI.pdf Trang 4)"]
-    PMSection --> PMEdit["/mng/curriculum/versions/:versionId/edit<br/>Soạn thảo Khung PLO, PI (UI.pdf Trang 9, 10)"]
+    PMSection --> PMDetail["/mng/curriculum/versions/:versionId<br/>Không gian PLO & PI (UI.pdf Trang 4)"]
+    PMSection --> PMEdit["/mng/curriculum/versions/:versionId/edit<br/>Soạn thảo Khung PLO (passThreshold), PI (weight, passThreshold)"]
 ```
 
 ### Chi tiết cấu hình Router Guards & Role-based Data:
@@ -103,10 +103,8 @@ flowchart TD
      data: {
        listRoles: [
          SystemConstant.MNG_ROLE.PROGRAM_MANAGER,
-         SystemConstant.MNG_ROLE.QA_OFFICER,
-         SystemConstant.MNG_ROLE.DEPARTMENT_HEAD,
+         SystemConstant.MNG_ROLE.QA,
          SystemConstant.MNG_ROLE.LECTURER,
-         SystemConstant.MNG_ROLE.VIEWER,
        ],
        rolesRelation: 'OR',
      },
@@ -172,32 +170,19 @@ flowchart TD
 
 ---
 
-#### Màn hình 2: Không gian làm việc PLO, PI & Ma trận I/R/M (`/mng/curriculum/versions/:versionId`)
+#### Màn hình 2: Không gian làm việc PLO & PI (`/mng/curriculum/versions/:versionId`)
 *(Tham chiếu bố cục Trang 4 `UI.pdf`)*
 - **Header:**
   - Tiêu đề: `Chương trình đào tạo — Khung Chuẩn đầu ra`
-  - Thông tin phiên bản: Mã phiên bản, trạng thái, tổng số tín chỉ, thời gian đào tạo.
-  - Nút hành động: `Sửa chương trình` (dành cho PM có quyền ghi), `Duyệt nội dung` (dành cho `QA_OFFICER`).
+  - Thông tin phiên bản: Mã phiên bản, trạng thái (`DRAFT`/`ACTIVE`/`ARCHIVED` + nút đổi trạng thái qua `PUT .../status`), tổng số tín chỉ, thời gian đào tạo.
+  - Nút hành động: `Sửa chương trình` (dành cho PM có quyền ghi), `Duyệt nội dung` (dành cho `QA`).
 - **Phần A — Danh sách Chuẩn đầu ra PLO & Chỉ số PI (Tree Table):**
   - Hiển thị cấu trúc cây 2 cấp:
-    - **Cấp 1 (PLO):** Hiển thị 7 PLO theo đúng thứ tự `displayOrder` của Khoa (`PLO1, PLO6, PLO7, PLO4, PLO5, PLO2, PLO3`). Cột Mức năng lực (1–6, dùng `app-level-label`), Cột Nguồn nội dung (tag `Diễn giải tạm` hoặc `Đã đối chiếu bản gốc`). Nội dung nếu chưa có thì hiển thị dấu `—`.
-    - **Cấp 2 (PI):** Các chỉ số hiệu năng trực thuộc từng PLO (`PI6.1, PI6.2, PI6.3...`). Cột mục tiêu đạt `targetPassRate` (ví dụ `70%` hoặc `—`).
-  - Chú thích chân bảng: *"Xếp theo thứ tự của Khoa. Mức năng lực lưu đúng như tài liệu, không tính lại từ PI."*
-- **Phần B — Ma trận Học phần đóng góp vào PI (I/R/M Matrix):**
-  - Bảng ma trận trực quan 2 chiều:
-    - **Dòng:** Danh sách học phần trong CTĐT (Mã học phần, Tên học phần, ví dụ `OOPR230279 - Lập trình hướng đối tượng`).
-    - **Cột gộp tầng 1:** Danh mục PLO (`PLO1`, `PLO2`, `PLO6`, `PLO7`...).
-    - **Cột tầng 2:** Các PI tương ứng (`PI1.2`, `PI2.2`, `PI6.1`, `PI6.2`, `PI6.3`, `PI7.1`, `PI7.2`).
-    - **Ô ma trận:**
-      - Giá trị `I` (Introduce): Ô màu xanh dương nhạt.
-      - Giá trị `R` (Reinforce): Ô màu tím nhạt.
-      - Giá trị `M` (Master): Ô màu cam nhạt.
-      - Ô trống: Không có đóng góp (không hiển thị số 0).
-    - Với `PROGRAM_MANAGER`, click trực tiếp vào ô để chuyển nhanh giá trị `I` → `R` → `M` → Xóa (tự động gọi API `POST / DELETE` `pi-contributions`).
-  - Ghi chú cố định: *"I giới thiệu, R củng cố, M thành thạo: mô tả mức đóng góp dự kiến, không phải trọng số và không phải kết quả của sinh viên. Ô trống là chưa có bản ghi."*
-- **Phần C — Khối Thẩm định ĐBCL (US-08):**
+    - **Cấp 1 (PLO):** Hiển thị các PLO theo đúng thứ tự `displayOrder`. Cột Mức năng lực (1–6, dùng `app-level-label`), Cột Ngưỡng đạt (`passThreshold` — bắt buộc ∈ `[0, 1]`), Cột Nguồn nội dung (`Diễn giải tạm` hoặc `Đã đối chiếu bản gốc`). Nội dung nếu chưa có thì hiển thị dấu `—`.
+    - **Cấp 2 (PI):** Các chỉ số hiệu năng trực thuộc từng PLO (`PI6.1, PI6.2, PI6.3...`). Cột **Trọng số (`weight`)** (tổng các PI trong cùng PLO = `1.0`) và Cột **Ngưỡng đạt (`passThreshold`)**.
+- **Phần B — Khối Thẩm định ĐBCL (US-08):**
   - Hiển thị badge kiểm chứng: `CHƯA XÁC NHẬN` / `ĐÃ XÁC NHẬN` / `CẦN LÀM RÕ`.
-  - Nếu là `QA_OFFICER`: Hiển thị nút `Duyệt nội dung` (mở popup chọn trạng thái và nhập ghi chú thẩm định).
+  - Nếu là `QA`: Hiển thị nút `Duyệt nội dung` (mở popup chọn trạng thái và nhập ghi chú thẩm định).
   - Nếu là `PROGRAM_MANAGER` hoặc các vai trò khác: Chỉ hiển thị trạng thái và người đã duyệt, nút duyệt bị ẩn hoặc disabled.
 
 ---
@@ -261,13 +246,12 @@ src/app/
     │   └── program-modal/                   <-- Modal tạo/sửa CTĐT (code, name, level, degree)
     │
     └── curriculum/                          <-- 2. PHÂN HỆ PROGRAM MANAGER: Khung CTĐT & CĐR
-        ├── curriculum.menu.ts               <-- Menu item "Khung CTĐT & Chuẩn đầu ra" (roles: [PM, QA, DH, LEC, VIEWER])
-        ├── curriculum.routes.ts             <-- Routes: list versions, detail PLO/PI & matrix, edit
+        ├── curriculum.menu.ts               <-- Menu item "Khung CTĐT & Chuẩn đầu ra" (roles: [PM, QA, LEC])
+        ├── curriculum.routes.ts             <-- Routes: list versions, detail PLO/PI, edit
         ├── list-curriculum-versions/        <-- Danh sách phiên bản trong scope (UI.pdf Trang 3)
-        ├── detail-curriculum-version/       <-- Không gian PLO/PI & Ma trận I/R/M (UI.pdf Trang 4)
-        │   ├── plo-pi-tree-table/           <-- Cây phân cấp 7 PLO / 17 PI
-        │   ├── irm-matrix-table/            <-- Bảng ma trận 2 chiều học phần - PI (I/R/M)
-        │   └── verification-action-modal/   <-- Popup duyệt ĐBCL (US-08 dành cho QA_OFFICER)
+        ├── detail-curriculum-version/       <-- Không gian PLO/PI (UI.pdf Trang 4)
+        │   ├── plo-pi-tree-table/           <-- Cây phân cấp PLO / PI (kèm weight, passThreshold)
+        │   └── verification-action-modal/   <-- Popup duyệt ĐBCL (US-08 dành cho QA)
         └── form-curriculum-version/         <-- Màn hình soạn thảo phiên bản & PLO/PI (UI.pdf Trang 9, 10)
 ```
 
@@ -288,13 +272,13 @@ src/app/
    ```
    *Test suites trọng tâm:*
    - `list-programs.component.spec.ts`: Admin xem được danh sách CTĐT; người dùng không phải Admin bị Guard chặn.
-   - `list-curriculum-versions.component.spec.ts`: Hiển thị đúng các phiên bản thuộc CTĐT trong scope; nút "Tạo phiên bản mới" ẩn đối với vai trò chỉ xem (`VIEWER`, `LECTURER`).
+   - `list-curriculum-versions.component.spec.ts`: Hiển thị đúng các phiên bản thuộc CTĐT trong scope; nút "Tạo phiên bản mới" ẩn đối với vai trò chỉ xem (`QA`, `LECTURER`).
    - `detail-curriculum-version.component.spec.ts`:
-     - Kiểm tra sắp xếp PLO chuẩn theo `displayOrder` (`PLO1, PLO6, PLO7, PLO4, PLO5, PLO2, PLO3`).
-     - Render ma trận I/R/M chính xác: kiểm tra ô có `I`, `R`, `M` và ô trống không có bản ghi (không chứa giá trị `0`).
-     - Nút duyệt ĐBCL chỉ kích hoạt khi tài khoản có vai trò `QA_OFFICER`.
+     - Kiểm tra sắp xếp PLO chuẩn theo `displayOrder`.
+     - Hiển thị `passThreshold` cho PLO và `weight`, `passThreshold` cho PI (không chứa giá trị mặc định sai khi thiếu dữ liệu).
+     - Nút duyệt ĐBCL chỉ kích hoạt khi tài khoản có vai trò `QA`.
    - `form-curriculum-version.component.spec.ts`:
-     - Validate regex mã PLO (`^PLO[1-9][0-9]*$`) và mã PI (`^PI[1-9][0-9]*\.[1-9][0-9]*$`).
+     - Validate regex mã PLO (`^PLO[1-9][0-9]*$`), mã PI (`^PI[1-9][0-9]*\.[1-9][0-9]*$`) và tổng trọng số PI trong cùng PLO = `1.0`.
      - Đảm bảo trường mã của bản ghi đã lưu trong DB ở trạng thái `disabled`.
 3. **Kiểm tra Build Dev:**
    ```bash
@@ -309,10 +293,9 @@ src/app/
 2. **Luồng Program Manager:**
    - Đăng nhập `quanly.ctdt` -> Vào menu **Khung CTĐT & Chuẩn đầu ra** (`/mng/curriculum`).
    - Chọn CTĐT trong phạm vi -> Thấy danh sách các phiên bản (Nháp, Đang áp dụng, Đã lưu trữ).
-   - Mở chi tiết một phiên bản -> Kiểm tra cây 7 PLO / 17 PI và ma trận I/R/M.
-   - Thử cấu hình ma trận I/R/M bằng thao tác click chuyển trạng thái (I/R/M).
+   - Mở chi tiết một phiên bản -> Kiểm tra cây PLO / PI kèm `passThreshold` và `weight`.
    - Thử bấm **Sửa chương trình** -> Thêm một PLO mới không nhập mã -> Kiểm tra thanh cảnh báo đỏ chân trang hiển thị lỗi *"Dòng PLO mới chưa có mã"*.
-3. **Luồng Cán bộ ĐBCL (`QA_OFFICER`):**
+3. **Luồng Cán bộ ĐBCL (`QA`):**
    - Đăng nhập `qa.01` -> Vào xem phiên bản CTĐT -> Nút **Duyệt nội dung** hiển thị cho phép cập nhật trạng thái `VERIFIED` kèm ghi chú thẩm định (US-08).
 
 ---
@@ -322,12 +305,12 @@ src/app/
 1. **Mã vừa tạo làm gì?**
    - Xây dựng 2 phân hệ UI riêng biệt:
      1. Giao diện Admin quản trị danh mục Ngành đào tạo cấp trường (Master Data).
-     2. Giao diện Program Manager quản lý nội dung chuyên môn của CTĐT (Vòng đời phiên bản, cây 7 PLO / 17 PI, ma trận sư phạm I/R/M) và tích hợp quy trình thẩm định ĐBCL độc lập (`QA_OFFICER`).
+     2. Giao diện Program Manager quản lý nội dung chuyên môn của CTĐT (Vòng đời phiên bản, cây PLO / PI kèm trọng số và ngưỡng đạt) và tích hợp quy trình thẩm định ĐBCL độc lập (`QA`).
 2. **Vì sao có sự phân chia giao diện Admin và Program Manager?**
-   - Theo quyết định kiến trúc **ADR 0005**: Danh mục ngành là dữ liệu pháp lý dài hạn do Hội đồng trường ban hành, chỉ Admin/Phòng Đào tạo được khởi tạo. Ngược lại, nội dung chuẩn đầu ra PLO/PI và ma trận I/R/M là nghiệp vụ học thuật chuyên môn của Quản lý CTĐT. Phân tách rõ ràng giúp tuân thủ nguyên tắc phân định trách nhiệm (Separation of Duties) và chuẩn an toàn thông tin OWASP.
+   - Theo quyết định kiến trúc **ADR 0005**: Danh mục ngành là dữ liệu pháp lý dài hạn do Hội đồng trường ban hành, chỉ Admin/Phòng Đào tạo được khởi tạo. Ngược lại, nội dung chuẩn đầu ra PLO/PI là nghiệp vụ học thuật chuyên môn của Quản lý CTĐT. Phân tách rõ ràng giúp tuân thủ nguyên tắc phân định trách nhiệm (Separation of Duties) và chuẩn an toàn thông tin OWASP.
 3. **Các tham số, ràng buộc và thư viện đến từ đâu?**
    - Thư viện: Angular 21, `ng-zorro-antd`, FontAwesome.
-   - Ràng buộc: Regex mã PLO/PI, các enum trạng thái phiên bản (`DRAFT`, `ACTIVE`, `ARCHIVED`), loại đóng góp (`I`, `R`, `M`) và quy trình thẩm định đồng bộ 100% với Spring Boot backend `LMS-API` và CSDL v0.5 (`GiaiThich_CoSoDuLieu.md`).
+   - Ràng buộc: Regex mã PLO/PI, các enum trạng thái phiên bản (`DRAFT`, `ACTIVE`, `ARCHIVED`), ngưỡng đạt `passThreshold`, trọng số `weight` (bỏ I/R/M theo ADR 0012) và quy trình thẩm định đồng bộ 100% với Spring Boot backend `LMS-API` và Schema v0.7 (`GiaiThich_CoSoDuLieu.md`).
 4. **Nếu bỏ mô-đun này đi thì hệ thống bị ảnh hưởng gì?**
    - Nếu không có UI Admin: Không thể tạo ngành mới để cấp scope cho người dùng.
    - Nếu không có UI Program Manager: Không thể thiết lập và cập nhật khung chuẩn đầu ra phiên bản hóa; toàn bộ chuỗi đo lường (CLO → PI → PLO) bị mất dữ liệu tham chiếu gốc và không thể tiến hành đo lường hay lập báo cáo kiểm định.

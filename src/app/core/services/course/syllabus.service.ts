@@ -11,9 +11,9 @@ import {
 import { Observable } from 'rxjs';
 
 /**
- * Quản lý Phiên bản Đề cương Học phần (F03 US-10, ADR 0010).
- * Tạo đề cương DRAFT: LECTURER / DEPARTMENT_HEAD trong scope.courseIds hoặc ADMIN.
- * Phê duyệt CONFIRMED / ARCHIVED: DEPARTMENT_HEAD trong scope.courseIds hoặc ADMIN.
+ * Quản lý Phiên bản Đề cương Học phần (F03 US-10, ADR 0014).
+ * Tạo đề cương DRAFT: LECTURER / PROGRAM_MANAGER trong scope.
+ * Phê duyệt CONFIRMED / ARCHIVED: PROGRAM_MANAGER trong scope.
  */
 @Injectable({
   providedIn: 'root',

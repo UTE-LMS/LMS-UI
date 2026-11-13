@@ -1,22 +1,30 @@
 <div class="login-page">
   <section class="login-hero">
-    <span class="login-logo"><i aria-hidden="true"></i>LOMS</span>
+    <span class="login-logo">
+      <span class="loms-mark" aria-hidden="true">
+        <span></span><span></span><span></span><span></span>
+      </span>
+      LOMS
+    </span>
     <div class="flex flex-col gap-4 max-w-130">
       <h1 class="login-title">Đo lường chuẩn đầu ra, truy vết đến từng dòng điểm</h1>
       <p class="login-lead">Hệ thống của Khoa Công nghệ thông tin, Trường HCM-UTE.</p>
     </div>
     <p class="login-chain">
-      Điểm <span class="opacity-60">→</span> <b>CLO</b> <span class="opacity-60">→</span> <b>PI</b>
-      <span class="opacity-60">→</span> <b>PLO</b> <span class="opacity-60">→</span> Báo cáo
-      <span class="opacity-60">→</span> <b>Cải tiến</b>
+      Điểm <span class="opacity-60">→</span> <b class="chain-clo">CLO</b> <span class="opacity-60">→</span> <b class="chain-pi">PI</b>
+      <span class="opacity-60">→</span> PLO <span class="opacity-60">→</span> Báo cáo
+      <span class="opacity-60">→</span> <b class="chain-improve">Cải tiến</b>
     </p>
+    <div class="login-accent-bar" aria-hidden="true">
+      <span></span><span></span><span></span><span></span>
+    </div>
   </section>
 
   <section class="login-form-wrap">
     @if (form) {
     <form [formGroup]="form" class="login-card" (keydown.enter)="$event.preventDefault()" novalidate>
       <div>
-        <h2 class="text-2xl font-semibold m-0">Đăng nhập</h2>
+        <h2 class="text-2xl font-semibold m-0 text-slate-900">Đăng nhập</h2>
         <p class="login-muted mt-1 mb-0">Dùng tài khoản do quản trị viên cấp.</p>
       </div>
 
@@ -25,7 +33,7 @@
       }
 
       <div>
-        <label for="login-username" class="font-medium">Tên đăng nhập</label>
+        <label for="login-username" class="font-medium text-slate-800 block mb-1.5">Tên đăng nhập</label>
         <input id="login-username" nz-input nzSize="large" type="text" formControlName="username"
           autocomplete="username" (keyup.enter)="onSubmit()"
           [nzStatus]="formValidSvc.displayFieldCssZorro(form, 'username')" />
@@ -36,7 +44,7 @@
       </div>
 
       <div>
-        <label for="login-password" class="font-medium">Mật khẩu</label>
+        <label for="login-password" class="font-medium text-slate-800 block mb-1.5">Mật khẩu</label>
         <nz-input-password nzSize="large">
           <input id="login-password" nz-input type="password" formControlName="password"
             autocomplete="current-password" (keyup.enter)="onSubmit()"
@@ -46,12 +54,15 @@
           errorMsg="Không được để trống" />
       </div>
 
-      <button nz-button nzType="primary" nzSize="large" type="button" class="w-full"
+      <button nz-button nzType="primary" nzSize="large" type="button" class="w-full login-submit-btn"
         [nzLoading]="isSubmitting()" [disabled]="isSubmitting()" (click)="onSubmit()">
         Đăng nhập
       </button>
       <p class="login-muted m-0 text-[13px]">
         Tài khoản bị khóa không đăng nhập được. Liên hệ quản trị viên để mở khóa.
+      </p>
+      <p class="login-muted m-0 text-[12px] pt-2 border-t border-slate-100">
+        Không nhập dữ liệu thật của sinh viên; dùng mã thay thế.
       </p>
     </form>
     }

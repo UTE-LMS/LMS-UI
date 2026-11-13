@@ -73,7 +73,7 @@ export class ListAssessmentsComponent implements OnInit {
       const section = this.section();
       return roles.includes(SystemConstant.ROLE.LECTURER) && !!section && section.lecturerIds.includes(this.currentUserId());
     }
-    return roles.includes(SystemConstant.ROLE.LECTURER) || roles.includes(SystemConstant.ROLE.DEPARTMENT_HEAD);
+    return roles.includes(SystemConstant.ROLE.LECTURER) || roles.includes(SystemConstant.ROLE.PROGRAM_MANAGER);
   });
 
   ngOnInit(): void {

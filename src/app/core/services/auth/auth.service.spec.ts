@@ -61,7 +61,7 @@ describe('AuthService (F01 US-01)', () => {
     expect(service.getUsername()).toBe('admin');
     expect(service.getRoles()).toEqual(['ADMIN', 'LECTURER']);
     expect(service.checkRole(SystemConstant.ROLE.ADMIN)).toBe(true);
-    expect(service.checkRole(SystemConstant.ROLE.VIEWER)).toBe(false);
+    expect(service.checkRole(SystemConstant.ROLE.QA)).toBe(false);
   });
 
   it('US-01/AC-2: lỗi đăng nhập do form tự hiển thị (INLINE_ERRORS) và không lưu phiên', () => {

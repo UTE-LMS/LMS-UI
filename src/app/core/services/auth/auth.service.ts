@@ -180,7 +180,7 @@ export class AuthService {
    ************************************/
   doRegisterForm(role: string, model: Partial<IRegisterDTO>): Observable<{ message: string; }> {
     switch (role) {
-      case SystemConstant.ROLE.STUDENT:
+      case 'STUDENT':
         return this.http
           .post<{ message: string; }>(this.apiUrl + '/register', model);
       default:
@@ -194,7 +194,7 @@ export class AuthService {
    ************************************/
   doResetPasswordRequest(role: string, model: Partial<IResetPasswordRequsetDTO>): Observable<{ message: string; }> {
     switch (role) {
-      case SystemConstant.ROLE.STUDENT:
+      case 'STUDENT':
         return this.http
           .post<{ message: string; }>(this.apiUrl + '/forgot-password', model);
       default:
@@ -208,7 +208,7 @@ export class AuthService {
     token: string,
   ): Observable<{ message: string; }> {
     switch (role) {
-      case SystemConstant.ROLE.STUDENT:
+      case 'STUDENT':
         return this.http
           .post<{ message: string; }>(this.apiUrl + '/reset-password', model, { headers: new HttpHeaders().append('thiSinhId', token) });
       default:

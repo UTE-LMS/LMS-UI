@@ -16,7 +16,7 @@ import { Observable } from 'rxjs';
  * Quản lý Phiên bản CTĐT (F02, US-05, ADR 0005).
  * Quyền tạo/sửa: PROGRAM_MANAGER trong scope.
  * Đọc: Mọi vai trò đã đăng nhập.
- * Duyệt: QA_OFFICER.
+ * Duyệt: QA.
  */
 @Injectable({
   providedIn: 'root',
