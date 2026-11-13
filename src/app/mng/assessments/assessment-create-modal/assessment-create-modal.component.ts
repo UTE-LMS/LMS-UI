@@ -3,10 +3,10 @@ import {
 } from '@angular/core';
 import { FormsModule, NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import {
-  ASSESSMENT_PHASE_LABEL, ASSESSMENT_TYPE_LABEL, DATA_GRANULARITY_LABEL, toOptions,
+  ASSESSMENT_PHASE_LABEL, ASSESSMENT_TYPE_LABEL, toOptions,
 } from '@constants/assessment-display.constant';
 import {
-  AssessmentPhase, AssessmentType, DataGranularity, IAssessment, IAssessmentRequest,
+  AssessmentPhase, AssessmentType, IAssessment, IAssessmentRequest,
 } from '@models/assessment/assessment.model';
 import { toUserError } from '@services/common/api-error.util';
 import { AssessmentService } from '@services/assessment/assessment.service';
@@ -19,9 +19,7 @@ import { cleanOptional } from '../assessments.util';
 export type AssessmentCreateMode = 'SECTION' | 'TEMPLATE';
 
 /**
- * Modal tạo bài đánh giá: bản của một lớp (có thể sao chép items từ khung theo đề cương) hoặc khung theo đề cương
- * (F04 US-15). Chỉ khai báo thông tin chung; câu hỏi/tiêu chí soạn ở màn chi tiết. Bản lớp là SNAPSHOT của khung
- * tại thời điểm tạo. Kiểm tra ở đây chỉ để phản hồi nhanh; lỗi 409/422 của backend được hiển thị nguyên văn.
+ * Modal tạo bài đánh giá: bản của một lớp hoặc khung theo đề cương (ADR 0014, Schema v0.7).
  */
 @Component({
   selector: 'app-assessment-create-modal',
@@ -36,13 +34,9 @@ export class AssessmentCreateModalComponent {
 
   readonly isVisible = input(false);
   readonly mode = input.required<AssessmentCreateMode>();
-  /** Bắt buộc ở chế độ SECTION. */
   readonly sectionId = input<string | null>(null);
-  /** Đề cương của lớp (SECTION) hoặc đề cương đang soạn khung (TEMPLATE). */
   readonly syllabusId = input<string | null>(null);
-  /** Khung của đề cương để chọn sao chép (chỉ SECTION). */
   readonly templates = input<IAssessment[]>([]);
-  /** Chọn sẵn khung khi mở bằng nút "Tạo từ khung mẫu". */
   readonly presetTemplateId = input<string | null>(null);
 
   readonly visibleChange = output<boolean>();
@@ -50,7 +44,6 @@ export class AssessmentCreateModalComponent {
 
   protected readonly typeOptions = toOptions<AssessmentType>(ASSESSMENT_TYPE_LABEL);
   protected readonly phaseOptions = toOptions<AssessmentPhase>(ASSESSMENT_PHASE_LABEL);
-  protected readonly granularityOptions = toOptions<DataGranularity>(DATA_GRANULARITY_LABEL);
 
   readonly isSubmitting = signal(false);
   readonly submitError = signal<string | null>(null);
@@ -61,9 +54,6 @@ export class AssessmentCreateModalComponent {
     type: [null as AssessmentType | null],
     phase: [null as AssessmentPhase | null],
     scheduledDate: [''],
-    totalPoints: [null as number | null, [Validators.min(0)]],
-    weightInCourse: [null as number | null, [Validators.min(0), Validators.max(1)]],
-    dataGranularity: this.fb.control<DataGranularity>('ITEM'),
     templateId: [null as string | null],
   });
 
@@ -73,7 +63,7 @@ export class AssessmentCreateModalComponent {
         const preset = this.presetTemplateId();
         untracked(() => {
           this.submitError.set(null);
-          this.form.reset({ dataGranularity: 'ITEM', templateId: preset });
+          this.form.reset({ templateId: preset });
         });
       }
     });
@@ -104,9 +94,6 @@ export class AssessmentCreateModalComponent {
       type: v.type ?? undefined,
       phase: v.phase ?? undefined,
       scheduledAt: cleanOptional(v.scheduledDate) ? `${v.scheduledDate}T00:00:00Z` : undefined,
-      totalPoints: v.totalPoints ?? undefined,
-      weightInCourse: v.weightInCourse ?? undefined,
-      dataGranularity: v.dataGranularity,
       templateId: this.mode() === 'SECTION' ? (v.templateId ?? undefined) : undefined,
     };
 
@@ -130,7 +117,6 @@ export class AssessmentCreateModalComponent {
       },
       error: err => {
         this.isSubmitting.set(false);
-        // 409 trùng mã, 422 khung không thuộc đề cương..., 403 ngoài phạm vi: hiện thông điệp backend, giữ dữ liệu
         this.submitError.set(toUserError(err).message);
       },
     });

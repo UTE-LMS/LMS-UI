@@ -27,9 +27,7 @@ export interface IRowAction {
 }
 
 /**
- * Danh sách bài đánh giá của một lớp (route `sections/:sectionId`) hoặc khung theo đề cương (route
- * `syllabi/:syllabusId`) (F04 US-15). Luồng: Nháp, Đã gửi duyệt, Đã duyệt, Đã nhập điểm, Đã khóa; Bị từ chối quay
- * về Nháp. Ẩn nút theo vai trò chỉ để tiện dùng; backend kiểm tra quyền và trả 403/409/422.
+ * Danh sách bài đánh giá của một lớp hoặc khung theo đề cương (ADR 0014, Schema v0.7).
  */
 @Component({
   selector: 'app-list-assessments',
@@ -46,7 +44,6 @@ export class ListAssessmentsComponent implements OnInit {
   private readonly courseSvc = inject(CourseService);
   private readonly authSvc = inject(AuthService);
 
-  /** Gắn từ tham số route (withComponentInputBinding): chỉ một trong hai có giá trị. */
   readonly sectionId = input<string>();
   readonly syllabusId = input<string>();
 
@@ -67,17 +64,9 @@ export class ListAssessmentsComponent implements OnInit {
   readonly presetTemplateId = signal<string | null>(null);
 
   readonly mode = computed<AssessmentCreateMode>(() => (this.sectionId() ? 'SECTION' : 'TEMPLATE'));
-
-  /** Đề cương áp dụng: của lớp (khi xem theo lớp) hoặc đề cương trên đường dẫn (khi xem khung). */
   readonly effectiveSyllabusId = computed(() => this.section()?.syllabusId ?? this.syllabusId() ?? null);
-
-  /** Danh sách đang hiển thị ở bảng chính. */
   readonly rows = computed(() => (this.mode() === 'SECTION' ? this.assessments() : this.templates()));
 
-  /**
-   * Chỉ để ẩn nút: bản lớp do LECTURER của lớp tạo; khung do LECTURER hoặc DEPARTMENT_HEAD soạn (trong phạm vi
-   * học phần). Backend kiểm tra phạm vi thật.
-   */
   readonly canCreate = computed(() => {
     const roles = this.roles();
     if (this.mode() === 'SECTION') {
@@ -86,8 +75,6 @@ export class ListAssessmentsComponent implements OnInit {
     }
     return roles.includes(SystemConstant.ROLE.LECTURER) || roles.includes(SystemConstant.ROLE.DEPARTMENT_HEAD);
   });
-
-  readonly isDepartmentHead = computed(() => this.roles().includes(SystemConstant.ROLE.DEPARTMENT_HEAD));
 
   ngOnInit(): void {
     this.roles.set(this.authSvc.getRoles());
@@ -135,7 +122,6 @@ export class ListAssessmentsComponent implements OnInit {
           this.isLoading.set(false);
         }
       },
-      // Khung chỉ là phụ trợ ở màn của lớp: lỗi (ví dụ 403) không chặn danh sách bài của lớp
       error: err => (primary ? this.fail(err) : this.templates.set([])),
     });
   }
@@ -154,28 +140,21 @@ export class ListAssessmentsComponent implements OnInit {
     this.load();
   }
 
-  /** Câu mô tả cột "Cấu trúc": nói rõ vì sao sửa được hoặc bị khóa. */
   structureNote(assessment: IAssessment): string {
-    if (assessment.status === 'REJECTED') {
-      return assessment.approval?.reviewNote ? `"${assessment.approval.reviewNote}"` : 'Bị từ chối, chưa có ghi chú';
+    if (isStructureEditable(assessment)) {
+      return 'Bản nháp (Sửa được)';
     }
-    if (assessment.status === 'SUBMITTED') {
-      return 'Chờ Trưởng bộ môn duyệt';
+    if (assessment.status === 'SCORE_ENTERED') {
+      return 'Đã nhập điểm (Khóa cố định)';
     }
-    return isStructureEditable(assessment) ? 'Sửa được' : 'Đã khóa, chỉ xem';
+    return 'Đã khóa ma trận';
   }
 
   actionFor(assessment: IAssessment): IRowAction {
-    if (assessment.scope === 'SECTION' && assessment.status === 'SUBMITTED' && this.isDepartmentHead()) {
-      return { label: 'Duyệt', link: this.urlConst.ASSESSMENT_REVIEW(assessment.id) };
-    }
     const link = this.urlConst.ASSESSMENT_DETAIL(assessment.id);
-    if (assessment.scope === 'SECTION' && !isStructureEditable(assessment)) {
-      return { label: 'Xem', link };
-    }
-    return { label: assessment.status === 'REJECTED' ? 'Sửa' : 'Mở', link };
+    return {
+      label: isStructureEditable(assessment) ? 'Chỉnh sửa' : 'Chi tiết',
+      link,
+    };
   }
-
-  /** Bài chờ duyệt cần chú ý (hiện ở đầu trang cho Trưởng bộ môn). */
-  readonly pendingReviewCount = computed(() => this.assessments().filter(a => a.status === 'SUBMITTED').length);
 }

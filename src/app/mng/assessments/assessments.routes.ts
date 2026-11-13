@@ -19,13 +19,13 @@ export const assessmentsRoutes: Routes = [
     path: ':id/review',
     loadComponent: () => import('./review-assessment/review-assessment.component')
       .then(m => m.ReviewAssessmentComponent),
-    title: `Duyệt ma trận đề thi | ${SystemConstant.WEB_NAME}`,
+    title: `Xem độ phủ ma trận | ${SystemConstant.WEB_NAME}`,
   },
   {
     path: ':id',
     loadComponent: () => import('./detail-assessment/detail-assessment.component')
       .then(m => m.DetailAssessmentComponent),
     canDeactivate: [canDeactivate],
-    title: `Soạn bài đánh giá | ${SystemConstant.WEB_NAME}`,
+    title: `Chi tiết bài đánh giá | ${SystemConstant.WEB_NAME}`,
   },
 ];

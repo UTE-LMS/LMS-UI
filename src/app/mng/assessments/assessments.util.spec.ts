@@ -1,59 +1,30 @@
 import { IAssessmentItem } from '@models/assessment/assessment.model';
 import {
-  cleanOptional, describeMappings, formatNumber, hasDuplicates, isStructureEditable, lockReason, meterWidth,
-  nextItemCode, renumber, submitHints, sumMaxScores, sumWeights, totalPointsMatches, weightSumMatches,
+  cleanOptional, describeMappings, formatNumber, hasDuplicates, isStructureEditable, lockHints, lockReason, meterWidth,
+  nextItemCode, renumber, sumCloWeights, sumItemMaxScores, sumOutcomeScores,
 } from './assessments.util';
 
-/** DỮ LIỆU THỬ NGHIỆM: mã câu và CLO giả; kỳ vọng tính tay. */
+/** DỮ LIỆU THỬ NGHIỆM: mã câu và CLO giả. */
 const item = (code: string, maxScore: number): IAssessmentItem => ({
-  code, kind: 'QUESTION', maxScore, outcomeMappings: [{ cloId: 'c1', weight: 1 }],
+  code, bloomLevel: 3, outcomeMappings: [{ cloId: 'c1', maxScore }],
 });
 
-describe('assessments.util (F04)', () => {
-  describe('weightSumMatches (US-15/AC-2, gợi ý phía client; backend quyết định)', () => {
-    it('đúng khi tổng bằng 1: 1; 0,5 + 0,5; 0,3 + 0,3 + 0,4', () => {
-      expect(weightSumMatches(sumWeights([{ weight: 1 }]))).toBe(true);
-      expect(weightSumMatches(sumWeights([{ weight: 0.5 }, { weight: 0.5 }]))).toBe(true);
-      expect(weightSumMatches(sumWeights([{ weight: 0.3 }, { weight: 0.3 }, { weight: 0.4 }]))).toBe(true);
+describe('assessments.util (F04, ADR 0014)', () => {
+  describe('sumOutcomeScores & sumCloWeights', () => {
+    it('cộng điểm tối đa của outcomeMappings', () => {
+      expect(sumOutcomeScores([{ maxScore: 2 }, { maxScore: 3 }])).toBe(5);
+      expect(sumOutcomeScores([{ maxScore: null }, { maxScore: 1.5 }])).toBe(1.5);
     });
 
-    it('sai khi tổng 0,9 hoặc 1,01', () => {
-      expect(weightSumMatches(sumWeights([{ weight: 0.5 }, { weight: 0.4 }]))).toBe(false);
-      expect(weightSumMatches(1.01)).toBe(false);
-    });
-
-    it('biên: sai lệch đúng sai số 0,0001 chấp nhận, hơn một chút thì không', () => {
-      expect(weightSumMatches(1.0001)).toBe(true);
-      expect(weightSumMatches(1.00011)).toBe(false);
-      expect(weightSumMatches(0.99995)).toBe(true);
-    });
-
-    it('ô phần điểm chưa nhập (null) không được tính thành 0,5: tổng thiếu thì không khớp', () => {
-      expect(weightSumMatches(sumWeights([{ weight: 0.5 }, { weight: null }]))).toBe(false);
+    it('cộng trọng số CLO', () => {
+      expect(sumCloWeights([{ weight: 0.4 }, { weight: 0.6 }])).toBe(1.0);
+      expect(sumCloWeights([{ weight: null }, { weight: 0.5 }])).toBe(0.5);
     });
   });
 
-  describe('totalPointsMatches (NEW-01/AC-2)', () => {
-    it('khớp khi lệch dưới 0,001', () => {
-      expect(totalPointsMatches(10, 10)).toBe(true);
-      expect(totalPointsMatches(10, 10.0009)).toBe(true);
-    });
-
-    it('lệch từ 0,001 trở lên thì không khớp', () => {
-      expect(totalPointsMatches(10, 10.0011)).toBe(false);
-      expect(totalPointsMatches(10, 9)).toBe(false);
-    });
-
-    it('null khi chưa khai báo tổng điểm (không đối chiếu được, khác với 0)', () => {
-      expect(totalPointsMatches(null, 0)).toBeNull();
-      expect(totalPointsMatches(undefined, 5)).toBeNull();
-      expect(totalPointsMatches(0, 0)).toBe(true);
-    });
-  });
-
-  it('sumMaxScores cộng điểm tối đa các phần tử (2 + 2 + 3 + 3 = 10)', () => {
-    expect(sumMaxScores([item('C1', 2), item('C2', 2), item('C3', 3), item('C4', 3)])).toBe(10);
-    expect(sumMaxScores([])).toBe(0);
+  it('sumItemMaxScores cộng điểm tối đa các phần tử (2 + 3 = 5)', () => {
+    expect(sumItemMaxScores([item('C1', 2), item('C2', 3)])).toBe(5);
+    expect(sumItemMaxScores([])).toBe(0);
   });
 
   describe('formatNumber', () => {
@@ -71,59 +42,48 @@ describe('assessments.util (F04)', () => {
     });
   });
 
-  describe('isStructureEditable và lockReason (US-15/AC-5, khóa sửa khi locked)', () => {
-    it('khung theo đề cương luôn sửa được', () => {
-      expect(isStructureEditable({ scope: 'SYLLABUS_TEMPLATE', status: 'DRAFT', locked: false })).toBe(true);
-      expect(lockReason({ scope: 'SYLLABUS_TEMPLATE', status: 'DRAFT', locked: false })).toBeNull();
-    });
-
-    it('bản lớp sửa được ở Nháp và Bị từ chối', () => {
+  describe('isStructureEditable và lockReason (ADR 0014)', () => {
+    it('sửa được khi ở Nháp và chưa khóa', () => {
       expect(isStructureEditable({ scope: 'SECTION', status: 'DRAFT', locked: false })).toBe(true);
-      expect(isStructureEditable({ scope: 'SECTION', status: 'REJECTED', locked: false })).toBe(true);
+      expect(lockReason({ scope: 'SECTION', status: 'DRAFT', locked: false })).toBeNull();
     });
 
-    it('bản lớp bị khóa từ Đã gửi duyệt trở đi', () => {
-      for (const status of ['SUBMITTED', 'APPROVED', 'SCORE_ENTERED', 'LOCKED'] as const) {
-        expect(isStructureEditable({ scope: 'SECTION', status, locked: status !== 'SUBMITTED' })).toBe(false);
-      }
-    });
-
-    it('cờ locked=true khóa dù trạng thái là Nháp (không tin riêng trạng thái)', () => {
+    it('bị khóa khi locked=true hoặc trạng thái không phải DRAFT', () => {
+      expect(isStructureEditable({ scope: 'SECTION', status: 'LOCKED', locked: true })).toBe(false);
+      expect(isStructureEditable({ scope: 'SECTION', status: 'SCORE_ENTERED', locked: true })).toBe(false);
       expect(isStructureEditable({ scope: 'SECTION', status: 'DRAFT', locked: true })).toBe(false);
     });
 
-    it('lý do khóa khác nhau giữa chờ duyệt và đã duyệt', () => {
-      expect(lockReason({ scope: 'SECTION', status: 'SUBMITTED', locked: false })).toContain('chờ Trưởng bộ môn');
-      expect(lockReason({ scope: 'SECTION', status: 'APPROVED', locked: true })).toContain('đã được duyệt');
+    it('lý do khóa nêu rõ trạng thái', () => {
+      expect(lockReason({ scope: 'SECTION', status: 'LOCKED', locked: true })).toContain('đã được khóa');
+      expect(lockReason({ scope: 'SECTION', status: 'SCORE_ENTERED', locked: true })).toContain('nhập điểm');
     });
   });
 
-  describe('submitHints (NEW-01/AC-2)', () => {
-    it('không có gợi ý nào khi đủ điều kiện', () => {
-      expect(submitHints({ totalPoints: 4 }, [item('C1', 1), item('C2', 3)], false)).toEqual([]);
+  describe('lockHints (ADR 0014)', () => {
+    it('không có gợi ý chặn nào khi cấu trúc hợp lệ và khớp CLO', () => {
+      const hints = lockHints(
+        { cloWeights: [{ cloId: 'c1', weight: 1.0 }] },
+        [item('C1', 5)],
+        false,
+      );
+      expect(hints).toEqual([]);
     });
 
-    it('chặn khi chưa có phần tử', () => {
-      const hints = submitHints({ totalPoints: 0 }, [], false);
+    it('chặn khi chưa có câu hỏi nào', () => {
+      const hints = lockHints({ cloWeights: [] }, [], false);
       expect(hints.some(h => h.blocking && h.message.includes('Chưa có câu hỏi'))).toBe(true);
     });
 
-    it('chặn khi chưa khai báo tổng điểm', () => {
-      const hints = submitHints({ totalPoints: null }, [item('C1', 1)], false);
-      expect(hints.map(h => h.message)).toContain('Chưa khai báo tổng điểm của bài.');
-    });
-
-    it('chặn khi tổng điểm lệch, nêu rõ cả hai giá trị', () => {
-      const hints = submitHints({ totalPoints: 10 }, [item('C1', 4), item('C2', 5)], false);
-      expect(hints.length).toBe(1);
-      expect(hints[0].message).toContain('(10)');
-      expect(hints[0].message).toContain('(9)');
-    });
-
     it('chặn khi còn thay đổi chưa lưu', () => {
-      const hints = submitHints({ totalPoints: 1 }, [item('C1', 1)], true);
-      expect(hints[0].message).toContain('chưa lưu');
+      const hints = lockHints({ cloWeights: [{ cloId: 'c1', weight: 1.0 }] }, [item('C1', 5)], true);
       expect(hints[0].blocking).toBe(true);
+      expect(hints[0].message).toContain('chưa lưu');
+    });
+
+    it('báo lỗi khi CLO trong câu hỏi chưa có trong cloWeights', () => {
+      const hints = lockHints({ cloWeights: [] }, [item('C1', 5)], false);
+      expect(hints.some(h => h.message.includes('khai báo trọng số'))).toBe(true);
     });
   });
 
@@ -149,12 +109,12 @@ describe('assessments.util (F04)', () => {
     });
   });
 
-  it('describeMappings hiện mã CLO và phần điểm; CLO không tra được thì "CLO ?"', () => {
+  it('describeMappings hiện mã CLO và điểm tối đa', () => {
     const labels = describeMappings(
-      { outcomeMappings: [{ cloId: 'c1', weight: 0.5 }, { cloId: 'zz', weight: 0.5 }] },
+      { outcomeMappings: [{ cloId: 'c1', maxScore: 2.5 }, { cloId: 'zz', maxScore: 1.5 }] },
       new Map([['c1', 'CLO3']]),
     );
-    expect(labels).toEqual(['CLO3 (0,5)', 'CLO ? (0,5)']);
+    expect(labels).toEqual(['CLO3 (2,5 đ)', 'CLO ? (1,5 đ)']);
   });
 
   it('nextItemCode chọn số nhỏ nhất chưa dùng, không phân biệt hoa thường', () => {
@@ -167,7 +127,7 @@ describe('assessments.util (F04)', () => {
   it('hasDuplicates và cleanOptional', () => {
     expect(hasDuplicates(['a', 'b'])).toBe(false);
     expect(hasDuplicates(['a', 'a'])).toBe(true);
-    expect(cleanOptional('  chủ đề ')).toBe('chủ đề');
+    expect(cleanOptional('  chủ đề  ')).toBe('chủ đề');
     expect(cleanOptional('   ')).toBeUndefined();
     expect(cleanOptional(null)).toBeUndefined();
   });

@@ -1,237 +1,254 @@
 <div class="mx-auto max-w-7xl p-6">
   @if (loadError(); as error) {
-  <app-error-state [error]="error" [retrying]="isLoading()" (retry)="load()" (reload)="load()" />
+    <app-error-state [error]="error" [retrying]="isLoading()" (retry)="load()" (reload)="load()" />
   } @else if (isLoading() && !assessment()) {
-  <p class="text-slate-700" role="status">Đang tải bài đánh giá…</p>
+    <p class="text-slate-700" role="status">Đang tải bài đánh giá…</p>
   } @else if (assessment(); as a) {
-  @if (a.scope === 'SECTION' && a.sectionId) {
-  <a class="text-sm font-medium text-blue-800 hover:underline" [routerLink]="urlConst.ASSESSMENTS_OF_SECTION(a.sectionId)">
-    <i class="fa-solid fa-arrow-left mr-1 text-xs" aria-hidden="true"></i>Tất cả bài đánh giá của lớp
-  </a>
-  } @else {
-  <a class="text-sm font-medium text-blue-800 hover:underline" [routerLink]="urlConst.ASSESSMENT_TEMPLATES(a.syllabusId)">
-    <i class="fa-solid fa-arrow-left mr-1 text-xs" aria-hidden="true"></i>Tất cả khung của đề cương
-  </a>
-  }
-
-  <div class="mt-3 flex flex-wrap items-end gap-3">
-    <div>
-      <p class="m-0 text-xs font-semibold uppercase tracking-wider text-blue-700">
-        {{ a.scope === 'SECTION' ? 'Bài của lớp' : 'Khung theo đề cương' }} · {{ a.code }}
-      </p>
-      <h1 class="m-0 text-2xl font-bold text-slate-900">{{ a.name }}</h1>
-    </div>
-    @if (a.scope === 'SECTION') {
-    <app-display-chip [display]="statusDisplay[a.status]" />
+    @if (a.scope === 'SECTION' && a.sectionId) {
+      <a class="text-sm font-medium text-blue-800 hover:underline" [routerLink]="urlConst.ASSESSMENTS_OF_SECTION(a.sectionId)">
+        <i class="fa-solid fa-arrow-left mr-1 text-xs" aria-hidden="true"></i>Tất cả bài đánh giá của lớp
+      </a>
+    } @else {
+      <a class="text-sm font-medium text-blue-800 hover:underline" [routerLink]="urlConst.ASSESSMENT_TEMPLATES(a.syllabusId)">
+        <i class="fa-solid fa-arrow-left mr-1 text-xs" aria-hidden="true"></i>Tất cả khung của đề cương
+      </a>
     }
-    <app-test-data-flag />
-    <span class="flex-1"></span>
-    @if (canReview()) {
-    <a nz-button nzType="primary" [routerLink]="urlConst.ASSESSMENT_REVIEW(a.id)">Mở màn hình duyệt</a>
-    }
-  </div>
 
-  @if (lockMessage(); as message) {
-  <div class="mt-4 rounded border border-[#d6b46a] bg-[#fff8e6] p-3 text-sm text-[#5c3d00]" role="status">
-    <i class="fa-solid fa-lock mr-1.5" aria-hidden="true"></i>{{ message }}
-  </div>
-  }
-
-  @if (a.status === 'REJECTED' && a.scope === 'SECTION') {
-  <div class="mt-4 rounded border border-[#d9a0a6] bg-[#fdf2f3] p-3 text-sm text-[#8c2f39]" role="status">
-    <p class="m-0 font-semibold"><i class="fa-solid fa-circle-xmark mr-1.5" aria-hidden="true"></i>Bài bị từ chối. Sửa theo ghi chú rồi lưu để quay về Nháp và gửi duyệt lại.</p>
-    <p class="m-0 mt-1">{{ a.approval?.reviewNote ? '"' + a.approval?.reviewNote + '"' : 'Chưa có ghi chú.' }}</p>
-  </div>
-  }
-
-  @if (!a.measurableByOutcome) {
-  <div class="mt-4 rounded border border-slate-400 bg-slate-50 p-3 text-sm text-slate-800" role="status">
-    <i class="fa-solid fa-circle-info mr-1.5" aria-hidden="true"></i>
-    Bài này chỉ có điểm tổng nên không đo được CLO/PI.
-  </div>
-  }
-
-  @if (isConflict()) {
-  <div class="mt-4 flex flex-wrap items-center gap-3 rounded border border-[#d6b46a] bg-[#fff8e6] p-3 text-sm text-[#5c3d00]" role="alert">
-    <span>{{ actionError()?.message }} {{ actionError()?.hint }}</span>
-    <button nz-button type="button" (click)="load()">Tải lại dữ liệu</button>
-  </div>
-  }
-
-  <section class="mt-6" aria-labelledby="infoTitle">
-    <h2 id="infoTitle" class="m-0 text-lg font-semibold">Thông tin bài</h2>
-    <form [formGroup]="infoForm" (ngSubmit)="saveInfo()" (keydown.enter)="$event.preventDefault()" class="mt-3">
-      <div class="grid grid-cols-1 gap-x-4 gap-y-3 md:grid-cols-3">
-        <div class="md:col-span-2">
-          <label class="mb-1 block text-sm font-medium" for="infoName">Tên bài</label>
-          <input id="infoName" class="h-8 w-full rounded border border-slate-400 px-2 text-sm disabled:bg-slate-100" formControlName="name" />
-          @if (infoForm.controls.name.touched && infoForm.controls.name.invalid) {
-          <p class="m-0 mt-1 text-xs text-[#8c2f39]">Nhập tên bài (tối đa 200 ký tự).</p>
-          }
-        </div>
-        <div>
-          <label class="mb-1 block text-sm font-medium" for="infoType">Loại</label>
-          <nz-select nzId="infoType" class="w-full" formControlName="type" nzAllowClear nzPlaceHolder="Chưa chọn">
-            @for (opt of typeOptions; track opt.value) {
-            <nz-option [nzValue]="opt.value" [nzLabel]="opt.label" />
-            }
-          </nz-select>
-        </div>
-        <div>
-          <label class="mb-1 block text-sm font-medium" for="infoPhase">Giai đoạn đánh giá</label>
-          <nz-select nzId="infoPhase" class="w-full" formControlName="phase" nzAllowClear nzPlaceHolder="Chưa chọn">
-            @for (opt of phaseOptions; track opt.value) {
-            <nz-option [nzValue]="opt.value" [nzLabel]="opt.label" />
-            }
-          </nz-select>
-        </div>
-        <div>
-          <label class="mb-1 block text-sm font-medium" for="infoTotal">Tổng điểm</label>
-          <input id="infoTotal" type="number" step="0.25" min="0" inputmode="decimal" placeholder="Chưa khai báo"
-            class="h-8 w-full rounded border border-slate-400 px-2 text-right text-sm disabled:bg-slate-100" formControlName="totalPoints" />
-        </div>
-        <div>
-          <label class="mb-1 block text-sm font-medium" for="infoWeight">Tỷ trọng trong học phần (0–1)</label>
-          <input id="infoWeight" type="number" step="0.05" min="0" max="1" inputmode="decimal" placeholder="Chưa khai báo"
-            class="h-8 w-full rounded border border-slate-400 px-2 text-right text-sm disabled:bg-slate-100" formControlName="weightInCourse" />
-        </div>
-        <div>
-          <label class="mb-1 block text-sm font-medium" for="infoDate">Ngày dự kiến</label>
-          <input id="infoDate" type="date" class="h-8 w-full rounded border border-slate-400 px-2 text-sm disabled:bg-slate-100" formControlName="scheduledDate" />
-        </div>
-        <div>
-          <label class="mb-1 block text-sm font-medium" for="infoGranularity">Độ chi tiết của điểm</label>
-          <nz-select nzId="infoGranularity" class="w-full" formControlName="dataGranularity">
-            @for (opt of granularityOptions; track opt.value) {
-            <nz-option [nzValue]="opt.value" [nzLabel]="opt.label" />
-            }
-          </nz-select>
-        </div>
+    <div class="mt-3 flex flex-wrap items-end gap-3">
+      <div>
+        <p class="m-0 text-xs font-semibold uppercase tracking-wider text-blue-700">
+          {{ a.scope === 'SECTION' ? 'Bài của lớp' : 'Khung theo đề cương' }} · {{ a.code }}
+        </p>
+        <h1 class="m-0 text-2xl font-bold text-slate-900">{{ a.name }}</h1>
       </div>
-      @if (editable()) {
-      <div class="mt-3">
-        <button nz-button type="submit" [nzLoading]="isSavingInfo()" [disabled]="isSavingInfo() || !infoForm.dirty">Lưu thông tin</button>
-      </div>
+      @if (a.scope === 'SECTION') {
+        <app-display-chip [display]="statusDisplay[a.status]" />
       }
-    </form>
-  </section>
-
-  <section class="mt-8" aria-labelledby="itemsTitle">
-    <div class="flex flex-wrap items-center gap-3">
-      <h2 id="itemsTitle" class="m-0 text-lg font-semibold">Câu hỏi / tiêu chí <span class="text-sm font-normal text-slate-700">{{ items().length }} phần tử</span></h2>
+      <app-test-data-flag />
       <span class="flex-1"></span>
-      @if (editable()) {
-      <button nz-button type="button" (click)="openAddItem()"><i class="fa-solid fa-plus mr-1.5" aria-hidden="true"></i>Thêm câu</button>
+      @if (a.scope === 'SECTION') {
+        <a nz-button nzType="default" [routerLink]="urlConst.ASSESSMENT_REVIEW(a.id)">
+          <i class="fa-solid fa-chart-pie mr-1.5" aria-hidden="true"></i>Xem độ phủ ma trận
+        </a>
       }
     </div>
 
-    <nz-table class="mt-3" nzSize="middle" [nzShowPagination]="false" [nzFrontPagination]="false" [nzData]="items()"
-      [nzNoResult]="emptyItemsTpl" [nzScroll]="{ x: '860px' }">
-      <thead>
-        <tr>
-          <th nzWidth="190px">Câu</th>
-          <th nzWidth="120px">Loại</th>
-          <th nzWidth="190px">CLO (phần điểm)</th>
-          <th nzWidth="160px">Mức Bloom</th>
-          <th nzWidth="110px" nzAlign="right">Điểm tối đa</th>
-          <th nzWidth="90px" nzAlign="right">Rubric</th>
-          <th nzWidth="150px" nzAlign="right"><span class="sr-only">Thao tác</span></th>
-        </tr>
-      </thead>
-      <tbody>
-        @for (item of items(); track item.id ?? item.code; let i = $index) {
-        <tr>
-          <td>
-            <span class="font-semibold">{{ item.code }}</span>
-            @if (item.title) {
-            <span class="block text-xs text-slate-700">{{ item.title }}</span>
-            }
-          </td>
-          <td>{{ kindLabel[item.kind] }}</td>
-          <td>
-            @for (label of mappingLabels(item); track $index) {
-            <span class="mr-1 inline-block rounded border border-slate-400 px-1.5 text-xs">{{ label }}</span>
-            }
-          </td>
-          <td>
-            @if (item.bloomLevel) {
-            <app-bloom-level-label [level]="item.bloomLevel" />
-            } @else {
-            <span class="text-slate-700">—</span>
-            }
-          </td>
-          <td nzAlign="right">{{ formatNumber(item.maxScore) }}</td>
-          <td nzAlign="right">{{ rubricCount(item) > 0 ? rubricCount(item) + ' mức' : '—' }}</td>
-          <td nzAlign="right">
-            @if (editable()) {
-            <button type="button" class="mr-1 h-7 w-7 rounded hover:bg-slate-100 disabled:opacity-40" [disabled]="i === 0"
-              [attr.aria-label]="'Đưa ' + item.code + ' lên trên'" (click)="moveItem(i, -1)"><i class="fa-solid fa-arrow-up" aria-hidden="true"></i></button>
-            <button type="button" class="mr-1 h-7 w-7 rounded hover:bg-slate-100 disabled:opacity-40" [disabled]="i === items().length - 1"
-              [attr.aria-label]="'Đưa ' + item.code + ' xuống dưới'" (click)="moveItem(i, 1)"><i class="fa-solid fa-arrow-down" aria-hidden="true"></i></button>
-            <button type="button" class="mr-2 text-blue-800 hover:underline" [attr.aria-label]="'Sửa ' + item.code" (click)="openEditItem(i)">Sửa</button>
-            <button type="button" class="text-[#8c2f39] hover:underline" [attr.aria-label]="'Bỏ ' + item.code" (click)="removeItem(i)">Bỏ</button>
-            } @else {
-            <button type="button" class="text-blue-800 hover:underline" [attr.aria-label]="'Xem ' + item.code" (click)="openEditItem(i)">Xem</button>
-            }
-          </td>
-        </tr>
-        }
-      </tbody>
-    </nz-table>
+    @if (lockMessage(); as message) {
+      <div class="mt-4 rounded border border-[#d6b46a] bg-[#fff8e6] p-3 text-sm text-[#5c3d00]" role="status">
+        <i class="fa-solid fa-lock mr-1.5" aria-hidden="true"></i>{{ message }}
+      </div>
+    }
 
-    <p class="mt-2 text-sm text-slate-800">
-      Tổng điểm tối đa các phần tử: <strong>{{ items().length === 0 ? '—' : formatNumber(itemsSum()) }}</strong>
-      · Tổng điểm khai báo: <strong>{{ formatNumber(a.totalPoints) }}</strong>
-      @if (items().length > 0 && totalMatch() === false) {
-      <span class="ml-2 font-medium text-[#7a4a00]"><i class="fa-solid fa-triangle-exclamation mr-1" aria-hidden="true"></i>Lệch nhau; gửi duyệt cần khớp (hệ thống kiểm tra khi gửi).</span>
-      } @else if (items().length > 0 && totalMatch() === true) {
-      <span class="ml-2 text-slate-700">Khớp.</span>
-      }
-    </p>
-    <p class="mt-1 text-xs text-slate-700">
-      PI không khai báo ở câu hỏi: kết quả PI được suy ra từ CLO qua liên kết CLO–PI của đề cương. Mức Bloom (1–6)
-      khác mức rubric (1–4) và không phải điểm.
-    </p>
-  </section>
+    @if (isConflict()) {
+      <div class="mt-4 flex flex-wrap items-center gap-3 rounded border border-[#d6b46a] bg-[#fff8e6] p-3 text-sm text-[#5c3d00]" role="alert">
+        <span>{{ actionError()?.message }} {{ actionError()?.hint }}</span>
+        <button nz-button type="button" (click)="load()">Tải lại dữ liệu</button>
+      </div>
+    }
 
-  @if ((a.approval?.history?.length ?? 0) > 0) {
-  <details class="mt-8 rounded border border-slate-300">
-    <summary class="cursor-pointer px-4 py-3 font-semibold">Lịch sử duyệt</summary>
-    <ol class="m-0 list-none border-t border-slate-300 px-4 py-3 text-sm">
-      @for (entry of a.approval?.history; track $index) {
-      <li class="py-1">
-        <strong>{{ actionLabel[entry.action] }}</strong>
-        <span class="ml-2 text-xs text-slate-700">{{ entry.at | date: 'dd/MM/yyyy HH:mm' }}</span>
-        @if (entry.note) {
-        <span class="block text-slate-800">"{{ entry.note }}"</span>
+    <!-- Thông tin chung -->
+    <section class="mt-6 rounded border border-slate-200 bg-white p-5 shadow-sm" aria-labelledby="infoTitle">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <h2 id="infoTitle" class="m-0 text-lg font-semibold text-slate-800">Thông tin bài đánh giá</h2>
+        @if (editable()) {
+          <button nz-button nzType="primary" (click)="saveInfo()" [nzLoading]="isSavingInfo()">
+            Lưu thông tin
+          </button>
         }
-      </li>
+      </div>
+      <form [formGroup]="infoForm" (ngSubmit)="saveInfo()" (keydown.enter)="$event.preventDefault()" class="mt-4">
+        <div class="grid grid-cols-1 gap-x-4 gap-y-3 md:grid-cols-4">
+          <div class="md:col-span-2">
+            <label class="mb-1 block text-sm font-medium" for="infoName">Tên bài đánh giá</label>
+            <input id="infoName" class="h-8 w-full rounded border border-slate-400 px-2 text-sm disabled:bg-slate-100" formControlName="name" />
+            @if (infoForm.controls.name.touched && infoForm.controls.name.invalid) {
+              <p class="m-0 mt-1 text-xs text-red-600">Vui lòng nhập tên bài đánh giá (tối đa 200 ký tự).</p>
+            }
+          </div>
+          <div>
+            <label class="mb-1 block text-sm font-medium" for="infoType">Loại bài</label>
+            <nz-select nzId="infoType" class="w-full" formControlName="type" nzAllowClear nzPlaceHolder="Chưa chọn">
+              @for (opt of typeOptions; track opt.value) {
+                <nz-option [nzValue]="opt.value" [nzLabel]="opt.label" />
+              }
+            </nz-select>
+          </div>
+          <div>
+            <label class="mb-1 block text-sm font-medium" for="infoPhase">Giai đoạn</label>
+            <nz-select nzId="infoPhase" class="w-full" formControlName="phase" nzAllowClear nzPlaceHolder="Chưa chọn">
+              @for (opt of phaseOptions; track opt.value) {
+                <nz-option [nzValue]="opt.value" [nzLabel]="opt.label" />
+              }
+            </nz-select>
+          </div>
+          <div>
+            <label class="mb-1 block text-sm font-medium" for="infoDate">Ngày đánh giá</label>
+            <input id="infoDate" type="date" class="h-8 w-full rounded border border-slate-400 px-2 text-sm disabled:bg-slate-100" formControlName="scheduledDate" />
+          </div>
+          <div>
+            <span class="mb-1 block text-sm font-medium">Tổng điểm câu hỏi</span>
+            <div class="flex h-8 items-center px-2 text-sm font-bold text-blue-700">
+              {{ formatNumber(itemsSum()) }} điểm
+            </div>
+          </div>
+        </div>
+      </form>
+    </section>
+
+    <!-- Trọng số CLO (cloWeights) -->
+    <section class="mt-6 rounded border border-slate-200 bg-white p-5 shadow-sm" aria-labelledby="cloWeightTitle">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <div>
+          <h2 id="cloWeightTitle" class="m-0 text-lg font-semibold text-slate-800">Trọng số đóng góp cho Chuẩn đầu ra (CLO Weights)</h2>
+          <p class="m-0 mt-1 text-xs text-slate-600">
+            Trọng số \(W_{{ '{p,j}' }}\) (trong khoảng (0, 1]) thể hiện mức độ đóng góp của bài kiểm tra này vào từng CLO của học phần.
+          </p>
+        </div>
+        <div class="text-right">
+          <span class="text-xs text-slate-500">Tổng trọng số:</span>
+          <span class="ml-1 text-sm font-bold text-blue-700">{{ formatNumber(totalCloWeight() * 100) }}%</span>
+        </div>
+      </div>
+
+      <div class="mt-3 overflow-x-auto">
+        <table class="w-full border-collapse text-sm">
+          <thead>
+            <tr class="border-b border-slate-200 bg-slate-50 text-left text-xs font-semibold text-slate-600">
+              <th class="py-2 px-3">Mã CLO</th>
+              <th class="py-2 px-3">Nội dung CLO</th>
+              <th class="py-2 px-3 text-right">Trọng số bài thi \(W_{{ '{p,j}' }}\) (0.01 - 1.0)</th>
+              <th class="py-2 px-3 text-right">Tỷ lệ %</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (w of cloWeights(); track w.cloId) {
+              <tr class="border-b border-slate-100 hover:bg-slate-50">
+                <td class="py-2 px-3 font-semibold text-slate-800">{{ cloCodes().get(w.cloId) ?? w.cloId }}</td>
+                <td class="py-2 px-3 text-xs text-slate-600">{{ clos().find(c => c.id === w.cloId)?.contentOriginal ?? '—' }}</td>
+                <td class="py-2 px-3 text-right">
+                  <input type="number" step="0.05" min="0.01" max="1" [disabled]="!editable()"
+                    class="h-7 w-24 rounded border border-slate-300 px-2 text-right text-xs disabled:bg-slate-100"
+                    [value]="w.weight" (change)="updateCloWeight(w.cloId, +$any($event.target).value)" />
+                </td>
+                <td class="py-2 px-3 text-right font-medium text-slate-700">
+                  {{ formatNumber(w.weight * 100) }}%
+                </td>
+              </tr>
+            }
+            @if (cloWeights().length === 0) {
+              <tr>
+                <td colspan="4" class="py-4 text-center text-xs text-slate-400">
+                  Chưa có CLO nào được gán trong các câu hỏi.
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Danh sách câu hỏi -->
+    <section class="mt-6 rounded border border-slate-200 bg-white p-5 shadow-sm" aria-labelledby="itemsTitle">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <div>
+          <h2 id="itemsTitle" class="m-0 text-lg font-semibold text-slate-800">Cấu trúc câu hỏi bài đánh giá</h2>
+          <p class="m-0 mt-1 text-xs text-slate-600">
+            Số câu hỏi: <strong>{{ items().length }}</strong> · Tổng điểm: <strong class="text-blue-700">{{ formatNumber(itemsSum()) }} điểm</strong>
+          </p>
+        </div>
+        @if (editable()) {
+          <div class="flex gap-2">
+            <button nz-button nzType="dashed" (click)="openCreateItemModal()">
+              + Thêm câu hỏi
+            </button>
+            <button nz-button nzType="primary" (click)="saveItems()" [nzLoading]="isSavingItems()" [disabled]="!itemsDirty()">
+              Lưu cấu trúc
+            </button>
+          </div>
+        }
+      </div>
+
+      <div class="mt-4 overflow-x-auto">
+        <table class="w-full border-collapse text-sm">
+          <thead>
+            <tr class="border-b border-slate-200 bg-slate-50 text-left text-xs font-semibold text-slate-600">
+              <th class="w-12 py-2 px-3 text-center">STT</th>
+              <th class="py-2 px-3">Mã câu hỏi</th>
+              <th class="py-2 px-3">Mức độ Bloom</th>
+              <th class="py-2 px-3">Chuẩn đầu ra & Điểm tối đa</th>
+              <th class="py-2 px-3 text-right">Tổng điểm câu</th>
+              @if (editable()) {
+                <th class="w-24 py-2 px-3 text-center">Thao tác</th>
+              }
+            </tr>
+          </thead>
+          <tbody>
+            @for (item of items(); track item.code; let i = $index) {
+              <tr class="border-b border-slate-100 hover:bg-slate-50">
+                <td class="py-2 px-3 text-center text-slate-400">{{ i + 1 }}</td>
+                <td class="py-2 px-3 font-semibold text-slate-800">{{ item.code }}</td>
+                <td class="py-2 px-3">
+                  <app-bloom-level-label [level]="item.bloomLevel" />
+                </td>
+                <td class="py-2 px-3">
+                  <div class="flex flex-wrap gap-1">
+                    @for (desc of describeMappings(item, cloCodes()); track desc) {
+                      <span class="rounded bg-blue-50 px-2 py-0.5 text-xs text-blue-700 font-medium">
+                        {{ desc }}
+                      </span>
+                    }
+                  </div>
+                </td>
+                <td class="py-2 px-3 text-right font-semibold text-slate-800">
+                  {{ formatNumber(item.outcomeMappings.reduce((sum, m) => sum + m.maxScore, 0)) }} đ
+                </td>
+                @if (editable()) {
+                  <td class="py-2 px-3 text-center">
+                    <button type="button" (click)="openEditItemModal(i)" class="mr-2 text-blue-600 hover:underline">Sửa</button>
+                    <button type="button" (click)="removeItem(i)" class="text-red-600 hover:underline">Xóa</button>
+                  </td>
+                }
+              </tr>
+            }
+            @if (items().length === 0) {
+              <tr>
+                <td [attr.colspan]="editable() ? 6 : 5" class="py-8 text-center text-slate-400">
+                  Chưa có câu hỏi nào. Bấm <strong>+ Thêm câu hỏi</strong> để bắt đầu soạn ma trận.
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Bottom Action Dock -->
+    <app-action-dock [tone]="dock().tone" [message]="dock().message">
+      @if (editable()) {
+        <button nz-button nzType="primary" (click)="lockAssessment()" [disabled]="lockBlocked() || isLocking()" [nzLoading]="isLocking()">
+          <i class="fa-solid fa-lock mr-1.5" aria-hidden="true"></i>Khóa ma trận đánh giá
+        </button>
+        @if (a.status === 'DRAFT') {
+          <button nz-button nzDanger (click)="deleteAssessment()">
+            <i class="fa-solid fa-trash mr-1.5" aria-hidden="true"></i>Xóa bài
+          </button>
+        }
+      } @else if (a.status === 'LOCKED') {
+        <button nz-button nzType="default" (click)="unlockAssessment()" [nzLoading]="isLocking()">
+          <i class="fa-solid fa-lock-open mr-1.5" aria-hidden="true"></i>Mở khóa ma trận (để sửa)
+        </button>
       }
-    </ol>
-  </details>
-  }
+    </app-action-dock>
+
+    <!-- Modal thêm / sửa câu hỏi -->
+    <app-assessment-item-modal
+      [isVisible]="isItemModalVisible()"
+      [item]="editingItem()"
+      [clos]="clos()"
+      [otherCodes]="otherCodes()"
+      [disabled]="!editable()"
+      (visibleChange)="isItemModalVisible.set($event)"
+      (saved)="onItemSaved($event)"
+    />
   }
 </div>
-
-<ng-template #emptyItemsTpl>
-  <div class="py-8 text-center text-slate-700">
-    <p class="mb-3">Bài chưa có câu hỏi/tiêu chí nào.</p>
-    @if (editable()) {
-    <button nz-button nzType="primary" type="button" (click)="openAddItem()">Thêm câu đầu tiên</button>
-    }
-  </div>
-</ng-template>
-
-@if (assessment()) {
-<app-assessment-item-modal [isVisible]="isItemModalVisible()" [item]="editingItem()" [clos]="clos()" [otherCodes]="otherCodes()"
-  [disabled]="!editable()" (visibleChange)="isItemModalVisible.set($event)" (saved)="onItemSaved($event)" />
-
-<app-action-dock [tone]="dock().tone" [message]="dock().message">
-  @if (editable()) {
-  <button nz-button type="button" [nzLoading]="isSavingItems()" [disabled]="isSavingItems() || !itemsDirty()" (click)="saveItems()">Lưu cấu trúc</button>
-  }
-  @if (canSubmit()) {
-  <button nz-button nzType="primary" type="button" [nzLoading]="isSubmitting()" [disabled]="isSubmitting() || submitBlocked()" (click)="confirmSubmit()">Gửi duyệt</button>
-  }
-</app-action-dock>
-}

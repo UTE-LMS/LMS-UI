@@ -11,6 +11,7 @@ export interface IPlo {
   contentOriginal?: string;
   contentSummary?: string;
   capabilityLevelRaw?: number;
+  passThreshold?: number;
   verification?: IVerificationResponse;
   reviewNote?: string;
 }
@@ -22,6 +23,7 @@ export interface IPloRequest {
   contentOriginal?: string;
   contentSummary?: string;
   capabilityLevelRaw?: number;
+  passThreshold?: number;
   reviewNote?: string;
 }
 
@@ -36,6 +38,8 @@ export interface IPi {
   contentShort?: string;
   capabilityLevelRaw?: number;
   targetPassRate?: number;
+  weight?: number;
+  passThreshold?: number;
   verification?: IVerificationResponse;
   reviewNote?: string;
 }
@@ -49,6 +53,8 @@ export interface IPiRequest {
   contentShort?: string;
   capabilityLevelRaw?: number;
   targetPassRate?: number;
+  weight?: number;
+  passThreshold?: number;
   reviewNote?: string;
 }
 

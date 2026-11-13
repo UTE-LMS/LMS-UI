@@ -44,7 +44,7 @@ export interface ICloPiLinkRequest {
   programVersionId: string;
   cloId: string;
   piId: string;
-  weight?: number | null;
+  weight: number;
 }
 
 export interface ICloPiLinkCell {

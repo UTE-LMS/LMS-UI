@@ -83,9 +83,8 @@ export const UrlConstant = {
     ASSESSMENT_DETAIL: (id: string) => `${environment.serverUrl}api/v1/assessments/${id}`,
     ASSESSMENT_ITEMS: (id: string) => `${environment.serverUrl}api/v1/assessments/${id}/items`,
     ASSESSMENT_COVERAGE: (id: string) => `${environment.serverUrl}api/v1/assessments/${id}/coverage`,
-    ASSESSMENT_SUBMIT: (id: string) => `${environment.serverUrl}api/v1/assessments/${id}/submit`,
-    ASSESSMENT_APPROVE: (id: string) => `${environment.serverUrl}api/v1/assessments/${id}/approve`,
-    ASSESSMENT_REJECT: (id: string) => `${environment.serverUrl}api/v1/assessments/${id}/reject`,
+    ASSESSMENT_LOCK: (id: string) => `${environment.serverUrl}api/v1/assessments/${id}/lock`,
+    ASSESSMENT_UNLOCK: (id: string) => `${environment.serverUrl}api/v1/assessments/${id}/unlock`,
 
     // Categories
     DEMO_API: environment.serverUrl + 'rest/demo',

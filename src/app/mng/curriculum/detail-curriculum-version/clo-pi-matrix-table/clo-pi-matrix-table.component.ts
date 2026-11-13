@@ -493,7 +493,7 @@ export class CloPiMatrixTableComponent {
         programVersionId: this.versionId(),
         cloId: clo.id,
         piId: pi.id,
-        weight: weightVal,
+        weight: weightVal ?? 1.0,
       })
       .subscribe({
         next: () => {

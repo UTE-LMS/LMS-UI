@@ -121,7 +121,7 @@ describe('CloPiMatrixTableComponent (F03 US-12, TD-27, TD-28, Q22)', () => {
       programVersionId: pvId,
       cloId: 'clo_1',
       piId: 'pi_1_2',
-      weight: null,
+      weight: 1,
     });
   });
 

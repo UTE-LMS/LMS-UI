@@ -71,7 +71,7 @@ describe('CloService (F03 US-11, US-12, ADR 0010, ADR 0004)', () => {
       programVersionId: pvId,
       cloId,
       piId: '671dcba5f123456789abcde5',
-      weight: null,
+      weight: 0.5,
     };
     service.createCloPiLink(syllabusId, linkBody).subscribe();
     const postReq = http.expectOne(UrlConstant.API.SYLLABUS_CLO_PI_LINKS(syllabusId));
