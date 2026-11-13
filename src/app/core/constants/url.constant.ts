@@ -86,6 +86,15 @@ export const UrlConstant = {
     ASSESSMENT_LOCK: (id: string) => `${environment.serverUrl}api/v1/assessments/${id}/lock`,
     ASSESSMENT_UNLOCK: (id: string) => `${environment.serverUrl}api/v1/assessments/${id}/unlock`,
 
+    // F05b - Lô nhập điểm thi 2-pha (ADR 0014, Schema v0.7)
+    IMPORT_BATCH_CREATE: (sectionId: string, assessmentId: string) => `${environment.serverUrl}api/v1/sections/${sectionId}/assessments/${assessmentId}/import-batches`,
+    IMPORT_BATCH_LIST: (sectionId: string, assessmentId: string) => `${environment.serverUrl}api/v1/sections/${sectionId}/assessments/${assessmentId}/import-batches`,
+    IMPORT_BATCH_DETAIL: (id: string) => `${environment.serverUrl}api/v1/import-batches/${id}`,
+    IMPORT_BATCH_ERRORS: (id: string) => `${environment.serverUrl}api/v1/import-batches/${id}/errors`,
+    IMPORT_BATCH_VALIDATE: (id: string) => `${environment.serverUrl}api/v1/import-batches/${id}/validate`,
+    IMPORT_BATCH_CONFIRM: (id: string) => `${environment.serverUrl}api/v1/import-batches/${id}/confirm`,
+    IMPORT_BATCH_ROLLBACK: (id: string) => `${environment.serverUrl}api/v1/import-batches/${id}/rollback`,
+
     // Categories
     DEMO_API: environment.serverUrl + 'rest/demo',
   },
@@ -125,6 +134,7 @@ export const UrlConstant = {
       ASSESSMENT_TEMPLATES: (syllabusId: string) => `/mng/assessments/syllabi/${syllabusId}`,
       ASSESSMENT_DETAIL: (assessmentId: string) => `/mng/assessments/${assessmentId}`,
       ASSESSMENT_REVIEW: (assessmentId: string) => `/mng/assessments/${assessmentId}/review`,
+      ASSESSMENT_SCORE_IMPORT: (assessmentId: string) => `/mng/assessments/${assessmentId}/score-import`,
 
       CATEGORIES: '/mng/categories',
       ACADEMIC_RANKS: '/mng/categories/academic-ranks',

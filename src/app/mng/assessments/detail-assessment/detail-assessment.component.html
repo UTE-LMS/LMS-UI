@@ -30,6 +30,11 @@
         <a nz-button nzType="default" [routerLink]="urlConst.ASSESSMENT_REVIEW(a.id)">
           <i class="fa-solid fa-chart-pie mr-1.5" aria-hidden="true"></i>Xem độ phủ ma trận
         </a>
+        @if (a.status === 'LOCKED' || a.status === 'SCORE_ENTERED') {
+          <a nz-button nzType="primary" class="bg-blue-600" [routerLink]="urlConst.ASSESSMENT_SCORE_IMPORT(a.id)">
+            <i class="fa-solid fa-file-import mr-1.5" aria-hidden="true"></i>Nhập điểm từ CSV
+          </a>
+        }
       }
     </div>
 

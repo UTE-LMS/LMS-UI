@@ -58,6 +58,7 @@ interface IPloFormValue {
   displayOrder: number;
   category: PloCategory;
   capabilityLevelRaw?: number | null;
+  passThreshold: number;
   contentSummary?: string | null;
   contentOriginal?: string | null;
 }
@@ -67,6 +68,8 @@ interface IPiFormValue {
   displayOrder: number;
   capabilityLevelRaw?: number | null;
   targetPassRatePercent?: number | null;
+  weight: number;
+  passThreshold: number;
   contentShort?: string | null;
   contentOriginal?: string | null;
 }
@@ -276,6 +279,10 @@ export class FormCurriculumVersionComponent implements OnInit {
       displayOrder: [plo?.displayOrder ?? this.ploForms().length + 1, [Validators.required]],
       category: [plo?.category ?? 'SPECIALIZED', [Validators.required]],
       capabilityLevelRaw: [plo?.capabilityLevelRaw ?? null],
+      passThreshold: [
+        plo?.passThreshold ?? 0.5,
+        [Validators.required, Validators.min(0.01), Validators.max(1.0)],
+      ],
       contentSummary: [plo?.contentSummary ?? '', [Validators.maxLength(2000)]],
       contentOriginal: [plo?.contentOriginal ?? '', [Validators.maxLength(2000)]],
     });
@@ -298,6 +305,14 @@ export class FormCurriculumVersionComponent implements OnInit {
       displayOrder: [pi?.displayOrder ?? 1, [Validators.required]],
       capabilityLevelRaw: [pi?.capabilityLevelRaw ?? null],
       targetPassRatePercent: [passRatePercent, [Validators.min(0), Validators.max(100)]],
+      weight: [
+        pi?.weight ?? 1.0,
+        [Validators.required, Validators.min(0.01), Validators.max(1.0)],
+      ],
+      passThreshold: [
+        pi?.passThreshold ?? 0.5,
+        [Validators.required, Validators.min(0.01), Validators.max(1.0)],
+      ],
       contentShort: [pi?.contentShort ?? '', [Validators.maxLength(2000)]],
       contentOriginal: [pi?.contentOriginal ?? '', [Validators.maxLength(2000)]],
     });
@@ -499,6 +514,7 @@ export class FormCurriculumVersionComponent implements OnInit {
       displayOrder: Number(rawVal.displayOrder),
       category: rawVal.category,
       capabilityLevelRaw: rawVal.capabilityLevelRaw ? Number(rawVal.capabilityLevelRaw) : undefined,
+      passThreshold: Number(rawVal.passThreshold),
       contentSummary: rawVal.contentSummary ? rawVal.contentSummary.trim() : undefined,
       contentOriginal: rawVal.contentOriginal ? rawVal.contentOriginal.trim() : undefined,
     };
@@ -545,6 +561,8 @@ export class FormCurriculumVersionComponent implements OnInit {
         displayOrder: Number(piVal.displayOrder),
         capabilityLevelRaw: piVal.capabilityLevelRaw ? Number(piVal.capabilityLevelRaw) : undefined,
         targetPassRate: targetRate,
+        weight: Number(piVal.weight),
+        passThreshold: Number(piVal.passThreshold),
         contentShort: piVal.contentShort ? piVal.contentShort.trim() : undefined,
         contentOriginal: piVal.contentOriginal ? piVal.contentOriginal.trim() : undefined,
       };

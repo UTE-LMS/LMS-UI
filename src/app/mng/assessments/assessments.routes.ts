@@ -22,6 +22,12 @@ export const assessmentsRoutes: Routes = [
     title: `Xem độ phủ ma trận | ${SystemConstant.WEB_NAME}`,
   },
   {
+    path: ':id/score-import',
+    loadComponent: () => import('./score-import/score-import.component')
+      .then(m => m.ScoreImportComponent),
+    title: `Nhập điểm thi theo lô | ${SystemConstant.WEB_NAME}`,
+  },
+  {
     path: ':id',
     loadComponent: () => import('./detail-assessment/detail-assessment.component')
       .then(m => m.DetailAssessmentComponent),
