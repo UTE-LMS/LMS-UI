@@ -45,14 +45,12 @@ describe('ManagementHeaderComponent (Header Admin Layout)', () => {
     expect(component).toBeTruthy();
   });
 
-  it('hiển thị logo trường từ assets và tiêu đề OBE', () => {
+  it('hiển thị thương hiệu LOMS và sidebar điều hướng theo UI.pdf', () => {
     const el = fixture.nativeElement as HTMLElement;
-    const logoImg = el.querySelector('img.header-logo') as HTMLImageElement;
-    expect(logoImg).toBeTruthy();
-    expect(logoImg.getAttribute('src')).toBe('assets/img/logo/ute_logo.png');
+    expect(el.querySelector('aside.loms-sidebar')).toBeTruthy();
 
     const brand = el.querySelector('.brand-title');
-    expect(brand?.textContent?.trim()).toBe('OBE');
+    expect(brand?.textContent?.trim()).toBe('LOMS');
   });
 
   it('chỉ hiển thị các chức năng đang có trong hệ thống từ menu chức năng', () => {
@@ -66,11 +64,9 @@ describe('ManagementHeaderComponent (Header Admin Layout)', () => {
     expect(titles).toContain('Khung CTĐT & Chuẩn đầu ra');
     expect(titles).toContain('Học phần & Học kỳ');
     expect(titles).toContain('Đề cương & CLO');
+    expect(titles).toContain('Lớp học phần');
 
     // Không chứa các chức năng chưa triển khai
-    expect(titles).not.toContain('Lớp học');
-    expect(titles).not.toContain('Đánh giá');
-    expect(titles).not.toContain('Điểm');
     expect(titles).not.toContain('Báo cáo');
   });
 

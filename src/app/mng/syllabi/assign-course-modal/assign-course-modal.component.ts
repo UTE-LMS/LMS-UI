@@ -14,8 +14,8 @@ import { NzSelectModule } from 'ng-zorro-antd/select';
 import { ToastrService } from 'ngx-toastr';
 
 /**
- * Modal Trưởng bộ môn (DEPARTMENT_HEAD) phân công / gỡ phân công học phần cho Giảng viên
- * thuộc phạm vi Khoa/Ngành (scope.programIds) theo ADR 0010 (Thu hồi quyền ADMIN).
+ * Modal Quản lý CTĐT (PROGRAM_MANAGER) phân công / gỡ phân công học phần cho Giảng viên
+ * thuộc phạm vi Khoa/Ngành (scope.programIds) theo ADR 0014.
  */
 @Component({
   selector: 'app-assign-course-modal',

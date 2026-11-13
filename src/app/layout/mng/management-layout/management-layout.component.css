@@ -1,16 +1,32 @@
-.management-content-area {
-  min-height: calc(100vh - 56px);
-  background-color: #f0f4f9;
-  padding: 24px 32px;
+.loms-shell {
+  display: flex;
+  min-height: 100vh;
+  width: 100%;
+  background-color: #eef2f6;
 }
 
-.management-container {
-  max-width: 1440px;
+.loms-main {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 100vh;
+  padding: 24px 32px;
+  background-color: #eef2f6;
+  background-image: radial-gradient(#cbd5e1 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+.loms-container {
+  max-width: 1380px;
   margin: 0 auto;
 }
 
-@media (max-width: 768px) {
-  .management-content-area {
+@media (max-width: 1023px) {
+  .loms-shell {
+    flex-direction: column;
+  }
+
+  .loms-main {
+    min-height: calc(100vh - 56px);
     padding: 16px;
   }
 }

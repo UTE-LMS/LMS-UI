@@ -52,7 +52,7 @@ export class MainHeaderComponent implements OnInit {
   checkLogin(): void {
     if (this.authSvc.getAuthData() && this.authSvc.getToken()) {
       this.isLogin.set(true);
-      this.isStudent.set(this.authSvc.checkRole(SystemConstant.ROLE.STUDENT));
+      this.isStudent.set(false);
       this.isAdmin.set(Object.values(SystemConstant.MNG_ROLE).some(role => this.authSvc.checkRole(role)));
       this.userAvatarLink.set(this.authSvc.getAvatarOfLogin() ?? '');
       this.userName.set(this.authSvc.getNameOfLogin());

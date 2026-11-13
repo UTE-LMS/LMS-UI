@@ -289,10 +289,10 @@ describe('FormUsersComponent (F01 US-02)', () => {
 
     it('US-02/AC-5: 422 tự gỡ vai trò ADMIN hiện thông điệp và giữ nguyên form', () => {
       userSvc.update.mockImplementation(() => throwError(() => apiError(422, 'Không thể tự gỡ vai trò quản trị viên của chính mình')));
-      component.roleForms()[0].patchValue({ role: 'VIEWER' });
+      component.roleForms()[0].patchValue({ role: 'QA' });
       component.onSubmit();
       expect(component.formErrorMsg()).toBe('Không thể tự gỡ vai trò quản trị viên của chính mình');
-      expect(component.roleForms()[0].getRawValue().role).toBe('VIEWER');
+      expect(component.roleForms()[0].getRawValue().role).toBe('QA');
       expect(closed).toEqual([]);
     });
 

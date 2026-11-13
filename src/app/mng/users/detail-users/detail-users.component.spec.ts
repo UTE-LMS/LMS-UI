@@ -16,7 +16,7 @@ const user: IUser = {
   email: 'gv.oop01@example.test',
   fullName: 'Giảng viên thử nghiệm',
   status: 'ACTIVE',
-  roleAssignments: [{ role: 'VIEWER', scope: null }],
+  roleAssignments: [{ role: 'QA', scope: null }],
   createdAt: '2026-10-27T05:00:00Z',
   updatedAt: '2026-10-27T05:00:00Z',
 };

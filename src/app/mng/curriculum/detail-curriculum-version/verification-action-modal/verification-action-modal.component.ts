@@ -11,7 +11,7 @@ import { NzRadioModule } from 'ng-zorro-antd/radio';
 import { ToastrService } from 'ngx-toastr';
 
 /**
- * Modal Thẩm định ĐBCL (US-08, ADR 0004) dành riêng cho QA_OFFICER.
+ * Modal Thẩm định ĐBCL (US-08, ADR 0014) dành riêng cho QA.
  */
 @Component({
   selector: 'app-verification-action-modal',

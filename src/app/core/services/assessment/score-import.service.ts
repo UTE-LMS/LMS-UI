@@ -72,4 +72,10 @@ export class ScoreImportService {
   rollbackBatch(id: string): Observable<IImportBatch> {
     return this.http.post<IImportBatch>(UrlConstant.API.IMPORT_BATCH_ROLLBACK(id), {});
   }
+
+  downloadTemplateCsv(assessmentId: string): Observable<Blob> {
+    return this.http.get(UrlConstant.API.ASSESSMENT_SCORE_TEMPLATE_CSV(assessmentId), {
+      responseType: 'blob',
+    });
+  }
 }

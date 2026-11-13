@@ -8,6 +8,8 @@ import {
   IImportBatch,
   IImportColumnMapping,
   IImportRowError,
+  ImportSourceSystem,
+  ReimportPolicy,
 } from '@models/assessment/score-import.model';
 import { toUserError } from '@services/common/api-error.util';
 import { AssessmentService } from '@services/assessment/assessment.service';
@@ -48,7 +50,18 @@ export class ScoreImportComponent implements OnInit {
   readonly file = signal<File | null>(null);
   readonly csvHeaders = signal<string[]>([]);
   readonly studentColumn = signal<string>('MSSV');
-  readonly itemMappings = signal<{ column: string; itemId: string; itemCode: string; }[]>([]);
+  readonly reimportPolicy = signal<ReimportPolicy>('REJECT_ON_CONFLICT');
+  readonly sourceSystem = signal<ImportSourceSystem>('CSV');
+  readonly isTemplateFormat = signal<boolean>(false);
+  readonly isDownloadingTemplate = signal<boolean>(false);
+  readonly itemMappings = signal<{
+    column: string;
+    itemId: string;
+    itemCode: string;
+    cloId?: string;
+    maxScore?: number;
+    multiClo?: boolean;
+  }[]>([]);
   readonly isLoading = signal<boolean>(false);
   readonly isSubmitting = signal<boolean>(false);
   readonly step = signal<ScoreImportStep>('UPLOAD');
@@ -75,12 +88,63 @@ export class ScoreImportComponent implements OnInit {
   }
 
   private initItemMappings(a: IAssessment): void {
-    const mappings = (a.items ?? []).map(item => ({
-      column: '',
-      itemId: item.id ?? item.code,
-      itemCode: item.code,
-    }));
+    const mappings: {
+      column: string;
+      itemId: string;
+      itemCode: string;
+      cloId?: string;
+      maxScore?: number;
+      multiClo?: boolean;
+    }[] = [];
+
+    for (const item of a.items ?? []) {
+      const itemId = item.id ?? item.code;
+      const outcomes = item.outcomeMappings ?? [];
+      if (outcomes.length > 0) {
+        const multiClo = outcomes.length > 1;
+        for (const om of outcomes) {
+          mappings.push({
+            column: '',
+            itemId,
+            itemCode: item.code,
+            cloId: om.cloId,
+            maxScore: om.maxScore,
+            multiClo,
+          });
+        }
+      } else {
+        mappings.push({
+          column: '',
+          itemId,
+          itemCode: item.code,
+        });
+      }
+    }
     this.itemMappings.set(mappings);
+  }
+
+  downloadTemplateCsv(): void {
+    const currentAss = this.assessment();
+    if (!currentAss) {
+      return;
+    }
+    this.isDownloadingTemplate.set(true);
+    this.errorMessage.set(null);
+    this.scoreImportSvc.downloadTemplateCsv(currentAss.id).subscribe({
+      next: (blob: Blob) => {
+        this.isDownloadingTemplate.set(false);
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `${currentAss.code || 'assessment'}-scores-template.csv`;
+        link.click();
+        URL.revokeObjectURL(url);
+      },
+      error: (err: unknown) => {
+        this.isDownloadingTemplate.set(false);
+        this.errorMessage.set(toUserError(err).message);
+      },
+    });
   }
 
   onFileChange(event: Event): void {
@@ -96,11 +160,11 @@ export class ScoreImportComponent implements OnInit {
     this.file.set(selectedFile);
     this.errorMessage.set(null);
 
-    // Đọc header của CSV để tự động ánh xạ
+    // Đọc header của CSV để tự động ánh xạ (loại bỏ UTF-8 BOM nếu có)
     const reader = new FileReader();
     reader.onload = e => {
       const text = (e.target?.result as string) ?? '';
-      const firstLine = text.split(/\r?\n/)[0] ?? '';
+      const firstLine = (text.split(/\r?\n/)[0] ?? '').replace(/^\uFEFF/, '');
       const headers = firstLine
         .split(',')
         .map(h => h.trim().replace(/^"|"$/g, ''))
@@ -121,18 +185,37 @@ export class ScoreImportComponent implements OnInit {
       this.studentColumn.set(headers[0]);
     }
 
-    // Tự động map các câu hỏi
+    const templateCols = headers.filter(h => / - .+ \(Max:\s*[\d.]+\)$/i.test(h));
+    const looksLikeTemplate =
+      foundStudentCol?.toLowerCase() === 'masv' && templateCols.length >= this.itemMappings().length && templateCols.length > 0;
+    this.isTemplateFormat.set(looksLikeTemplate);
+
+    // Tự động map các câu hỏi (theo cặp item + CLO nếu dùng tệp mẫu)
+    const usedHeaders = new Set<string>();
     const currentMappings = this.itemMappings();
     const updated = currentMappings.map(m => {
+      const lowerCode = m.itemCode.toLowerCase();
       const matched = headers.find(h => {
+        if (usedHeaders.has(h)) {
+          return false;
+        }
         const lowerH = h.toLowerCase();
-        const lowerCode = m.itemCode.toLowerCase();
+        if (lowerH.startsWith(`${lowerCode} - `)) {
+          if (m.maxScore !== undefined && lowerH.includes('(max:')) {
+            return lowerH.includes(`(max: ${m.maxScore})`) || lowerH.includes(`(max: ${Number(m.maxScore)})`);
+          }
+          return true;
+        }
         return (
           lowerH === lowerCode ||
           lowerH.includes(lowerCode) ||
-          h.replace(/[^0-9]/g, '') === m.itemCode.replace(/[^0-9]/g, '')
+          (m.itemCode.replace(/[^0-9]/g, '').length > 0 &&
+            h.replace(/[^0-9]/g, '') === m.itemCode.replace(/[^0-9]/g, ''))
         );
       });
+      if (matched) {
+        usedHeaders.add(matched);
+      }
       return {
         ...m,
         column: matched ?? '',
@@ -149,26 +232,36 @@ export class ScoreImportComponent implements OnInit {
       return;
     }
 
-    // Kiểm tra ánh xạ
-    const unmapped = this.itemMappings().find(m => !m.column);
-    if (unmapped) {
-      this.errorMessage.set(`Vui lòng chọn cột trong tệp CSV cho câu "${unmapped.itemCode}"`);
-      return;
-    }
+    let columnMapping: IImportColumnMapping | undefined;
+    if (!this.isTemplateFormat()) {
+      const unmapped = this.itemMappings().find(m => !m.column);
+      if (unmapped) {
+        this.errorMessage.set(`Vui lòng chọn cột trong tệp CSV cho câu "${unmapped.itemCode}"`);
+        return;
+      }
 
-    const columnMapping: IImportColumnMapping = {
-      studentColumn: this.studentColumn(),
-      items: this.itemMappings().map(m => ({
-        column: m.column,
-        item: m.itemId,
-      })),
-    };
+      columnMapping = {
+        studentColumn: this.studentColumn(),
+        items: this.itemMappings().map(m => ({
+          column: m.column,
+          item: m.itemId,
+          ...(m.cloId ? { cloId: m.cloId } : {}),
+        })),
+      };
+    }
 
     this.isSubmitting.set(true);
     this.errorMessage.set(null);
 
     this.scoreImportSvc
-      .createBatch(currentAss.sectionId, currentAss.id, currentFile, columnMapping)
+      .createBatch(
+        currentAss.sectionId,
+        currentAss.id,
+        currentFile,
+        columnMapping,
+        this.reimportPolicy(),
+        this.sourceSystem(),
+      )
       .subscribe({
         next: (batch: IImportBatch) => {
           // Tự động kích hoạt validate batch

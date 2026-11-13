@@ -120,7 +120,7 @@ describe('ListSectionsComponent (F05a US-19)', () => {
   });
 
   it('403: hiện trạng thái hết quyền, không hiện bảng', async () => {
-    await setup([SystemConstant.ROLE.VIEWER]);
+    await setup([SystemConstant.ROLE.QA]);
     sectionSvc.getSections.mockReturnValue(throwError(() => new HttpErrorResponse({
       status: 403, error: { status: 403, code: 'FORBIDDEN', message: 'Bạn không có quyền truy cập tài nguyên này' },
     })));

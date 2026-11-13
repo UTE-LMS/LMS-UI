@@ -15,7 +15,7 @@ describe('users.util (F01 §4.3 phạm vi)', () => {
       expect(isScopeEmpty({ programIds: [], courseIds: [], sectionIds: [] })).toBe(true);
     });
 
-    it('chỉ có programIds KHÔNG phải rỗng (tránh VIEWER bị coi là đọc toàn hệ thống)', () => {
+    it('chỉ có programIds KHÔNG phải rỗng (tránh QA bị coi là đọc toàn hệ thống)', () => {
       expect(isScopeEmpty({ programIds: [ID_A], courseIds: [], sectionIds: [] })).toBe(false);
     });
 
@@ -30,10 +30,10 @@ describe('users.util (F01 §4.3 phạm vi)', () => {
 
     it('phạm vi rỗng được diễn giải theo vai trò', () => {
       expect(describeScope({ role: 'ADMIN', scope: empty })).toBe('Toàn hệ thống');
-      expect(describeScope({ role: 'VIEWER', scope: empty })).toBe('Đọc toàn hệ thống');
+      expect(describeScope({ role: 'QA', scope: empty })).toBe('Đọc toàn hệ thống');
       // Vai trò nghiệp vụ khác bị từ chối khi scope rỗng nên không được ghi như có quyền
       expect(describeScope({ role: 'LECTURER', scope: empty })).toBe('Chưa gán');
-      expect(describeScope({ role: 'QA_OFFICER', scope: empty })).toBe('Chưa gán');
+      expect(describeScope({ role: 'PROGRAM_MANAGER', scope: empty })).toBe('Chưa gán');
     });
 
     it('đếm số mục theo từng loại phạm vi', () => {
@@ -44,9 +44,9 @@ describe('users.util (F01 §4.3 phạm vi)', () => {
       expect(describeScope(assignment)).toBe('1 học phần, 2 lớp');
     });
 
-    it('VIEWER chỉ có programIds hiển thị số CTĐT chứ không phải "Đọc toàn hệ thống"', () => {
+    it('QA chỉ có programIds hiển thị số CTĐT chứ không phải "Đọc toàn hệ thống"', () => {
       const assignment: IRoleAssignment = {
-        role: 'VIEWER',
+        role: 'QA',
         scope: { programIds: [ID_A], courseIds: [], sectionIds: [] },
       };
       expect(describeScope(assignment)).toBe('1 CTĐT');
@@ -71,7 +71,7 @@ describe('users.util (F01 §4.3 phạm vi)', () => {
     });
 
     it('phạm vi rỗng gửi null', () => {
-      const result = toRoleAssignment({ role: 'VIEWER', programIds: [], courseIds: [], sectionIds: [] });
+      const result = toRoleAssignment({ role: 'QA', programIds: [], courseIds: [], sectionIds: [] });
       expect(result.scope).toBeNull();
     });
 

@@ -2,7 +2,6 @@ import { ChangeDetectionStrategy, Component, DestroyRef, inject, OnInit, signal 
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormGroup, NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { SystemConstant } from '@constants/system.constant';
 import { UrlConstant } from '@constants/url.constant';
 import { ILoginRequest } from '@models/auth/auth.model';
 import { MakeForm } from '@models/common/make-form.model';
@@ -110,8 +109,6 @@ export class LoginComponent implements OnInit {
     if (returnUrl?.startsWith('/') && !returnUrl.startsWith('//') && !returnUrl.startsWith(UrlConstant.ROUTE.AUTH.LOGIN)) {
       return returnUrl;
     }
-    return this.authSvc.checkRole(SystemConstant.ROLE.STUDENT) && !this.authSvc.hasAnyRole(Object.values(SystemConstant.MNG_ROLE))
-      ? UrlConstant.ROUTE.MAIN.HOMEPAGE
-      : UrlConstant.ROUTE.MANAGEMENT.DASHBOARD;
+    return UrlConstant.ROUTE.MANAGEMENT.DASHBOARD;
   }
 }

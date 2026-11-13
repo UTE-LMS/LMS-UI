@@ -604,14 +604,14 @@ Khóa hoặc mở khóa tài khoản người dùng.
 
 ---
 
-### 5.4. Khung Định Hướng Phân Quyền Theo Phạm Vi (US-03)
-Backend kiểm tra quyền hạn của người dùng trên từng tài nguyên theo cặp `(vai trò, phạm vi)` và phân định hành vi `READ` / `WRITE` theo ma trận [ĐỀ XUẤT, chờ Q08]:
+### 5.4. Khung Định Hướng Phân Quyền Theo Phạm Vi (US-03, OBE v0.7 / ADR 0014)
+Hệ thống tinh gọn còn **4 vai trò cốt lõi**: `ADMIN`, `PROGRAM_MANAGER`, `LECTURER`, `QA` (loại bỏ `DEPARTMENT_HEAD`, `VIEWER`, `QA_OFFICER` và `STUDENT` khỏi enum `Role`). Backend kiểm tra quyền hạn của người dùng trên từng tài nguyên theo cặp `(vai trò, phạm vi)` và phân định hành vi `READ` / `WRITE`:
 - **Nguyên tắc nạp quyền động:** Quyền hạn được nạp từ CSDL mỗi request và đóng gói trong `UserPrincipal` (trong package `dto`). Thay đổi vai trò hoặc phạm vi trên CSDL lập tức có hiệu lực ở request tiếp theo mà không cần cấp lại token.
 - **Nguyên tắc hợp quyền (UNION):** Người dùng có nhiều `roleAssignments` sẽ nhận quyền hạn là phép hợp (UNION) của tất cả các assignment.
 - **Quy ước phạm vi rỗng (Empty Scope):** Scope rỗng là khi `scope == null` HOẶC cả ba mảng `programIds`, `courseIds`, `sectionIds` đều rỗng hoặc null (`{ programIds: [], courseIds: [], sectionIds: [] }`).
-  - `ADMIN`: Toàn quyền hệ thống (READ & WRITE).
-  - `VIEWER`: Toàn quyền đọc toàn hệ thống (READ only). Nếu VIEWER có chứa ID trong scope thì chỉ đọc trong phạm vi đó. Nếu VIEWER chỉ có `programIds` thì bị từ chối 403 (không được coi là scope rỗng).
-  - Các vai trò nghiệp vụ khác: Scope rỗng bị từ chối truy cập (fail-closed, HTTP 403). Riêng `LECTURER`, nếu tài khoản có tên trong `CourseSection.lecturerIds` của lớp học phần thì vẫn được cấp quyền thao tác trên lớp đó (miễn là user vẫn giữ vai trò LECTURER).
+  - `ADMIN`: Toàn quyền quản trị danh mục, người dùng, học kỳ, lớp học phần (lưu ý: thu hồi quyền biên soạn/chấm điểm học thuật trên đề cương, CLO, bài đánh giá, nhập điểm).
+  - `QA` (Cán bộ Đảm bảo chất lượng & Khảo thí, hợp nhất từ `VIEWER` + `QA_OFFICER`): Toàn quyền đọc toàn hệ thống (READ only) khi scope rỗng để xem báo cáo đo lường. Nếu `QA` có chứa ID trong scope thì chỉ đọc trong phạm vi đó (nếu chỉ có `programIds` khi truy cập `section` thì bị từ chối 403). Đồng thời `QA` có quyền ghi thẩm định nội dung CTĐT (`PUT .../verification`) và liên kết CLO–PI (`PUT /clo-pi-links/{id}/verification`) trong `scope.programIds`.
+  - `PROGRAM_MANAGER` & `LECTURER`: Scope rỗng bị từ chối truy cập (fail-closed, HTTP 403). Riêng `LECTURER`, nếu tài khoản có tên trong `CourseSection.lecturerIds` của lớp học phần thì vẫn được cấp quyền thao tác trên lớp đó (miễn là user vẫn giữ vai trò LECTURER).
 
 ---
 
@@ -625,7 +625,7 @@ Danh sách nhật ký có phân trang chuẩn (§5.1), **mới nhất trước**
 
 | Tham số | Kiểu | Mô tả |
 |---|---|---|
-| `action` | Enum `AuditAction` | `SCORE_UPDATE`, `IMPORT_CONFIRM`, `ASSESSMENT_APPROVE`, `ASSESSMENT_REJECT`, `RUN_CALCULATION`, `RULE_CONFIRM`, `LOGIN` |
+| `action` | Enum `AuditAction` | `SCORE_UPDATE`, `IMPORT_CONFIRM`, `ASSESSMENT_LOCK`, `ASSESSMENT_UNLOCK`, `RUN_CALCULATION`, `LOGIN` |
 | `entity` | String (≤ 64) | Tên collection của thực thể bị tác động, ví dụ `users`, `scores` |
 | `entityId` | String (≤ 64) | ID thực thể bị tác động |
 | `userId` | ObjectId (24 hex) | Người thực hiện |
@@ -656,64 +656,65 @@ Phản hồi `200`:
 
 ---
 
-## 6. Khung Mục Lục Endpoint Cho Các Bước Tiếp Theo (F02 - F08)
+## 6. Đặc Tả Endpoint Các Phân Hệ Nghiệp Vụ (F02 – F08)
 
-Các mục dưới đây giữ vai trò khung định hướng và sẽ được cập nhật chi tiết (Request/Response DTO, URL, query params) tương ứng qua từng bước phát triển của đề tài:
+### 6.1. F02: Chương Trình Đào Tạo, Phiên Bản, PLO & PI
+> **Trạng thái:** đã hiện thực ở backend (OBE v0.7 / ADR 0012 / ADR 0004). Đã **xóa bỏ** ma trận I/R/M (`/pi-contributions`); tách riêng endpoint cập nhật trạng thái phiên bản CTĐT (`/program-versions/{id}/status`); `QA` thẩm định nội dung (`/verification`). Tiền tố `/api/v1`.
 
-### 6.1. F02: Quản Lý Chương Trình Đào Tạo & Chuẩn Đầu Ra (Curriculum & PLO/PI Management)
-- `GET /api/v1/programs` — Danh sách Chương trình đào tạo (CTĐT).
-- `POST /api/v1/programs` — Thêm mới CTĐT.
-- `GET /api/v1/programs/{id}/versions` — Danh sách các phiên bản áp dụng của CTĐT.
-- `GET /api/v1/programs/{id}/plos` — Danh sách Chuẩn đầu ra cấp chương trình (PLO) và chỉ số hiệu năng (PI).
-- `POST /api/v1/programs/{id}/plos` — Khởi tạo/cập nhật danh mục PLO và PI.
-- `PUT /api/v1/programs/{id}/matrix` — Cấu hình ma trận quan hệ giữa các học phần và PLO/PI.
+- `GET/POST/PUT /programs`, `GET /programs/{id}` — Danh mục ngành đào tạo (`ADMIN` tạo/sửa; các vai trò đọc).
+- `GET/POST /programs/{programId}/versions`, `GET/PUT /program-versions/{id}` — Quản lý phiên bản CTĐT (`PROGRAM_MANAGER` trong `scope.programIds`).
+- `PUT /program-versions/{id}/status` — Đổi trạng thái vòng đời `DRAFT -> ACTIVE -> ARCHIVED` (`PROGRAM_MANAGER`).
+- `PUT /program-versions/{id}/verification` — Thẩm định chất lượng CTĐT (`QA` trong `scope.programIds`).
+- `GET/POST /program-versions/{pvId}/plos`, `PUT/DELETE /plos/{id}` — Quản lý PLO (bắt buộc `passThreshold` ∈ `[0, 1]`).
+- `GET/POST /plos/{ploId}/pis`, `GET /program-versions/{pvId}/pis`, `PUT/DELETE /pis/{id}` — Quản lý PI (bắt buộc `passThreshold` ∈ `[0, 1]` và `weight` ∈ `(0, 1]`; tổng `weight` các PI trong cùng PLO = `1.0`).
 
-### 6.2. F03: Quản Lý Học Phần, Đề Cương & CLO (Course, Syllabus & CLO Management)
-- `GET /api/v1/courses` — Danh sách học phần trong hệ thống.
-- `POST /api/v1/courses` — Thêm mới thông tin học phần.
-- `GET /api/v1/courses/{id}/syllabus` — Xem đề cương chi tiết học phần.
-- `PUT /api/v1/courses/{id}/syllabus` — Cập nhật đề cương chi tiết.
-- `GET /api/v1/courses/{id}/clos` — Danh sách Chuẩn đầu ra học phần (CLO) và mức độ thang đo Bloom.
-- `POST /api/v1/courses/{id}/clos` — Thêm mới / cập nhật danh mục CLO.
-- `PUT /api/v1/courses/{id}/clo-pi-mapping` — Ánh xạ giữa CLO của học phần và PI của CTĐT.
+### 6.2. F03: Học Phần, Đề Cương, CLO & Liên Kết CLO–PI
+> **Trạng thái:** đã hiện thực ở backend (ADR 0010, ADR 0014). Tiền tố `/api/v1`.
 
-### 6.3. F04: Bài Đánh Giá, Rubric & Duyệt Ma Trận Đề Thi (Assessment, Rubric & Matrix Approval)
+- `GET/POST/PUT/DELETE /courses`, `POST /courses/import` — Kho học phần cấp trường (`ADMIN` độc quyền quản lý & nhập CSV danh mục).
+- `GET/POST /program-versions/{pvId}/courses`, `PUT/DELETE /program-courses/{id}` — Cấu trúc học phần trong CTĐT (`PROGRAM_MANAGER`, hỗ trợ `prerequisiteCourseIds` và `previousCourseIds`).
+- `GET /departments/lecturers`, `POST /departments/assign-course`, `POST /departments/unassign-course` — `PROGRAM_MANAGER` tra cứu giảng viên cùng ngành và phân công/gỡ môn học (`scope.courseIds`) cho `LECTURER`.
+- `GET /courses/{courseId}/syllabi`, `GET /syllabi/{id}` — Đọc đề cương.
+- `POST /courses/{courseId}/syllabi` — Tạo đề cương `DRAFT` (`LECTURER` hoặc `PROGRAM_MANAGER` có quyền ghi học phần).
+- `PUT /syllabi/{id}/status` — Chuyển trạng thái đề cương (`DRAFT -> CONFIRMED -> ARCHIVED`, quyền `PROGRAM_MANAGER`).
+- `GET/POST /syllabi/{syllabusId}/clos`, `PUT/DELETE /clos/{id}` — Quản lý CLO (`LECTURER` hoặc `PROGRAM_MANAGER` khi đề cương ở `DRAFT`).
+- `GET/POST /syllabi/{syllabusId}/clo-pi-links`, `DELETE /clo-pi-links/{id}`, `GET /syllabi/{syllabusId}/clo-pi-matrix` — Liên kết CLO–PI (`PROGRAM_MANAGER` thiết lập, **bắt buộc `weight` ∈ `(0, 1]`**; tổng trọng số về 1 PI = `1.0`).
+- `PUT /clo-pi-links/{id}/verification` — Thẩm định liên kết CLO–PI (`QA`).
 
-> **Trạng thái:** đã hiện thực ở backend (nhánh `feat/f04-assessments`, đã merge). Nội dung dưới đây đối chiếu mã `AssessmentController` và các DTO `Assessment*`, `OutcomeMappingDto`, `Rubric*`, `CoverageResponse`. Phần "Question Bank" (US-13/14) và nhập câu hỏi (US-17) **chưa làm**, không có endpoint. Tiền tố `/api/v1`. Mã lỗi theo §2–§3.
+### 6.3. F04: Bài Đánh Giá & Khóa Ma Trận Đề Thi (OBE v0.7 / ADR 0014)
+
+> **Trạng thái:** đã hiện thực và nâng cấp theo **v0.7 / ADR 0014**. Đã **xóa bỏ** hoàn toàn Rubric (`IRubric`), quy trình duyệt bài của `DEPARTMENT_HEAD` (`submit`, `approve`, `reject`), `totalPoints`, `weightInCourse`, và `dataGranularity`. Thay bằng cơ chế `LECTURER` tự cấu hình `cloWeights` + câu hỏi (`maxScore` theo từng CLO) và tự khóa/mở khóa ma trận đề thi. Tiền tố `/api/v1`.
 
 | Phương thức | Đường dẫn | Ai gọi được (backend kiểm tra) | Phản hồi |
 |---|---|---|---|
-| GET | `/syllabi/{syllabusId}/assessment-templates` | đọc được đề cương (`canAccessSyllabus` READ) | `AssessmentResponse[]` (khung, sắp theo `code`) |
-| POST | `/syllabi/{syllabusId}/assessment-templates` | `LECTURER` hoặc `DEPARTMENT_HEAD` có học phần trong `scope.courseIds`; `ADMIN`, `PROGRAM_MANAGER` chỉ đọc | 201 `AssessmentResponse` |
+| GET | `/syllabi/{syllabusId}/assessment-templates` | đọc được đề cương (`canAccessSyllabus` READ) | `AssessmentResponse[]` (khung) |
+| POST | `/syllabi/{syllabusId}/assessment-templates` | `LECTURER` hoặc `PROGRAM_MANAGER` có quyền ghi đề cương | 201 `AssessmentResponse` |
 | GET | `/sections/{sectionId}/assessments` | đọc được lớp (`canAccessSection` READ) | `AssessmentResponse[]` |
 | POST | `/sections/{sectionId}/assessments` | `LECTURER` của lớp | 201 `AssessmentResponse` |
 | GET | `/assessments/{id}` | đọc được lớp/đề cương của bài | `AssessmentResponse` |
-| PUT | `/assessments/{id}` | như tạo (`LECTURER`/`DEPARTMENT_HEAD`, đúng phạm vi) | `AssessmentResponse` |
-| PUT | `/assessments/{id}/items` | như tạo | `AssessmentResponse` (thay **toàn bộ** `items`) |
+| PUT | `/assessments/{id}` | `LECTURER` (bản lớp) hoặc `LECTURER`/`PROGRAM_MANAGER` (khung) | `AssessmentResponse` |
+| PUT | `/assessments/{id}/items` | như cập nhật | `AssessmentResponse` (thay toàn bộ `items[]`) |
 | GET | `/assessments/{id}/coverage` | như đọc | `CoverageResponse` |
-| POST | `/assessments/{id}/submit` | `LECTURER` của lớp | `AssessmentResponse` (không body) |
-| POST | `/assessments/{id}/approve` | `DEPARTMENT_HEAD` có học phần của đề cương trong `scope.courseIds` (`ADMIN` **không** có quyền) | `AssessmentResponse` (không body) |
-| POST | `/assessments/{id}/reject` | như approve | `AssessmentResponse`; body `{ "reviewNote": string (bắt buộc, ≤ 1000) }` |
+| POST | `/assessments/{id}/lock` | `LECTURER` của lớp (chỉ bản lớp) | `AssessmentResponse` (`DRAFT` → `LOCKED`) |
+| POST | `/assessments/{id}/unlock` | `LECTURER` của lớp (chỉ bản lớp, chưa có điểm) | `AssessmentResponse` (`LOCKED` → `DRAFT`) |
+| DELETE | `/assessments/{id}` | `LECTURER` của lớp (khi ở `DRAFT` hoặc chưa nhập điểm) | 204 No Content |
 
-**`AssessmentResponse`:** `id`, `syllabusId`, `sectionId` (null với khung), `templateId`, `code`, `name`, `scope` (`SYLLABUS_TEMPLATE` | `SECTION`), `type` (`QUIZ`, `PRACTICAL`, `PROJECT`, `MIDTERM`, `FINAL`, `OTHER`), `phase` (`FORMATIVE`, `MIDTERM`, `SUMMATIVE`), `scheduledAt`, `totalPoints`, `weightInCourse` (0–1), `dataGranularity` (`ITEM` | `TOTAL_ONLY`), `measurableByOutcome` (false khi `TOTAL_ONLY`), `status` (`DRAFT`, `SUBMITTED`, `APPROVED`, `REJECTED`, `SCORE_ENTERED`, `LOCKED`), **`locked`** (JSON dùng tên `locked`, không phải `isLocked`; true khi đã duyệt trở đi), `approval` (`submittedBy`, `submittedAt`, `reviewedBy`, `reviewedAt`, `reviewNote`, `history[{action, actorId, at, note}]`, `action` ∈ `SUBMIT`/`APPROVE`/`REJECT`/`UNLOCK`; chỉ có **ID** người thực hiện, chưa có tên), `coverageSummary`, `items[]`, `revision`.
+**`AssessmentResponse`:** `id`, `syllabusId`, `sectionId` (null với khung), `templateId`, `code`, `name`, `scope` (`SYLLABUS_TEMPLATE` | `SECTION`), `type` (`QUIZ`, `PRACTICAL`, `PROJECT`, `MIDTERM`, `FINAL`, `OTHER`), `phase` (`FORMATIVE`, `MIDTERM`, `SUMMATIVE`), `scheduledAt`, `status` (`DRAFT`, `LOCKED`, `SCORE_ENTERED`), **`locked`** (boolean: `true` khi `LOCKED` hoặc `SCORE_ENTERED`), `cloWeights` (`[{ cloId, weight }]`), `coverageSummary`, `items[]`, `revision`.
 
-**Phần tử `items[]` (`AssessmentItemDto`):** `id` (tùy chọn khi gửi: có thì giữ định danh), `code` (bắt buộc, `^[A-Za-z0-9._-]{1,40}$`, không trùng trong bài), `orderIndex` (≥ 1), `title` (≤ 300), `kind` (`QUESTION` | `CRITERION`, bắt buộc), `maxScore` (bắt buộc, > 0), `bloomLevel` (1–6, tùy chọn), `topic` (≤ 200), `externalRef` (≤ 100), `outcomeMappings[]` (bắt buộc ≥ 1; mỗi phần tử `{ cloId, weight }`, `weight` ∈ (0, 1]), `rubric` (`{ levels: [{ level 1–4, description ≤ 500, score ≥ 0 }] }`, tùy chọn, `levels` không rỗng).
+**Phần tử `items[]` (`AssessmentItemDto`):** `id` (tùy chọn), `code` (bắt buộc, `^[A-Za-z0-9._ -]{1,40}$`, không trùng trong bài), `orderIndex` (≥ 1), `bloomLevel` (1–6, bắt buộc theo UI), `outcomeMappings[]` (bắt buộc ≥ 1; mỗi phần tử `{ cloId, maxScore }`, `maxScore > 0`, không trùng CLO trong cùng câu hỏi).
 
-**Quy tắc (xem plan F04 §4 và §11 của backend):**
+**Quy tắc nghiệp vụ (v0.7):**
+- Câu hỏi chỉ gán **CLO** + **điểm tối đa cho từng CLO** (`{ cloId, maxScore }`); **PI suy ra tự động** từ liên kết CLO–PI (ADR 0011). Một câu hỏi có thể đo nhiều CLO và mỗi CLO có `maxScore` độc lập (nhập điểm riêng cho từng CLO của câu hỏi, không chia theo trọng số).
+- `cloWeights`: Trọng số đóng góp của bài đánh giá đối với từng CLO trong học phần (`weight` ∈ `(0, 1]`). Tổng trọng số của cùng một CLO qua các bài đánh giá đã khóa của lớp không vượt quá `1.0` (100%).
+- Khóa ma trận (`POST /assessments/{id}/lock`): chỉ thực hiện trên bản lớp (`SECTION`) đang ở `DRAFT`, yêu cầu đã có ≥ 1 phần tử trong `items[]`, mọi CLO xuất hiện trong `items[]` phải có trong `cloWeights` (hoặc ngược lại). Sau khi khóa (`LOCKED`), `items[]` và `cloWeights` bị đóng băng và bài đánh giá sẵn sàng để nhập điểm.
+- Mở khóa (`POST /assessments/{id}/unlock`): chuyển `LOCKED` → `DRAFT` để chỉnh sửa lại cấu trúc, chỉ hợp lệ khi bài chưa chuyển sang `SCORE_ENTERED` (chưa có dữ liệu điểm).
+- Trùng `code` trong cùng phạm vi → **409**. Xung đột `revision` → **409**.
 
-- Ánh xạ chỉ có **CLO** (`cloId` + `weight`); **PI không khai báo ở câu hỏi** mà suy ra từ liên kết CLO–PI (ADR 0011). Σ `weight` của một phần tử = 1 (sai số 0,0001), không trùng CLO, CLO phải thuộc đúng đề cương của bài → vi phạm trả **422**.
-- Rubric: mức không lặp, điểm mỗi mức ≤ `maxScore` → **422**; mức ngoài 1–4 → **400**. Mức rubric (1–4) tách khỏi `bloomLevel` (1–6).
-- Gửi duyệt (`submit`) chỉ từ `DRAFT`, cần ≥ 1 phần tử, đã có `totalPoints`, và `|totalPoints − Σ maxScore| < 0,001`, nếu không **422**. Khung (`SYLLABUS_TEMPLATE`) không qua quy trình duyệt: `submit` → **422**, `approve`/`reject` → **403** (`canReviewAssessment` chỉ chấp nhận bản lớp).
-- Bản lớp chỉ sửa được ở `DRAFT` hoặc `REJECTED`; sửa bài `REJECTED` tự đưa về `DRAFT`. Từ `SUBMITTED` trở đi sửa → **422**. `approve`/`reject` chỉ từ `SUBMITTED`; sai thứ tự → **422**. Người gửi duyệt không được duyệt/từ chối lượt của chính mình → **403**.
-- Trùng `code` trong cùng phạm vi → **409**. `revision` (khóa lạc quan) → hai người cùng duyệt: một người nhận **409**.
-- `coverageSummary`/`/coverage`: `{ totalItemsSum, byClo[{cloId, cloCode?, points, percentage}], byBloom[{bloomLevel, questionCount, points, percentage}] }`; `percentage` là 0–100 so với `totalItemsSum`; phần tử không có Bloom không nằm trong `byBloom`. `cloCode` chỉ có ở `/coverage`.
-- Chưa có: API mở khóa (`UNLOCK`), xóa bài, danh sách "bài chờ duyệt" theo Trưởng bộ môn (UI phải đi từ lớp → bài), tên người trong `history`.
-
-**Xử lý ở UI (`LMS-UI`):** `INLINE_ERRORS` cho mọi lệnh gọi; 400/409/422 hiển thị thông điệp backend tại thanh hành động dưới cùng, giữ nguyên dữ liệu đã soạn; 409 kèm nút "Tải lại dữ liệu"; 403 hiện "Bạn không có quyền truy cập chức năng này" (theo §3, không đăng xuất). Ẩn nút theo vai trò chỉ để tiện dùng.
+**Xử lý ở UI (`LMS-UI`):** Hiển thị thông báo lỗi 400/409/422 nguyên văn từ backend và giữ nguyên dữ liệu đang nhập; 409 kèm nút "Tải lại dữ liệu"; 403 hiển thị banner không đủ quyền (không đăng xuất).
 
 ### 6.4. F05a: Học Kỳ, Lớp Học Phần, Ghi Danh & Nhập Danh Sách Lớp (Terms, Sections, Enrollments)
 
-> **Trạng thái:** đã hiện thực ở backend. Đối chiếu `TermController`, `SectionController`, `EnrollmentController`. Phần **nhập điểm** (`/scores/...`) là F05b, **chưa có**; các đường dẫn `course-sections/...` ghi trước đây trong tài liệu này **không tồn tại**. Tiền tố `/api/v1`.
+> **Trạng thái:** đã hiện thực ở backend. Đối chiếu `TermController`, `SectionController`, `EnrollmentController`. Tiền tố `/api/v1`.
 
 | Phương thức | Đường dẫn | Ai gọi được | Ghi chú |
 |---|---|---|---|
@@ -731,32 +732,49 @@ Các mục dưới đây giữ vai trò khung định hướng và sẽ được
 | POST | `/sections/{id}/enrollments/import` | `ADMIN` hoặc giảng viên của lớp (`canAccessSection` WRITE) | `multipart/form-data`, trường **`file`** (CSV) → `EnrollmentImportResponse` |
 | PUT | `/enrollments/{id}/status` | `ADMIN` hoặc giảng viên của lớp | body `{ status: ENROLLED \| WITHDRAWN }` |
 
-**DTO:** `TermResponse { id, code, academicYear, startDate, endDate, status }`. `SectionResponse { id, code, courseId, syllabusId, termId, lecturerIds[], enrolledCount, status }` — `enrolledCount` là giá trị dẫn xuất do backend tính lại sau mỗi lần nhập/rút/ghi danh lại và **mặc định 0 cho lớp mới**, nên không phân biệt được "chưa nhập danh sách" với "0 sinh viên" ở danh sách lớp. `EnrollmentListResponse { sectionId, enrolled, withdrawn, enrollments[{ id, sectionId, studentId, studentRef, cohort, majorCode, status, enrolledAt }] }` (sắp theo `studentRef`; `enrolled` là mẫu số của tỷ lệ đạt cấp lớp). `EnrollmentImportResponse { sectionId, totalRows, newStudents, reusedStudents, sectionEnrolledCount, ignoredColumns[] }`.
+**DTO:** `TermResponse { id, code, academicYear, startDate, endDate, status }`. `SectionResponse { id, code, courseId, syllabusId, termId, lecturerIds[], enrolledCount, status }`. `EnrollmentListResponse { sectionId, enrolled, withdrawn, enrollments[{ id, sectionId, studentId, studentRef, cohort, majorCode, status, enrolledAt }] }`. `EnrollmentImportResponse { sectionId, totalRows, newStudents, reusedStudents, sectionEnrolledCount, ignoredColumns[] }`.
 
-**Quy tắc quan trọng cho UI:**
+### 6.5. F05b: Xuất Tệp CSV Mẫu & Nhập Điểm Theo Lô 3 Bước (Score Import Batches)
 
-- Mở lớp chỉ trên đề cương `CONFIRMED` và học kỳ `OPEN`; `lecturerIds` phải là người dùng `ACTIVE` có vai trò `LECTURER` → vi phạm **422**; trùng mã lớp **409**.
-- Danh sách ghi danh (mẫu số) **đóng băng** khi lớp không còn `OPEN` **hoặc** học kỳ không còn `OPEN`: nhập CSV và rút/ghi danh lại trả **422**.
-- **Nhập CSV là một thao tác thống nhất, không có bước xem trước.** UTF-8 (chấp nhận BOM), phân cách `,` hoặc `;`, tối đa 5000 dòng dữ liệu, chỉ đọc cột `studentRef` (bắt buộc), `cohort`, `majorCode`; cột khác bị bỏ qua và liệt kê trong `ignoredColumns`. Có dòng lỗi thì **không ghi gì** và trả **422** với `fieldErrors[]` theo dòng: `{ "field": "line 12", "message": "...", "rejectedValue": "SV-0018" }` (dòng 1 là tiêu đề). Tệp rỗng/sai cột/sai định dạng → **400** không có `fieldErrors`. Nhập lại cùng tệp bị từ chối (sinh viên đã ghi danh → 422); sinh viên đã `WITHDRAWN` phải ghi danh lại bằng `PUT /enrollments/{id}/status`. Excel (`.xlsx`) chưa hỗ trợ.
-- Riêng tư: chỉ dùng `studentRef` (mã thay thế, Q09); không có họ tên/email.
-- Chưa có: endpoint liệt kê giảng viên cho `PROGRAM_MANAGER` (chỉ `GET /users` của `ADMIN` và `GET /departments/lecturers` của Trưởng bộ môn), tên/mã học phần, học kỳ, phiên bản đề cương và tên giảng viên **nhúng trong** `SectionResponse` (UI phải tra thêm bằng nhiều lệnh gọi), `audit_logs` cho đổi trạng thái học kỳ/lớp.
+> **Trạng thái:** đã hiện thực đầy đủ ở backend (`AssessmentController#getScoreTemplateCsv` & `ImportBatchController`). Tiền tố `/api/v1`.
 
-### 6.5. F06: Tính Toán & Đo Lường Chuẩn Đầu Ra (Calculation & Outcome Measurement Engine)
-- `POST /api/v1/calculations/run` — Khởi chạy tiến trình tính toán đo lường kết quả chuẩn đầu ra theo phạm vi (lớp học phần / toàn khóa).
-- `GET /api/v1/calculations/{id}/status` — Kiểm tra tiến độ thực thi của tiến trình tính toán (`PENDING`, `PROCESSING`, `COMPLETED`, `FAILED`).
-- `GET /api/v1/calculations/results/course-sections/{id}` — Lấy kết quả đo lường mức độ đạt chuẩn CLO/PI của một lớp học phần.
-- `GET /api/v1/calculations/results/cohort/{cohortId}/program/{programId}` — Lấy kết quả đo lường chuẩn PLO của toàn bộ khóa sinh viên.
+| Phương thức | Đường dẫn | Ai gọi được | Ghi chú |
+|---|---|---|---|
+| GET | `/assessments/{id}/scores/template-csv` | đọc được bài đánh giá (`canAccessAssessment` READ) | Tải tệp CSV mẫu có UTF-8 BOM, header chuẩn `MaSV,HoTen,<item.code> - <clo.code> (Max: <maxScore>)`, danh sách SV `ENROLLED` với ô điểm để trống. Trả 422 nếu bài chưa `LOCKED`/`SCORE_ENTERED` hoặc là bài khung `SYLLABUS_TEMPLATE`. |
+| POST | `/sections/{sectionId}/assessments/{assessmentId}/import-batches` | `LECTURER` của lớp (`canAccessSection` WRITE) | `multipart/form-data`: `file` (CSV), `reimportPolicy` (`REJECT_ON_CONFLICT`), `sourceSystem` (`CSV`\|`MOODLE_EXPORT`, tùy chọn), `columnMapping` (chuỗi JSON, tùy chọn). **Nếu bỏ trống `columnMapping` và CSV dùng header tệp mẫu, hệ thống tự động nhận diện ánh xạ cột.** Trả 201 `ImportBatchResponse` (`UPLOADED`). |
+| GET | `/sections/{sectionId}/assessments/{assessmentId}/import-batches` | đọc được lớp | `ImportBatchResponse[]` (mới nhất trước). |
+| GET | `/import-batches/{id}` | đọc được lớp của lô | `ImportBatchResponse`. |
+| GET | `/import-batches/{id}/errors?page=0&size=20` | đọc được lớp của lô | `PageResponse<ImportRowErrorResponse>` sắp theo `rowNumber`. |
+| POST | `/import-batches/{id}/validate` | `LECTURER` của lớp | Kiểm tra từng dòng/ô điểm, trả về `VALIDATED` hoặc `HAS_ERRORS` kèm `stats`. |
+| POST | `/import-batches/{id}/confirm` | `LECTURER` của lớp | Xác nhận ghi điểm vào bảng `scores`, cập nhật bài sang `SCORE_ENTERED`, trả `CONFIRMED`. |
+| POST | `/import-batches/{id}/rollback` | `LECTURER` của lớp | Hủy lô chưa xác nhận (`UPLOADED`/`VALIDATED`/`HAS_ERRORS`) sang `ROLLED_BACK`. |
 
-### 6.6. F07: Báo Cáo, Thống Kê & Phân Tích Chất Lượng (Reports, Analytics & Dashboards)
-- `GET /api/v1/reports/dashboard-summary` — Tổng hợp số liệu KPI phục vụ màn hình Dashboard quản trị.
-- `GET /api/v1/reports/clo-attainment` — Báo cáo thống kê phân bổ tỷ lệ sinh viên đạt từng CLO của học phần.
-- `GET /api/v1/reports/plo-radar/{studentId}` — Biểu đồ mạng nhện (Radar Chart) thể hiện năng lực chuẩn đầu ra PLO của từng sinh viên.
-- `GET /api/v1/reports/cohort-matrix` — Báo cáo ma trận tổng thể mức độ đạt chuẩn PLO của khóa học phục vụ kiểm định chất lượng (AUN-QA / ABET).
-- `GET /api/v1/reports/export/excel` — Xuất báo cáo thống kê ra file định dạng Excel.
-- `GET /api/v1/reports/export/pdf` — Xuất phiếu đánh giá chuẩn đầu ra định dạng PDF.
+**`ImportColumnMappingDto` (chuỗi JSON gửi qua `columnMapping`):**
+```json
+{
+  "studentColumn": "MaSV",
+  "items": [
+    {
+      "column": "Q1 - CLO1 (Max: 4.0)",
+      "item": "671dcba5f123456789abc011",
+      "cloId": "671dcba5f123456789abc022"
+    }
+  ]
+}
+```
+- **Lưu ý v0.7:** `emptyCellAs` đã bị loại bỏ; ô trống hợp lệ được xử lý theo quy tắc mặc định (`0.0`), tách biệt với lỗi định dạng số (`SCORE_OUT_OF_RANGE`) hoặc dòng thiếu cột (`MISSING_FIELD`).
 
-### 6.7. F08: Kế Hoạch Cải Tiến Chất Lượng Liên Tục (Continuous Quality Improvement - CQI)
-- `GET /api/v1/cqi-plans` — Danh sách các kế hoạch hành động cải tiến chất lượng.
-- `POST /api/v1/cqi-plans` — Tạo kế hoạch cải tiến mới cho những CLO/PLO có tỷ lệ đạt dưới ngưỡng kỳ vọng.
-- `PUT /api/v1/cqi-plans/{id}` — Cập nhật tiến độ và kết quả thực hiện kế hoạch cải tiến.
-- `GET /api/v1/cqi-plans/{id}/history` — Lịch sử theo dõi sự thay đổi chất lượng qua các chu kỳ đào tạo.
+### 6.6. F06: Tính Toán & Đo Lường Chuẩn Đầu Ra (Calculation & Outcome Measurement Engine)
+- `POST /api/v1/calculations/run` — Khởi chạy tiến trình tính toán đo lường 4 cấp độ (`ASSESSMENT_CLO` $\to$ `CLO` $\to$ `PI` $\to$ `PLO`).
+- `GET /api/v1/calculations/{id}/status` — Kiểm tra tiến độ thực thi (`PENDING`, `PROCESSING`, `COMPLETED`, `FAILED`).
+- `GET /api/v1/calculations/results/course-sections/{id}` — Kết quả đo lường CLO của lớp học phần ($N_{\text{section}}$).
+- `GET /api/v1/calculations/results/cohort/{cohortId}/program/{programId}` — Kết quả đo lường PI/PLO của khóa sinh viên ($N_{\text{cohort}}$).
+
+### 6.7. F07: Báo Cáo, Thống Kê & Phân Tích Chất Lượng (Reports, Analytics & Dashboards)
+- `GET /api/v1/reports/dashboard-summary` — Tổng hợp số liệu KPI phục vụ Dashboard (`QA` / `PROGRAM_MANAGER` / `ADMIN`).
+- `GET /api/v1/reports/clo-attainment` — Báo cáo phân bổ tỷ lệ sinh viên đạt từng CLO của học phần.
+- `GET /api/v1/reports/cohort-matrix` — Báo cáo ma trận tổng thể mức độ đạt chuẩn PLO/PI của khóa học phục vụ kiểm định (AUN-QA / ABET).
+- `GET /api/v1/reports/export/excel` & `GET /api/v1/reports/export/pdf` — Xuất báo cáo thống kê.
+
+### 6.8. F08: Kế Hoạch Cải Tiến Chất Lượng Liên Tục (Continuous Quality Improvement - CQI)
+- `GET /api/v1/cqi-plans`, `POST /api/v1/cqi-plans`, `PUT /api/v1/cqi-plans/{id}`, `GET /api/v1/cqi-plans/{id}/history` — Quản lý và theo dõi kế hoạch cải tiến chất lượng.

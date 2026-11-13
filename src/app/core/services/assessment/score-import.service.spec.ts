@@ -105,4 +105,16 @@ describe('ScoreImportService', () => {
     expect(req.request.method).toBe('POST');
     req.flush({ ...mockBatch, status: 'ROLLED_BACK' });
   });
+
+  it('gọi downloadTemplateCsv trả về Blob tệp CSV mẫu', () => {
+    const mockBlob = new Blob(['\uFEFFMaSV,HoTen,Q1 - CLO1 (Max: 5)\r\n'], { type: 'text/csv;charset=utf-8;' });
+    service.downloadTemplateCsv('ass_1').subscribe(res => {
+      expect(res).toEqual(mockBlob);
+    });
+
+    const req = httpMock.expectOne(UrlConstant.API.ASSESSMENT_SCORE_TEMPLATE_CSV('ass_1'));
+    expect(req.request.method).toBe('GET');
+    expect(req.request.responseType).toBe('blob');
+    req.flush(mockBlob);
+  });
 });

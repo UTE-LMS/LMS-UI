@@ -95,25 +95,25 @@ export class DetailSyllabusComponent implements OnInit {
   });
 
   /**
-   * Quyền phê duyệt đề cương CONFIRMED / ARCHIVED (ADR 0010):
-   * Chỉ duy nhất DEPARTMENT_HEAD có môn học trong scope.courseIds.
-   * ADMIN không có thẩm quyền học thuật để phê duyệt thay Trưởng bộ môn (Thu hồi quyền ADMIN).
-   * Giảng viên (LECTURER) và Quản lý CTĐT (PROGRAM_MANAGER) không có quyền duyệt đề cương.
+   * Quyền phê duyệt đề cương CONFIRMED / ARCHIVED (ADR 0014):
+   * Chỉ duy nhất PROGRAM_MANAGER có môn học trong scope.
+   * ADMIN không có thẩm quyền học thuật để phê duyệt.
+   * Giảng viên (LECTURER) không có quyền duyệt đề cương.
    */
   readonly canApproveSyllabus = computed(() => {
     if (this.isAdmin()) {
       return false;
     }
     return (
-      this.userRoles().includes(SystemConstant.ROLE.DEPARTMENT_HEAD) && this.isCourseInScope()
+      this.userRoles().includes(SystemConstant.ROLE.PROGRAM_MANAGER) && this.isCourseInScope()
     );
   });
 
   /**
-   * Bất biến TD-27 & ADR 0010:
+   * Bất biến TD-27 & ADR 0014:
    * Khi syllabus.status !== 'DRAFT', khóa cứng 100% thao tác thêm/sửa/xóa CLO.
-   * Khi ở DRAFT, chỉ LECTURER hoặc DEPARTMENT_HEAD có môn học trong scope mới được sửa CLO.
-   * ADMIN không có thẩm quyền học thuật để thêm/sửa/xóa CLO (Thu hồi quyền ADMIN theo ADR 0010).
+   * Khi ở DRAFT, chỉ LECTURER hoặc PROGRAM_MANAGER có môn học trong scope mới được sửa CLO.
+   * ADMIN không có thẩm quyền học thuật để thêm/sửa/xóa CLO.
    */
   readonly canEditClo = computed(() => {
     const syl = this.syllabus();
@@ -123,7 +123,7 @@ export class DetailSyllabusComponent implements OnInit {
     const roles = this.userRoles();
     const isAuthorRole =
       roles.includes(SystemConstant.ROLE.LECTURER)
-      || roles.includes(SystemConstant.ROLE.DEPARTMENT_HEAD);
+      || roles.includes(SystemConstant.ROLE.PROGRAM_MANAGER);
     return isAuthorRole && this.isCourseInScope();
   });
 

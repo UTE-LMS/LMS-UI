@@ -131,7 +131,7 @@ describe('CloPiMatrixTableComponent (F03 US-12, TD-27, TD-28, Q22)', () => {
     expect(component.canMutateMatrix()).toBe(false);
   });
 
-  it('QA_OFFICER thẩm định độc lập từng liên kết CLO–PI (US-12/AC-3)', () => {
+  it('QA thẩm định độc lập từng liên kết CLO–PI (US-12/AC-3)', () => {
     const cell = component.getLinkCell('clo_1', 'pi_1_1')!;
     component.openVerifyModal(cell, mockMatrix.clos[0], mockMatrix.pis[0]);
     component.verifyForm.patchValue({ status: 'VERIFIED', note: 'Khớp đề cương' });

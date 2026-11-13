@@ -25,14 +25,14 @@ export function isScopeEmpty(scope: IUserScope | null | undefined): boolean {
 
 /**
  * Dòng mô tả phạm vi để hiển thị trong bảng. Ý nghĩa của phạm vi rỗng phụ thuộc vai trò (F01 §4.3):
- * ADMIN toàn quyền, VIEWER đọc toàn hệ thống, các vai trò khác bị từ chối (fail-closed) nên ghi "Chưa gán".
+ * ADMIN toàn quyền, QA đọc toàn hệ thống (nếu scope rỗng), các vai trò khác bị từ chối (fail-closed) nên ghi "Chưa gán".
  */
 export function describeScope(assignment: IRoleAssignment): string {
   if (isScopeEmpty(assignment.scope)) {
     switch (assignment.role) {
       case SystemConstant.ROLE.ADMIN:
         return 'Toàn hệ thống';
-      case SystemConstant.ROLE.VIEWER:
+      case SystemConstant.ROLE.QA:
         return 'Đọc toàn hệ thống';
       default:
         return 'Chưa gán';

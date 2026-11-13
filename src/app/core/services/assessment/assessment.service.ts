@@ -13,7 +13,7 @@ import { Observable } from 'rxjs';
 
 /**
  * Bài đánh giá (F04 US-15, US-16, NEW-01, ADR 0014).
- * Khung theo đề cương do LECTURER/DEPARTMENT_HEAD trong phạm vi soạn;
+ * Khung theo đề cương do LECTURER/PROGRAM_MANAGER trong phạm vi soạn;
  * bản lớp do LECTURER của lớp soạn và quản lý khóa/mở khóa ma trận.
  */
 @Injectable({

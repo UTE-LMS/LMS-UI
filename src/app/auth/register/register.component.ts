@@ -100,7 +100,7 @@ export class RegisterComponent implements OnInit, OnDestroy {
         this.spinner.hide();
         this.alert.error(this.langData.TAI_KHOAN_KHONG_HO_TRO);
       } else {
-        this.authSvc.doRegisterForm(SystemConstant.ROLE.STUDENT, this.form.value)
+        this.authSvc.doRegisterForm('STUDENT', this.form.value)
           .subscribe({
             next: res => {
               if (res.message === 'Success') {

@@ -21,6 +21,7 @@ describe('ScoreImportComponent', () => {
     confirmBatch: ReturnType<typeof vi.fn>;
     rollbackBatch: ReturnType<typeof vi.fn>;
     getErrors: ReturnType<typeof vi.fn>;
+    downloadTemplateCsv: ReturnType<typeof vi.fn>;
   };
   let router: Router;
   let toastr: {
@@ -72,6 +73,7 @@ describe('ScoreImportComponent', () => {
       confirmBatch: vi.fn(() => of({ ...mockBatch, status: 'CONFIRMED' })),
       rollbackBatch: vi.fn(() => of({ ...mockBatch, status: 'ROLLED_BACK' })),
       getErrors: vi.fn(() => of({ content: [], page: 0, size: 50, totalElements: 0, totalPages: 0, last: true })),
+      downloadTemplateCsv: vi.fn(() => of(new Blob(['MaSV,HoTen\r\n'], { type: 'text/csv' }))),
     };
     toastr = {
       success: vi.fn(),
@@ -181,5 +183,18 @@ describe('ScoreImportComponent', () => {
     assessmentSvc.getAssessment.mockReturnValue(throwError(() => ({ status: 404 })));
     component.loadAssessment();
     expect(component.errorMessage()).toBeTruthy();
+  });
+
+  it('downloadTemplateCsv gọi API tải tệp CSV mẫu', () => {
+    const createObjectUrlSpy = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:mock');
+    const revokeObjectUrlSpy = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
+    const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined);
+
+    component.downloadTemplateCsv();
+    expect(scoreImportSvc.downloadTemplateCsv).toHaveBeenCalledWith('ass_1');
+
+    clickSpy.mockRestore();
+    createObjectUrlSpy.mockRestore();
+    revokeObjectUrlSpy.mockRestore();
   });
 });

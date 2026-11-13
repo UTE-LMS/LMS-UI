@@ -51,22 +51,23 @@ export class ManagementHeaderComponent implements OnInit {
   fullName = signal('');
   roles = signal<string[]>([]);
   avatarOfUser = signal('');
+  mobileMenuOpen = signal(false);
 
   // Ngôn ngữ hiển thị
   langCode: 'en' | 'vi' = (localStorage.getItem('language') as 'en' | 'vi') ?? 'vi';
   langData: Record<string, string> = (localStorage.getItem('language') === 'en' ? langDataEn : langDataVi).LAYOUT.MNG.HEADER;
 
   /**
-   * Danh sách mục điều hướng trên thanh header được tổng hợp từ menu của từng chức năng.
+   * Danh sách mục điều hướng trên sidebar được tổng hợp từ menu của từng chức năng.
    */
   readonly allNavItems: ISiderMenu[] = [
     ...dashboardMenu,
-    ...usersMngMenu,
-    ...programsMngMenu,
     ...curriculumMngMenu,
     ...coursesMngMenu,
     ...syllabiMngMenu,
     ...sectionsMngMenu,
+    ...programsMngMenu,
+    ...usersMngMenu,
   ];
 
   /** Lọc các mục menu phù hợp với vai trò của người dùng hiện tại */
@@ -80,16 +81,51 @@ export class ManagementHeaderComponent implements OnInit {
     });
   });
 
+  /** Phân nhóm menu sidebar theo bố cục LOMS trong UI.pdf */
+  readonly navSections = computed(() => {
+    const items = this.visibleNavItems();
+    const byRoute = (route: string) => items.filter(i => i.routerLink === route);
+
+    const primary = byRoute(UrlConstant.ROUTE.MANAGEMENT.DASHBOARD);
+    const setup = [
+      ...byRoute(UrlConstant.ROUTE.MANAGEMENT.CURRICULUM),
+      ...byRoute(UrlConstant.ROUTE.MANAGEMENT.COURSES),
+      ...byRoute(UrlConstant.ROUTE.MANAGEMENT.SYLLABI),
+      ...byRoute(UrlConstant.ROUTE.MANAGEMENT.SECTIONS),
+    ];
+    const system = [
+      ...byRoute(UrlConstant.ROUTE.MANAGEMENT.PROGRAMS),
+      ...byRoute(UrlConstant.ROUTE.MANAGEMENT.USERS),
+    ];
+
+    const groups: { label: string | null; items: ISiderMenu[]; }[] = [];
+    if (primary.length > 0) {
+      groups.push({ label: null, items: primary });
+    }
+    if (setup.length > 0) {
+      groups.push({ label: 'THIẾT LẬP', items: setup });
+    }
+    if (system.length > 0) {
+      groups.push({ label: 'HỆ THỐNG', items: system });
+    }
+    return groups;
+  });
+
+  toggleMobileMenu(): void {
+    this.mobileMenuOpen.update(v => !v);
+  }
+
+  closeMobileMenu(): void {
+    this.mobileMenuOpen.set(false);
+  }
+
   /** Viết tắt 2 chữ cái đại diện vai trò chính để hiển thị huy hiệu avatar như trong UI.pdf */
   readonly roleBadgeText = computed(() => {
     const userRoles = this.roles();
     if (userRoles.includes(SystemConstant.ROLE.ADMIN)) return 'QT';
     if (userRoles.includes(SystemConstant.ROLE.PROGRAM_MANAGER)) return 'QL';
-    if (userRoles.includes(SystemConstant.ROLE.DEPARTMENT_HEAD)) return 'TK';
-    if (userRoles.includes(SystemConstant.ROLE.QA_OFFICER)) return 'QA';
+    if (userRoles.includes(SystemConstant.ROLE.QA)) return 'QA';
     if (userRoles.includes(SystemConstant.ROLE.LECTURER)) return 'GV';
-    if (userRoles.includes(SystemConstant.ROLE.STUDENT)) return 'SV';
-    if (userRoles.includes(SystemConstant.ROLE.VIEWER)) return 'NX';
     return 'ND';
   });
 

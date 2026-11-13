@@ -111,7 +111,7 @@ mng/sections/
 
 1. `SectionResponse` chỉ có ID: UI phải gọi thêm `GET /courses/{id}`, `GET /syllabi/{id}`, và không có tên giảng viên. Đề xuất nhúng `courseCode`, `courseName`, `termCode`, `syllabusVersion/status`, `lecturers[{id, username}]`.
 2. `enrolledCount` mặc định 0: không phân biệt "chưa nhập danh sách" với "0 sinh viên". Đề xuất `null` cho lớp chưa có ghi danh hoặc thêm `hasRoster`.
-3. Không có endpoint liệt kê giảng viên cho `PROGRAM_MANAGER` (chỉ `GET /users` của ADMIN và `GET /departments/lecturers` của Trưởng bộ môn): PM mở lớp phải dán ID giảng viên.
+3. Với `PROGRAM_MANAGER`, danh sách giảng viên để mở lớp có thể lấy qua `GET /api/v1/departments/lecturers` (đã mở cho `PROGRAM_MANAGER` và `ADMIN` trong v0.7).
 4. Không có bước xem trước/kiểm tra khi nhập CSV (UI không dựng bước "Kiểm tra" như thiết kế).
 5. Học kỳ: không có số lớp theo học kỳ; chưa có `audit_logs` cho đổi trạng thái (TD-31).
 

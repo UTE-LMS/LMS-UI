@@ -81,10 +81,10 @@ describe('DetailSyllabusComponent (F03 US-10, US-11, TD-27, ADR 0010)', () => {
   };
 
   const authSvc = {
-    getRoles: vi.fn<() => string[]>(() => [SystemConstant.ROLE.DEPARTMENT_HEAD]),
+    getRoles: vi.fn<() => string[]>(() => [SystemConstant.ROLE.PROGRAM_MANAGER]),
     getRoleAssignments: vi.fn(() => [
       {
-        role: SystemConstant.ROLE.DEPARTMENT_HEAD,
+        role: SystemConstant.ROLE.PROGRAM_MANAGER,
         scope: { programIds: [], courseIds: [courseId], sectionIds: [] },
       },
     ]),
@@ -98,7 +98,7 @@ describe('DetailSyllabusComponent (F03 US-10, US-11, TD-27, ADR 0010)', () => {
   beforeEach(async () => {
     vi.clearAllMocks();
     syllabusSvc.getSyllabusById.mockReturnValue(of(mockDraftSyllabus));
-    authSvc.getRoles.mockReturnValue([SystemConstant.ROLE.DEPARTMENT_HEAD]);
+    authSvc.getRoles.mockReturnValue([SystemConstant.ROLE.PROGRAM_MANAGER]);
 
     await TestBed.configureTestingModule({
       imports: [DetailSyllabusComponent],
@@ -134,12 +134,12 @@ describe('DetailSyllabusComponent (F03 US-10, US-11, TD-27, ADR 0010)', () => {
     expect(sorted.map(c => c.code)).toEqual(['CLO1', 'CLO2']);
   });
 
-  it('DEPARTMENT_HEAD trong scope được phép duyệt CONFIRMED và sửa CLO khi đề cương đang ở DRAFT (ADR 0010)', () => {
+  it('PROGRAM_MANAGER trong scope được phép duyệt CONFIRMED và sửa CLO khi đề cương đang ở DRAFT (ADR 0014)', () => {
     expect(component.canApproveSyllabus()).toBe(true);
     expect(component.canEditClo()).toBe(true);
   });
 
-  it('LECTURER trong scope được sửa CLO khi DRAFT nhưng KHÔNG có quyền duyệt CONFIRMED (ADR 0010)', () => {
+  it('LECTURER trong scope được sửa CLO khi DRAFT nhưng KHÔNG có quyền duyệt CONFIRMED (ADR 0014)', () => {
     component.userRoles.set([SystemConstant.ROLE.LECTURER]);
     fixture.detectChanges();
 

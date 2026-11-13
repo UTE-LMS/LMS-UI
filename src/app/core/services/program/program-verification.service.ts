@@ -8,8 +8,8 @@ import { IVerificationRequest } from '@models/program/program-verification.model
 import { Observable } from 'rxjs';
 
 /**
- * Dịch vụ Thẩm định Đảm bảo chất lượng (QA Officer) cho CTĐT (US-08, ADR 0004).
- * Quyền gọi: QA_OFFICER.
+ * Dịch vụ Thẩm định Đảm bảo chất lượng (QA) cho CTĐT (US-08, ADR 0014).
+ * Quyền gọi: QA.
  */
 @Injectable({
   providedIn: 'root',

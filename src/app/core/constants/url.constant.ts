@@ -77,7 +77,7 @@ export const UrlConstant = {
     SECTION_ENROLLMENT_IMPORT: (sectionId: string) => `${environment.serverUrl}api/v1/sections/${sectionId}/enrollments/import`,
     ENROLLMENT_STATUS: (id: string) => `${environment.serverUrl}api/v1/enrollments/${id}/status`,
 
-    // F04 - Bài đánh giá, rubric, duyệt ma trận (API-CONTRACT.md §6.3)
+    // F04 - Bài đánh giá & khóa ma trận (API-CONTRACT.md §6.3, OBE v0.7)
     SYLLABUS_ASSESSMENT_TEMPLATES: (syllabusId: string) => `${environment.serverUrl}api/v1/syllabi/${syllabusId}/assessment-templates`,
     SECTION_ASSESSMENTS: (sectionId: string) => `${environment.serverUrl}api/v1/sections/${sectionId}/assessments`,
     ASSESSMENT_DETAIL: (id: string) => `${environment.serverUrl}api/v1/assessments/${id}`,
@@ -85,8 +85,9 @@ export const UrlConstant = {
     ASSESSMENT_COVERAGE: (id: string) => `${environment.serverUrl}api/v1/assessments/${id}/coverage`,
     ASSESSMENT_LOCK: (id: string) => `${environment.serverUrl}api/v1/assessments/${id}/lock`,
     ASSESSMENT_UNLOCK: (id: string) => `${environment.serverUrl}api/v1/assessments/${id}/unlock`,
+    ASSESSMENT_SCORE_TEMPLATE_CSV: (id: string) => `${environment.serverUrl}api/v1/assessments/${id}/scores/template-csv`,
 
-    // F05b - Lô nhập điểm thi 2-pha (ADR 0014, Schema v0.7)
+    // F05b - Lô nhập điểm thi 3-bước (ADR 0014, Schema v0.7)
     IMPORT_BATCH_CREATE: (sectionId: string, assessmentId: string) => `${environment.serverUrl}api/v1/sections/${sectionId}/assessments/${assessmentId}/import-batches`,
     IMPORT_BATCH_LIST: (sectionId: string, assessmentId: string) => `${environment.serverUrl}api/v1/sections/${sectionId}/assessments/${assessmentId}/import-batches`,
     IMPORT_BATCH_DETAIL: (id: string) => `${environment.serverUrl}api/v1/import-batches/${id}`,

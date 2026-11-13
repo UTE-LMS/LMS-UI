@@ -134,7 +134,7 @@ describe('DetailCurriculumVersionComponent (F02 US-06, US-07, US-08 UI.pdf Trang
   };
 
   const authSvc = {
-    getRoles: vi.fn<() => string[]>(() => [SystemConstant.ROLE.PROGRAM_MANAGER, SystemConstant.ROLE.QA_OFFICER]),
+    getRoles: vi.fn<() => string[]>(() => [SystemConstant.ROLE.PROGRAM_MANAGER, SystemConstant.ROLE.QA]),
     getRoleAssignments: vi.fn(() => [
       {
         role: SystemConstant.ROLE.PROGRAM_MANAGER,
@@ -203,7 +203,7 @@ describe('DetailCurriculumVersionComponent (F02 US-06, US-07, US-08 UI.pdf Trang
     expect(rows[3].code).toBe('PI6.1');
   });
 
-  it('isQaOfficer = true khi user có vai trò QA_OFFICER', () => {
+  it('isQaOfficer = true khi user có vai trò QA', () => {
     expect(component.isQaOfficer()).toBe(true);
   });
 

@@ -1,6 +1,5 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
-import { NzLayoutModule } from 'ng-zorro-antd/layout';
 import { ManagementHeaderComponent } from '../management-header/management-header.component';
 
 @Component({
@@ -10,7 +9,6 @@ import { ManagementHeaderComponent } from '../management-header/management-heade
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     RouterOutlet,
-    NzLayoutModule,
     ManagementHeaderComponent,
   ],
 })

@@ -1,7 +1,6 @@
 import { ChangeDetectionStrategy, Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { SystemConstant } from '@constants/system.constant';
 import { UrlConstant } from '@constants/url.constant';
 import langDataEn from '@languages/en.json';
 import langDataVi from '@languages/vi.json';
@@ -85,7 +84,7 @@ export class ResetPasswordComponent implements OnInit, OnDestroy {
   onResetPass(): void {
     if (this.form.valid) {
       this.spinner.show();
-      this.authSvc.doResetPasswordUpdate(SystemConstant.ROLE.STUDENT, this.form.value, this.resetPassToken)
+      this.authSvc.doResetPasswordUpdate('STUDENT', this.form.value, this.resetPassToken)
         .subscribe({
           next: res => {
             if (res.message === 'Success') {
