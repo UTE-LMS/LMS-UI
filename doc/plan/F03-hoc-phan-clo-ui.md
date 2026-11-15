@@ -143,7 +143,7 @@ flowchart TD
 - **Mục đích:** Cung cấp danh mục học kỳ để gắn mốc hiệu lực (`effectiveFromTermId`, `effectiveToTermId`) cho đề cương.
 - **Bảng dữ liệu:**
   - Mã học kỳ (`code`, ví dụ `2026-HK1`), Năm học (`academicYear`, ví dụ `2026-2027`), Ngày bắt đầu (`startDate`), Ngày kết thúc (`endDate`), Trạng thái (`UPCOMING` / `ACTIVE` / `CLOSED` hiển thị qua `app-status-chip`).
-- **Thao tác (`ADMIN` / `PROGRAM_MANAGER`):**
+- **Thao tác (`ADMIN`):**
   - Thêm học kỳ mới, cập nhật thông tin, chuyển trạng thái vòng đời học kỳ (`PUT /api/v1/terms/{id}/status`).
 
 ---
