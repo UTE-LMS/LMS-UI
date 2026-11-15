@@ -8,7 +8,7 @@ import langDataEn from '@languages/en.json';
 import langDataVi from '@languages/vi.json';
 import {
   IAuthData, ILoginDTO, ILoginRequest, ILoginResponse,
-  IRegisterDTO, IResetPasswordDTO, IResetPasswordRequsetDTO,
+  IRegisterDTO, IResetPasswordDTO, IResetPasswordRequsetDTO, IUserProfile,
 } from '@models/auth/auth.model';
 import { IRoleAssignment } from '@models/user/user.model';
 import { sha256 } from 'js-sha256';
@@ -113,6 +113,13 @@ export class AuthService {
       tap(() => this.clearSession()),
       map(() => undefined),
     );
+  }
+
+  /** GET /api/v1/auth/me: hồ sơ hiện tại do backend trả (không đọc từ localStorage). */
+  getProfile(): Observable<IUserProfile> {
+    return this.http.get<IUserProfile>(UrlConstant.API.AUTH_ME, {
+      context: new HttpContext().set(INLINE_ERRORS, true),
+    });
   }
 
   private startSession(res: ILoginResponse): void {

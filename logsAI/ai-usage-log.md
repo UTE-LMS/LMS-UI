@@ -505,3 +505,38 @@ Phần này chuẩn bị sẵn nội dung trả lời cho 4 câu hỏi trọng t
 - **ESLint (`src/app/mng/curriculum/form-curriculum-version/`):** 0 errors, 0 warnings.
 - **Unit Tests (`npm test -- --watch=false`):** 81/81 test files passed (875/875 tests passed).
 - **Build (`npm run build:dev`):** Biên dịch thành công 0 errors.
+
+## Phiên #15: Bổ sung 5 màn hình còn thiếu so với canvas thiết kế (Tổng quan, Phân tích đa chiều, Nhật ký thao tác, Tài khoản của tôi, Lịch sử nhập điểm)
+
+### 1. Thông tin phiên làm việc
+- **Thời gian:** 2026-11-15
+- **Người thực hiện (`git config user.name`):** `TinMH`
+- **Sinh viên yêu cầu:** "build các màn hình trên canvas trong LMS-UI… hoàn thiện UI cho các chức năng đã làm"; chọn phạm vi "chỉ làm màn còn thiếu", giữ giao diện ng-zorro + Tailwind hiện có.
+- **Công cụ / mô hình:** Claude Code, Claude Opus 5.5 (skill `ui-ux-pro-max`, `dataviz` cho bảng màu biểu đồ).
+- **Nhánh:** `feat/ui-missing-screens` (chưa commit).
+
+### 2. Các hạng mục đã hiện thực
+1. **Phân tích đa chiều (F07/US-36)** — `src/app/mng/analytics/`: chọn 1 trong 7 chiều (`AnalyticsDimension`), bộ lọc chung + bộ lọc riêng từng chiều, biểu đồ thanh ngang (HTML/CSS, không thêm thư viện), bảng số liệu kèm mẫu số, xuất CSV. Ô `null` hiện “Chưa đủ dữ liệu” (gạch chéo), không vẽ như 0%. Bảng màu 8 ô lấy từ reference palette của skill dataviz.
+2. **Nhật ký thao tác (F01, chỉ ADMIN)** — `src/app/mng/audit-logs/`: lọc theo hành động, collection, mã thực thể, người thực hiện, khoảng thời gian; phân trang; khung so sánh trước/sau.
+3. **Tài khoản của tôi** — `src/app/mng/profile/` (route `/mng/profile` đã có hằng số nhưng chưa có trang): đọc `GET /auth/me`, hiện vai trò/phạm vi, đăng xuất; thêm liên kết trong menu tài khoản.
+4. **Lịch sử và chi tiết lần nhập điểm (F05b)** — `src/app/mng/assessments/import-batches/`: danh sách lần nhập của một bài, chi tiết thống kê, lỗi theo dòng/cột (có lọc, phân trang), hủy lần nhập có xác nhận. Chỉ cho hủy `UPLOADED/VALIDATED/HAS_ERRORS`, khớp `ImportBatchServiceImpl.rollbackBatch`. Thêm nút "Lịch sử nhập điểm" ở chi tiết bài đánh giá.
+5. **Tổng quan** — thay trang mẫu upload file/TinyMCE ở `src/app/mng/dashboard/` bằng số liệu thật từ API: số lớp trong phạm vi, các lần tính, kết quả PI/PLO của lần tính xong gần nhất (kèm mẫu số, nhãn Không chính thức/Đã cũ), lối tắt theo vai trò.
+6. **Model/service/hằng số mới:** `analytics.model.ts`, `audit-log.model.ts`, `AnalyticsService`, `AuditLogService`, `AuthService.getProfile()`, `IMPORT_BATCH_STATUS_DISPLAY`, `analytics-display.constant.ts`; URL `ANALYTICS`, `ANALYTICS_EXPORT`, `AUDIT_LOGS` và route `ANALYTICS`, `AUDIT_LOGS`, `ASSESSMENT_IMPORT_BATCHES`; menu đăng ký vào `management-header`.
+
+### 3. Lỗi/ảo giác AI phát hiện trong phiên
+| Mô tả | Cách phát hiện | Nguyên nhân | Commit sửa |
+|---|---|---|---|
+| Import `vi` (locale Angular) trong spec che mất `vi` của Vitest | `ng test` báo TS2339 `vi.fn` | Trùng tên định danh | chưa commit (đổi thành `localeVi`) |
+| Spec Nhật ký thiếu `NZ_I18N` nên `nz-date-picker` ném NG0701 | `ng test` báo Unhandled Error | Quên cấu hình locale như `core.providers.ts` | chưa commit |
+| Spec Lịch sử nhập điểm mock `NzModalService` không có tác dụng | Test đỏ trong `NzModalService.open` | `NzModalModule` trong imports của component tự cung cấp service; phải dùng `overrideProvider` | chưa commit |
+| Spec Nhật ký kiểm tra tham số lọc trước khi builder phát yêu cầu | Test đỏ (nhận `{}`) | Builder chạy qua signal, cần `detectChanges()` | chưa commit |
+| Dùng `||` cho nhãn và gọi hàm trước khi khai báo | ESLint (`prefer-nullish-coalescing`, `no-use-before-define`) | Thói quen viết tắt | chưa commit (thêm `headerLabel()`, đưa hàm lên trên) |
+
+### 4. Kết quả kiểm chứng
+- **Lint (`npm run lint`):** All files pass linting.
+- **Unit test (`ng test --no-watch`):** 89/89 test files, 810/810 tests passed (trước khi thêm 1 test `getProfile`; file `auth.service.spec.ts` chạy lại 9/9 passed).
+- **Build (`npm run build:dev`):** thành công.
+- **Chưa làm:** chưa chạy app với backend thật để xem giao diện; chưa có E2E cho 5 màn mới.
+
+### 5. Sinh viên cần rà soát
+- Chờ sinh viên rà soát: nhãn tiếng Việt của 7 chiều phân tích, danh sách collection trong bộ lọc nhật ký (`users, scores, import_batches, assessments, calculation_runs`), việc thay hẳn trang dashboard mẫu.

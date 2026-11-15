@@ -104,6 +104,11 @@ export const UrlConstant = {
     REPORT_EXPORT: (id: string) => `${environment.serverUrl}api/v1/reports/${id}/export`,
     TRACE_STUDENT_RESULT: (id: string) => `${environment.serverUrl}api/v1/trace/student-results/${id}`,
     TRACE_SCORE: (id: string) => `${environment.serverUrl}api/v1/trace/scores/${id}`,
+    ANALYTICS: environment.serverUrl + 'api/v1/reports/analytics',
+    ANALYTICS_EXPORT: environment.serverUrl + 'api/v1/reports/analytics/export',
+
+    // F01 - Nhật ký thao tác (chỉ ADMIN)
+    AUDIT_LOGS: environment.serverUrl + 'api/v1/audit-logs',
 
     // Categories
     DEMO_API: environment.serverUrl + 'rest/demo',
@@ -145,9 +150,12 @@ export const UrlConstant = {
       ASSESSMENT_DETAIL: (assessmentId: string) => `/mng/assessments/${assessmentId}`,
       ASSESSMENT_REVIEW: (assessmentId: string) => `/mng/assessments/${assessmentId}/review`,
       ASSESSMENT_SCORE_IMPORT: (assessmentId: string) => `/mng/assessments/${assessmentId}/score-import`,
+      ASSESSMENT_IMPORT_BATCHES: (assessmentId: string) => `/mng/assessments/${assessmentId}/import-batches`,
 
       CALCULATIONS: '/mng/calculations',
       REPORTS: '/mng/reports',
+      ANALYTICS: '/mng/analytics',
+      AUDIT_LOGS: '/mng/audit-logs',
 
       CATEGORIES: '/mng/categories',
       ACADEMIC_RANKS: '/mng/categories/academic-ranks',

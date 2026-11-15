@@ -28,6 +28,12 @@ export const assessmentsRoutes: Routes = [
     title: `Nhập điểm thi theo lô | ${SystemConstant.WEB_NAME}`,
   },
   {
+    path: ':id/import-batches',
+    loadComponent: () => import('./import-batches/import-batches.component')
+      .then(m => m.ImportBatchesComponent),
+    title: `Lịch sử nhập điểm | ${SystemConstant.WEB_NAME}`,
+  },
+  {
     path: ':id',
     loadComponent: () => import('./detail-assessment/detail-assessment.component')
       .then(m => m.DetailAssessmentComponent),

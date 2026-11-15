@@ -1,0 +1,246 @@
+<div class="flex flex-wrap items-end gap-3">
+  <div>
+    <h1 class="text-xl font-bold">Phân tích đa chiều</h1>
+    <p class="text-sm text-slate-600 mt-1">
+      So sánh kết quả đo lường theo một chiều. Mọi con số do hệ thống tính sẵn; trang này chỉ hiển thị.
+    </p>
+  </div>
+  <span class="flex-1"></span>
+  <button nz-button type="button" [nzLoading]="exporting()" [disabled]="loading()" (click)="exportCsv()">
+    <i class="fa-solid fa-file-csv mr-1.25" aria-hidden="true"></i>Xuất CSV
+  </button>
+</div>
+<hr>
+
+<section aria-labelledby="dim-heading">
+  <h2 id="dim-heading" class="text-base font-semibold mb-2">Chọn chiều phân tích</h2>
+  <div class="grid gap-2 sm:grid-cols-2 lg:grid-cols-4" role="radiogroup" aria-labelledby="dim-heading">
+    @for (d of dimensions; track d) {
+      <label class="flex gap-2 items-start rounded-md border p-3 cursor-pointer"
+        [class.border-blue-600]="dimension() === d" [class.bg-blue-50]="dimension() === d"
+        [class.border-slate-200]="dimension() !== d">
+        <input type="radio" name="dimension" class="mt-1" [checked]="dimension() === d" (change)="selectDimension(d)" />
+        <span>
+          <b class="block text-sm">{{ dimensionDisplay[d].label }}</b>
+          <small class="text-slate-600">{{ dimensionDisplay[d].hint }}</small>
+        </span>
+      </label>
+    }
+  </div>
+</section>
+
+<section class="mt-5" aria-label="Bộ lọc">
+  <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+    <div>
+      <label class="font-medium text-sm" for="f-pv">Phiên bản CTĐT</label>
+      <nz-select id="f-pv" class="w-full" nzAllowClear nzShowSearch nzPlaceHolder="Tất cả trong phạm vi"
+        [ngModel]="programVersionId()" (ngModelChange)="programVersionId.set($event)">
+        @for (pv of programVersions(); track pv.id) {
+          <nz-option [nzLabel]="pv.version" [nzValue]="pv.id" />
+        }
+      </nz-select>
+    </div>
+    <div>
+      <label class="font-medium text-sm" for="f-course">Học phần</label>
+      <nz-select id="f-course" class="w-full" nzAllowClear nzShowSearch nzPlaceHolder="Chọn học phần"
+        [ngModel]="courseId()" (ngModelChange)="courseId.set($event); sectionIds.set([])">
+        @for (c of courses(); track c.id) {
+          <nz-option [nzLabel]="c.code + ' · ' + c.name" [nzValue]="c.id" />
+        }
+      </nz-select>
+    </div>
+    <div>
+      <label class="font-medium text-sm" for="f-term">Học kỳ</label>
+      <nz-select id="f-term" class="w-full" nzMode="multiple" nzAllowClear nzPlaceHolder="Tất cả học kỳ"
+        [ngModel]="termIds()" (ngModelChange)="termIds.set($event)">
+        @for (t of terms(); track t.id) {
+          <nz-option [nzLabel]="t.code" [nzValue]="t.id" />
+        }
+      </nz-select>
+    </div>
+    <div>
+      <label class="font-medium text-sm" for="f-section">Lớp học phần</label>
+      <nz-select id="f-section" class="w-full" nzMode="multiple" nzAllowClear nzPlaceHolder="Tất cả lớp"
+        [ngModel]="sectionIds()" (ngModelChange)="sectionIds.set($event)">
+        @for (s of sectionsOfCourse(); track s.id) {
+          <nz-option [nzLabel]="s.code" [nzValue]="s.id" />
+        }
+      </nz-select>
+    </div>
+    <div>
+      <label class="font-medium text-sm" for="f-level">Cấp kết quả</label>
+      <nz-select id="f-level" class="w-full" nzAllowClear nzPlaceHolder="Mặc định của chiều"
+        [ngModel]="level()" (ngModelChange)="level.set($event)">
+        @for (o of levelOptions; track o.value) {
+          <nz-option [nzLabel]="o.label" [nzValue]="o.value" />
+        }
+      </nz-select>
+    </div>
+    <div>
+      <label class="font-medium text-sm" for="f-run">Lần tính</label>
+      <nz-select id="f-run" class="w-full" nzAllowClear nzPlaceHolder="Lần tính mới nhất"
+        [ngModel]="runId()" (ngModelChange)="runId.set($event)">
+        @for (r of runs(); track r.id) {
+          <nz-option [nzLabel]="(r.startedAt ?? r.id) + (r.official ? ' · chính thức' : ' · không chính thức')"
+            [nzValue]="r.id" />
+        }
+      </nz-select>
+    </div>
+
+    @switch (dimension()) {
+      @case ('COHORT') {
+        <div>
+          <label class="font-medium text-sm" for="f-cohort">Khóa</label>
+          <input id="f-cohort" nz-input class="ant-input w-full" placeholder="Ví dụ: K22, K23"
+            [ngModel]="cohortsText()" (ngModelChange)="cohortsText.set($event)" aria-describedby="f-cohort-hint" />
+          <small id="f-cohort-hint" class="text-slate-600">Để trống thì lấy các khóa áp dụng của CTĐT.</small>
+        </div>
+      }
+      @case ('ASSESSMENT_COMPONENT') {
+        <div>
+          <label class="font-medium text-sm" for="f-atype">Loại bài đánh giá</label>
+          <nz-select id="f-atype" class="w-full" nzMode="multiple" nzAllowClear nzPlaceHolder="Tất cả loại"
+            [ngModel]="assessmentTypes()" (ngModelChange)="assessmentTypes.set($event)">
+            @for (o of assessmentTypeOptions; track o.value) {
+              <nz-option [nzLabel]="o.label" [nzValue]="o.value" />
+            }
+          </nz-select>
+        </div>
+      }
+      @case ('CURRICULUM_CLASSIFICATION') {
+        <div>
+          <label class="font-medium text-sm" for="f-class">Phân loại theo</label>
+          <nz-select id="f-class" class="w-full" [ngModel]="classificationType()"
+            (ngModelChange)="classificationType.set($event)">
+            @for (o of classificationOptions; track o.value) {
+              <nz-option [nzLabel]="o.label" [nzValue]="o.value" />
+            }
+          </nz-select>
+        </div>
+      }
+      @case ('STUDENT') {
+        <div>
+          <label class="font-medium text-sm" for="f-student">Mã sinh viên</label>
+          <input id="f-student" nz-input class="ant-input w-full" placeholder="Ví dụ: SV-0001, SV-0002"
+            [ngModel]="studentIdsText()" (ngModelChange)="studentIdsText.set($event)" />
+        </div>
+      }
+    }
+  </div>
+  <div class="mt-3">
+    <button nz-button nzType="primary" type="button" [nzLoading]="loading()" (click)="analyze()">
+      <i class="fa-solid fa-chart-column mr-1.25" aria-hidden="true"></i>Phân tích
+    </button>
+  </div>
+</section>
+
+<section class="mt-6" aria-live="polite">
+  @if (error(); as e) {
+    <app-error-state [error]="e" [retrying]="loading()" (retry)="analyze()" />
+  } @else if (loading() && !result()) {
+    <p class="text-slate-600"><i class="fa-solid fa-spinner fa-spin mr-1.25" aria-hidden="true"></i>Đang phân tích…</p>
+  } @else if (!result()) {
+    <p class="rounded-md border border-dashed border-slate-300 p-4 text-slate-600">
+      Chọn chiều và bộ lọc rồi bấm <b>Phân tích</b>.
+    </p>
+  } @else if (isEmpty()) {
+    <p class="rounded-md border border-dashed border-slate-300 p-4 text-slate-600">
+      Không có dữ liệu cho bộ lọc này. Thử bỏ bớt điều kiện, hoặc chạy tính kết quả cho lớp trước.
+    </p>
+  } @else {
+    @let res = result()!;
+    <div class="flex flex-wrap items-center gap-3">
+      <app-unofficial-label [isOfficial]="res.isOfficial" />
+      <app-stale-warning [isStale]="res.isStale" />
+      <span class="flex-1"></span>
+      <nz-radio-group [ngModel]="metric()" (ngModelChange)="metric.set($event)" aria-label="Chỉ số hiển thị">
+        @for (o of metricOptions; track o.value) {
+          <label nz-radio-button [nzValue]="o.value">{{ o.label }}</label>
+        }
+      </nz-radio-group>
+    </div>
+
+    <!-- Biểu đồ thanh ngang: mỗi nhóm là một cột của ma trận, mỗi thanh là một hàng -->
+    <div class="mt-4 rounded-lg border border-slate-200 bg-white p-4">
+      <ul class="flex flex-wrap gap-4 text-sm mb-3" aria-label="Chú giải">
+        @for (l of legend(); track l.label) {
+          <li class="flex items-center gap-2">
+            <span class="inline-block w-3 h-3 rounded-sm" [style.background]="l.color" aria-hidden="true"></span>{{ l.label }}
+          </li>
+        }
+        <li class="flex items-center gap-2 text-slate-600">
+          <span class="inline-block w-3 h-3 rounded-sm chart-nodata border border-slate-300" aria-hidden="true"></span>Chưa có dữ liệu
+        </li>
+      </ul>
+      @if (res.rows.length > maxSeries) {
+        <p class="text-sm text-slate-600 mb-2">
+          Biểu đồ hiện {{ maxSeries }} trên {{ res.rows.length }} dòng đầu; xem đủ ở bảng bên dưới.
+        </p>
+      }
+      <div class="flex justify-between text-xs text-slate-600 pl-28 pr-14" aria-hidden="true">
+        <span>0%</span><span>25%</span><span>50%</span><span>75%</span><span>100%</span>
+      </div>
+      @for (g of chartGroups(); track g.label) {
+        <div class="flex gap-3 py-2 border-t border-slate-100" role="group" [attr.aria-label]="g.label">
+          <div class="w-25 shrink-0 text-sm font-semibold pt-0.5">{{ g.label }}</div>
+          <div class="flex-1 flex flex-col gap-0.5">
+            @for (b of g.bars; track b.seriesIndex) {
+              <div class="flex items-center gap-2" [title]="barTitle(g, b)">
+                <div class="relative flex-1 h-4">
+                  @if (b.value === null) {
+                    <div class="h-4 w-1/4 rounded chart-nodata border border-slate-300"></div>
+                  } @else {
+                    <div class="h-4 rounded-r" [style.width.%]="barWidth(b.value)" [style.background]="b.color"></div>
+                  }
+                </div>
+                <span class="w-12 text-right text-xs tabular-nums" [class.text-slate-600]="b.value === null">
+                  {{ b.value === null ? '—' : ((b.value * 100) | number: '1.0-1') + '%' }}
+                </span>
+              </div>
+            }
+          </div>
+        </div>
+      }
+      <span class="sr-only">Số liệu đầy đủ có trong bảng ngay dưới biểu đồ.</span>
+    </div>
+
+    <h2 class="text-base font-semibold mt-6 mb-2">Bảng số liệu</h2>
+    <nz-table class="table-border table-cell-middle table-margin-bot" nzSize="middle" nzShowPagination="false"
+      [nzData]="res.rows" [nzScroll]="{ x: (200 + res.columns.length * 140) + 'px' }" [nzFrontPagination]="false">
+      <thead>
+        <tr>
+          <th nzLeft nzWidth="200px">Hàng</th>
+          @for (c of res.columns; track c.id) {
+            <th nzAlign="center" nzWidth="140px">{{ headerLabel(c) }}</th>
+          }
+        </tr>
+      </thead>
+      <tbody>
+        @for (r of res.rows; track r.id; let i = $index) {
+          <tr>
+            <td nzLeft><b>{{ headerLabel(r) }}</b>
+              @if (r.code && r.name) { <div class="text-xs text-slate-600">{{ r.name }}</div> }
+            </td>
+            @for (c of res.columns; track c.id; let j = $index) {
+              @let cell = res.matrix[i]?.[j];
+              @let v = cellValue(cell);
+              <td nzAlign="center">
+                @if (v === null) {
+                  <span class="text-slate-600">{{ placeholder.INSUFFICIENT }}</span>
+                } @else {
+                  <b class="tabular-nums">{{ (v * 100) | number: '1.0-1' }}%</b>
+                }
+                @if (cell) {
+                  <div class="text-xs text-slate-600 tabular-nums">{{ cell.evaluated }}/{{ cell.enrolled }} đủ dữ liệu</div>
+                }
+              </td>
+            }
+          </tr>
+        }
+      </tbody>
+    </nz-table>
+    <p class="text-xs text-slate-600">
+      Mẫu số dưới mỗi ô: số sinh viên đủ dữ liệu / ghi danh. “{{ placeholder.INSUFFICIENT }}” khác với 0%.
+    </p>
+  }
+</section>

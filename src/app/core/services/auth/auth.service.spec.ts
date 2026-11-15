@@ -126,4 +126,12 @@ describe('AuthService (F01 US-01)', () => {
     expect(service.hasAnyRole([])).toBe(true);
     expect(service.hasAnyRole(['ADMIN'])).toBe(false);
   });
+
+  it('US-01: getProfile đọc hồ sơ từ GET /auth/me, lỗi do màn hình tự hiển thị (INLINE_ERRORS)', () => {
+    service.getProfile().subscribe(p => expect(p.username).toBe('gv.test'));
+    const req = http.expectOne(UrlConstant.API.AUTH_ME);
+    expect(req.request.method).toBe('GET');
+    expect(req.request.context.get(INLINE_ERRORS)).toBe(true);
+    req.flush({ id: 'u1', username: 'gv.test', email: '', fullName: '', status: 'ACTIVE', roleAssignments: [] });
+  });
 });
