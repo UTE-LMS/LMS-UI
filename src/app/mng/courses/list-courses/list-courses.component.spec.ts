@@ -111,7 +111,7 @@ describe('ListCoursesComponent (F03 US-09/AC-1 & F05a US-18)', () => {
     fixture.detectChanges();
 
     expect(component.isAdmin()).toBe(false);
-    expect(component.canManageTerms()).toBe(true);
+    expect(component.canManageTerms()).toBe(false);
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.textContent).not.toContain('Thêm học phần mới');
     expect(compiled.textContent).not.toContain('Nhập từ CSV');

@@ -55,14 +55,8 @@ export class ListCoursesComponent implements OnInit {
   /** Chỉ ADMIN được thêm/sửa/xóa kho học phần cấp trường (ADR 0010) */
   readonly isAdmin = computed(() => this.userRoles().includes(SystemConstant.ROLE.ADMIN));
 
-  /** ADMIN hoặc PROGRAM_MANAGER được quản lý học kỳ (F05a US-18) */
-  readonly canManageTerms = computed(() => {
-    const roles = this.userRoles();
-    return (
-      roles.includes(SystemConstant.ROLE.ADMIN)
-      || roles.includes(SystemConstant.ROLE.PROGRAM_MANAGER)
-    );
-  });
+  /** Chỉ ADMIN được quản lý học kỳ */
+  readonly canManageTerms = computed(() => this.isAdmin());
 
   /** Quản lý phân trang danh mục Học phần cấp trường */
   readonly manager = createListManagerNoFilter<ICourse>(
