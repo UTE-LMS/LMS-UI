@@ -28,6 +28,11 @@ export const CLASSIFICATION_TYPE_LABEL: Record<CurriculumClassificationType, str
 
 export const AUDIT_ACTION_LABEL: Record<AuditAction, string> = {
   LOGIN: 'Đăng nhập',
+  CREATE: 'Tạo mới',
+  UPDATE: 'Cập nhật',
+  DELETE: 'Xóa',
+  STATUS_CHANGE: 'Đổi trạng thái',
+  IMPORT: 'Import CSV',
   SCORE_UPDATE: 'Sửa điểm',
   IMPORT_CONFIRM: 'Xác nhận nhập tệp',
   ASSESSMENT_LOCK: 'Khóa ma trận bài',

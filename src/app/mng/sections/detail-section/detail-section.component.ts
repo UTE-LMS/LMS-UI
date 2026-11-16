@@ -207,7 +207,7 @@ export class DetailSectionComponent implements OnInit {
     this.enrollmentSvc.updateStatus(enrollment.id, status).subscribe({
       next: () => {
         this.busyEnrollmentId.set(null);
-        this.alert.success(status === 'WITHDRAWN' ? `Đã rút ${enrollment.studentRef} khỏi lớp` : `Đã ghi danh lại ${enrollment.studentRef}`);
+        this.alert.success(status === 'WITHDRAWN' ? `Đã rút ${enrollment.studentCode} khỏi lớp` : `Đã ghi danh lại ${enrollment.studentCode}`);
         this.loadRoster();
         this.refreshSection();
       },

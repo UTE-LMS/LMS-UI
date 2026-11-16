@@ -61,7 +61,11 @@ export class ListAuditLogsComponent implements OnInit {
 
   protected readonly actionLabel = AUDIT_ACTION_LABEL;
   protected readonly actionOptions = toOptions(AUDIT_ACTION_LABEL);
-  protected readonly entityOptions = ['users', 'scores', 'import_batches', 'assessments', 'calculation_runs'];
+  protected readonly entityOptions = [
+    'users', 'faculties', 'programs', 'program_versions', 'plos', 'pis',
+    'courses', 'syllabi', 'clos', 'clo_pi_links', 'terms', 'sections', 'enrollments',
+    'assessments', 'scores', 'import_batches', 'calculation_runs',
+  ];
 
   readonly users = signal<IUser[]>([]);
   readonly usernameById = computed(() => new Map(this.users().map(u => [u.id, u.username])));

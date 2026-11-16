@@ -73,7 +73,7 @@ describe('SyllabusService (F03 Import CSV, Status & Lock)', () => {
     expect(body.get('programVersionId')).toBe('pv_1');
     expect(body.get('effectiveFromTermId')).toBe('term_2026_1');
     expect(body.get('file')).toBe(file);
-    req.flush({ syllabusId, courseId, version: '2026-v1', status: 'DRAFT', verificationStatus: 'VERIFIED', cloCount: 1, linkCount: 1, warnings: [], clos: [], links: [] });
+    req.flush({ syllabusId, courseId, version: '2026-v1', status: 'CONFIRMED', verificationStatus: 'VERIFIED', cloCount: 1, linkCount: 1, warnings: [], clos: [], links: [] });
   });
 
   it('lockSyllabus gửi PUT tới /syllabi/{id}/lock và đổi trạng thái sang ARCHIVED', () => {

@@ -91,10 +91,15 @@ export const UrlConstant = {
 
     // F05a - Lớp học phần, ghi danh, nhập danh sách lớp (API-CONTRACT.md §6.4)
     SECTIONS: environment.serverUrl + 'api/v1/sections',
+    SECTION_IMPORT_TEMPLATE: environment.serverUrl + 'api/v1/sections/import-template',
+    SECTION_IMPORT: environment.serverUrl + 'api/v1/sections/import',
     SECTION_DETAIL: (id: string) => `${environment.serverUrl}api/v1/sections/${id}`,
     SECTION_STATUS: (id: string) => `${environment.serverUrl}api/v1/sections/${id}/status`,
     SECTION_ENROLLMENTS: (sectionId: string) => `${environment.serverUrl}api/v1/sections/${sectionId}/enrollments`,
     SECTION_ENROLLMENT_IMPORT: (sectionId: string) => `${environment.serverUrl}api/v1/sections/${sectionId}/enrollments/import`,
+    SECTION_ENROLLMENT_IMPORT_TEMPLATE: (sectionId: string) => `${environment.serverUrl}api/v1/sections/${sectionId}/enrollments/import-template`,
+    ENROLLMENT_BULK_IMPORT_TEMPLATE: environment.serverUrl + 'api/v1/enrollments/import-template',
+    ENROLLMENT_BULK_IMPORT: environment.serverUrl + 'api/v1/enrollments/import',
     ENROLLMENT_STATUS: (id: string) => `${environment.serverUrl}api/v1/enrollments/${id}/status`,
 
     // F04 - Bài đánh giá & khóa ma trận (API-CONTRACT.md §6.3, OBE v0.7)

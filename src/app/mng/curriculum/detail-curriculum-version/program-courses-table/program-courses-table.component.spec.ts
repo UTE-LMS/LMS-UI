@@ -85,7 +85,7 @@ describe('ProgramCoursesTableComponent (Read-only)', () => {
   });
 
   it('hiển thị nút Import Khung học phần (CSV) khi canImportCourses=true và gọi API import thành công', () => {
-    fixture.componentRef.setInput('versionStatus', 'DRAFT');
+    fixture.componentRef.setInput('versionStatus', 'ACTIVE');
     fixture.componentRef.setInput('canImportCourses', true);
     fixture.detectChanges();
 

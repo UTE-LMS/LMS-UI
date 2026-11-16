@@ -149,7 +149,19 @@ export class RosterImportComponent implements OnInit {
   }
 
   downloadTemplate(): void {
-    this.download(ROSTER_TEMPLATE_CSV, 'danh-sach-lop-mau.csv');
+    this.enrollmentSvc.downloadSectionImportTemplate(this.sectionId()).subscribe({
+      next: blob => {
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'enrollments-template.csv';
+        link.click();
+        URL.revokeObjectURL(url);
+      },
+      error: () => {
+        this.download(ROSTER_TEMPLATE_CSV, 'enrollments-template.csv');
+      },
+    });
   }
 
   private download(content: string, fileName: string): void {

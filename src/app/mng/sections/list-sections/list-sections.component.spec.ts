@@ -8,6 +8,7 @@ import { ISyllabus } from '@models/course/syllabus.model';
 import { ITerm } from '@models/course/term.model';
 import { AuthService } from '@services/auth/auth.service';
 import { CourseService } from '@services/course/course.service';
+import { EnrollmentService } from '@services/course/enrollment.service';
 import { SectionService } from '@services/course/section.service';
 import { SyllabusService } from '@services/course/syllabus.service';
 import { TermService } from '@services/course/term.service';
@@ -28,7 +29,15 @@ describe('ListSectionsComponent (F05a US-19)', () => {
     { id: 'sec2', code: 'TEST101-02', courseId: 'c1', syllabusId: 's1', termId: 't1', lecturerIds: ['u1'], enrolledCount: 0, status: 'LOCKED' },
   ];
 
-  const sectionSvc = { getSections: vi.fn() };
+  const sectionSvc = {
+    getSections: vi.fn(),
+    downloadImportTemplate: vi.fn(() => of(new Blob([''], { type: 'text/csv' }))),
+    importSections: vi.fn(),
+  };
+  const enrollmentSvc = {
+    downloadBulkImportTemplate: vi.fn(() => of(new Blob([''], { type: 'text/csv' }))),
+    importEnrollmentsBulk: vi.fn(),
+  };
   const termSvc = { getTerms: vi.fn(() => of([term])) };
   const courseSvc = {
     getCourses: vi.fn(() => of({ content: [course], page: 0, size: 100, totalElements: 1, totalPages: 1, last: true })),
@@ -53,6 +62,7 @@ describe('ListSectionsComponent (F05a US-19)', () => {
       providers: [
         provideRouter([]),
         { provide: SectionService, useValue: sectionSvc },
+        { provide: EnrollmentService, useValue: enrollmentSvc },
         { provide: TermService, useValue: termSvc },
         { provide: CourseService, useValue: courseSvc },
         { provide: SyllabusService, useValue: syllabusSvc },

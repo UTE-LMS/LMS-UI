@@ -47,7 +47,7 @@ export interface StudentResultResponse {
   sectionId?: string;
   assessmentId?: string;
   studentId: string;
-  studentRef?: string;
+  studentCode?: string;
   termId?: string;
   status: ResultStatus;
   value?: number;
@@ -145,7 +145,7 @@ export interface ReportResponse {
     missingEntries?: {
       studentResultId: string;
       studentId: string;
-      studentRef: string;
+      studentCode: string;
       level: string;
       subjectId: string;
       sectionId?: string;
@@ -166,7 +166,7 @@ export interface StudentResultTraceResponse {
   subjectId: string;
   subjectCode?: string;
   studentId: string;
-  studentRef?: string;
+  studentCode?: string;
   status: ResultStatus;
   value?: number;
   passThreshold?: number;
@@ -189,7 +189,7 @@ export interface ScoreTraceResponse {
   cloId: string;
   cloCode?: string;
   studentId: string;
-  studentRef?: string;
+  studentCode?: string;
   rawScore?: number;
   maxScore?: number;
   importBatchId?: string;

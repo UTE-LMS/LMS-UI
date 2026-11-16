@@ -186,7 +186,7 @@
                 <tr>
                   <td><nz-tag>{{ sr.level }}</nz-tag></td>
                   <td class="font-semibold">{{ sr.subjectCode || sr.subjectId }}</td>
-                  <td>{{ sr.studentRef || sr.studentId }}</td>
+                  <td>{{ sr.studentCode || sr.studentId }}</td>
                   <td>{{ sr.value !== undefined && sr.value !== null ? ((sr.value * 100) | number: '1.1-1') + '%' : '—' }}</td>
                   <td>{{ sr.passThreshold !== undefined ? ((sr.passThreshold * 100) | number: '1.0-0') + '%' : '—' }}</td>
                   <td>

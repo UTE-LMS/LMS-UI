@@ -87,7 +87,7 @@ describe('ProgramVersionService (F02 Import CSV, Status & Lock)', () => {
       totalCredits: 150,
       durationYears: 4,
       applicableCohort: 'K2024',
-      status: 'DRAFT',
+      status: 'ACTIVE',
       verificationStatus: 'VERIFIED',
       ploCount: 1,
       piCount: 2,
@@ -131,7 +131,7 @@ describe('ProgramVersionService (F02 Import CSV, Status & Lock)', () => {
     expect(body.get('totalCredits')).toBe('145');
     expect(body.get('durationYears')).toBe('4.5');
     expect(body.get('applicableCohort')).toBe('K2025');
-    req.flush({ programVersionId: 'ver_new', programId: 'prog_123', version: '2026-v1', status: 'DRAFT' });
+    req.flush({ programVersionId: 'ver_new', programId: 'prog_123', version: '2026-v1', status: 'ACTIVE' });
   });
 
   it('confirmImport gửi POST tới endpoint confirm-import', () => {

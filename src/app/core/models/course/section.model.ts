@@ -44,12 +44,13 @@ export interface IEnrollment {
   id: string;
   sectionId: string;
   studentId: string;
-  /** Mã thay thế của sinh viên (Q09): UI chỉ hiển thị mã này. */
-  studentRef: string;
+  /** Mã số sinh viên (MSSV). */
+  studentCode: string;
   cohort?: string | null;
-  majorCode?: string | null;
   status: EnrollmentStatus;
   enrolledAt?: string | null;
+  createdAt?: string | null;
+  updatedAt?: string | null;
 }
 
 export interface IEnrollmentList {
