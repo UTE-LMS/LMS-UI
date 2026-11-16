@@ -540,3 +540,39 @@ Phần này chuẩn bị sẵn nội dung trả lời cho 4 câu hỏi trọng t
 
 ### 5. Sinh viên cần rà soát
 - Chờ sinh viên rà soát: nhãn tiếng Việt của 7 chiều phân tích, danh sách collection trong bộ lọc nhật ký (`users, scores, import_batches, assessments, calculation_runs`), việc thay hẳn trang dashboard mẫu.
+
+## Phiên #16: Chạy thử giao diện với backend, sửa lỗi phát hiện khi xem, chụp ảnh màn hình cho README
+
+### 1. Thông tin phiên làm việc
+- **Thời gian:** 2026-11-16
+- **Người thực hiện (`git config user.name`):** `TinMH`
+- **Sinh viên yêu cầu:** "chạy cho tôi xem giao diện", "chụp các màn lại để trong 1 folder để viết readme", "bỏ nhãn không chính thức", "chụp lại để hiển thị 1 trang màn hình".
+- **Công cụ / mô hình:** Claude Code, Claude Opus 5.5; Playwright `playwright-core@1.63.0` cài trong thư mục tạm (không thêm vào repo).
+
+### 2. Các hạng mục đã thực hiện
+1. Chạy LMS-API (profile `demo`, cổng 8090) với MongoDB replica set tạm trong Docker (`loms-preview-mongo`, cổng 27018, database `loms_preview`) và `ng serve`. Không đụng MongoDB/dữ liệu cục bộ của sinh viên.
+2. Tạo DỮ LIỆU THỬ NGHIỆM qua chính API (học kỳ, đề cương, 2 lớp, ghi danh `SV-xxxx`, bài đánh giá, nhập điểm, lần tính chính thức) bằng script ngoài repo.
+3. Sửa 3 lỗi phát hiện khi xem giao diện thật (chưa commit):
+   - `analytics-page.component.ts`: gọi danh sách học phần với `size=200` vượt `@Max(100)` của backend → toast lỗi 400 khi mở trang; đổi thành 100.
+   - `list-audit-logs.component.html`: cột IP 70px làm địa chỉ IPv6 gãy dòng; nới 140px.
+   - `import-batches.component.html`: nhãn "Điểm đã ghi" sai nghĩa (là số ô điểm hợp lệ đọc từ tệp, kể cả lần nhập đã hủy); đổi thành "Ô điểm hợp lệ trong tệp".
+4. 23 ảnh 1440×900 trong `doc/screenshots/` và mục "Giao diện" trong `README.md`; cập nhật dòng trạng thái README.
+5. Nhãn "Không chính thức": **không xóa khỏi code** (rule 02 bắt buộc nhãn cho kết quả chưa chính thức). Ảnh dùng lần tính `official: true` nên nhãn không xuất hiện đúng theo dữ liệu.
+
+### 3. Lỗi/ảo giác AI phát hiện trong phiên
+| Mô tả | Cách phát hiện | Nguyên nhân | Commit sửa |
+|---|---|---|---|
+| Analytics gọi `getCourses(0, 200)` vượt giới hạn 100 | Toast 400 khi mở trang trên app thật | Không đối chiếu `@Max` của `CourseController`; unit test giả lập service nên không bắt được | chưa commit |
+| Nhãn "Điểm đã ghi" cho `stats.scoreCount` | Lần nhập đã hủy vẫn hiện 15 điểm | Đoán nghĩa trường thống kê | chưa commit |
+| Cột IP quá hẹp | Xem ảnh chụp | Không thử với địa chỉ IPv6 | chưa commit |
+| Gợi ý dùng công cụ `chromium-cli` | `npm view` cho thấy gói giữ chỗ cảnh báo tên bị AI bịa | Công cụ chỉ có trong môi trường khác; không cài | — |
+
+### 4. Vấn đề backend ghi nhận (repo LMS-API, chưa sửa)
+- `application.properties`: `INITIAL_ADMIN_USERNAME=${INITIAL_ADMIN_USERNAME:}` tự tham chiếu → không khởi động khi thiếu biến môi trường.
+- `POST /calculation-runs` thiếu trường `official` → 400 (`Cannot map null into type boolean`) dù DTO có `@Builder.Default`.
+- `DemoDataSeeder`: PLO2 chỉ có PI2.1 trọng số 0,5 → tổng trọng số PI của PLO2 ≠ 1,0, lần tính bị từ chối (đã sửa tạm trong database xem thử, không sửa mã).
+- `import-batches` trả `uploadedBy` là ObjectId, UI đang hiện nguyên ID.
+
+### 5. Kiểm chứng
+- Lint + test các màn đã sửa: ESLint sạch; `analytics-page` và `list-audit-logs` spec 12/12 passed. Toàn bộ `ng test --no-watch`: 89/89 file, 811/811 test passed.
+- Đã xem lại toàn bộ 23 ảnh.

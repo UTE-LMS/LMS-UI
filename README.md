@@ -4,7 +4,62 @@ Giao diện web (Angular) của **Hệ thống quản lý, đo lường và phâ
 Tiểu luận chuyên ngành CNTT, Trường HCM-UTE. Backend: repo riêng `LMS-API` (Spring Boot + MongoDB). UI chỉ gọi API,
 không truy cập MongoDB và không tự tính công thức đo lường chính thức.
 
-> **Trạng thái:** đang phát triển (khung dự án). Chưa có màn hình nghiệp vụ.
+> **Trạng thái:** đang phát triển. Đã có màn hình cho các chức năng F01–F07 (xem mục Giao diện). Theo dõi cải tiến
+> (F08) và cấu hình ngưỡng/trọng số chưa có màn hình vì backend chưa có API.
+
+## Giao diện
+
+Ảnh chụp ở độ phân giải 1440×900, đăng nhập bằng tài khoản Quản trị viên. Toàn bộ số liệu là **DỮ LIỆU THỬ NGHIỆM**
+(tên có nhãn `[DỮ LIỆU THỬ NGHIỆM]`, mã sinh viên giả `SV-xxxx`), tạo qua API trong database tạm, **không phải kết quả
+đo thật**. Ảnh gốc ở `doc/screenshots/`.
+
+### Đăng nhập và tổng quan
+
+| Màn | Ảnh |
+|---|---|
+| Đăng nhập | ![Đăng nhập](doc/screenshots/01-dang-nhap.png) |
+| Tổng quan: số lớp trong phạm vi, lần tính gần nhất, mức đạt PI/PLO kèm mẫu số | ![Tổng quan](doc/screenshots/02-tong-quan.png) |
+
+### Thiết lập: CTĐT, học phần, đề cương, lớp
+
+| Màn | Ảnh |
+|---|---|
+| Khung CTĐT và chuẩn đầu ra | ![Khung CTĐT](doc/screenshots/03-khung-ctdt.png) |
+| Chi tiết phiên bản CTĐT (PLO, PI) | ![Chi tiết phiên bản CTĐT](doc/screenshots/04-chi-tiet-phien-ban-ctdt.png) |
+| Học phần và học kỳ | ![Học phần và học kỳ](doc/screenshots/05-hoc-phan-hoc-ky.png) |
+| Đề cương và CLO | ![Đề cương và CLO](doc/screenshots/06-de-cuong-clo.png) |
+| Chi tiết đề cương (CLO, liên kết CLO–PI) | ![Chi tiết đề cương](doc/screenshots/07-chi-tiet-de-cuong.png) |
+| Lớp học phần | ![Lớp học phần](doc/screenshots/08-lop-hoc-phan.png) |
+| Chi tiết lớp và danh sách ghi danh | ![Chi tiết lớp](doc/screenshots/09-chi-tiet-lop.png) |
+
+### Thu thập: bài đánh giá và nhập điểm
+
+| Màn | Ảnh |
+|---|---|
+| Bài đánh giá của lớp | ![Bài đánh giá của lớp](doc/screenshots/10-bai-danh-gia-cua-lop.png) |
+| Chi tiết bài đánh giá (ma trận câu hỏi–CLO) | ![Chi tiết bài đánh giá](doc/screenshots/11-chi-tiet-bai-danh-gia.png) |
+| Độ phủ ma trận | ![Độ phủ ma trận](doc/screenshots/12-do-phu-ma-tran.png) |
+| Nhập điểm từ CSV | ![Nhập điểm từ CSV](doc/screenshots/13-nhap-diem-csv.png) |
+| Lịch sử nhập điểm, lỗi theo dòng/cột | ![Lịch sử nhập điểm](doc/screenshots/14-lich-su-nhap-diem.png) |
+
+### Đo lường, báo cáo và phân tích
+
+| Màn | Ảnh |
+|---|---|
+| Đo lường chuẩn đầu ra 4 cấp độ | ![Đo lường](doc/screenshots/15-do-luong-chuan-dau-ra.png) |
+| Báo cáo QA và truy vết | ![Báo cáo và truy vết](doc/screenshots/16-bao-cao-truy-vet.png) |
+| Phân tích đa chiều (biểu đồ và bảng số liệu) | ![Phân tích đa chiều](doc/screenshots/17-phan-tich-da-chieu.png) |
+
+### Hệ thống
+
+| Màn | Ảnh |
+|---|---|
+| Danh mục CTĐT | ![Danh mục CTĐT](doc/screenshots/18-danh-muc-ctdt.png) |
+| Người dùng và phân quyền | ![Người dùng](doc/screenshots/19-nguoi-dung.png) |
+| Thêm người dùng | ![Thêm người dùng](doc/screenshots/20-them-nguoi-dung.png) |
+| Nhật ký thao tác | ![Nhật ký thao tác](doc/screenshots/21-nhat-ky-thao-tac.png) |
+| Tài khoản của tôi | ![Tài khoản của tôi](doc/screenshots/22-tai-khoan-cua-toi.png) |
+| Không có quyền | ![Không có quyền](doc/screenshots/23-khong-co-quyen.png) |
 
 ## Công nghệ
 
@@ -70,6 +125,7 @@ e2e/                # Playwright (*.e2e.ts) và cấu hình
 deploy/             # nginx, entrypoint cấu hình runtime, script smoke/deploy/health check, compose staging
 doc/adr/            # quyết định kiến trúc của repo UI (0001 SPA tĩnh, 0002 CI/CD, 0003 Playwright)
 doc/deploy/         # tài liệu triển khai staging
+doc/screenshots/    # ảnh chụp màn hình cho README (dữ liệu thử nghiệm)
 public/             # tài nguyên tĩnh
 CLAUDE.md, .claude/ # quy tắc làm việc cho trợ lý AI
 logsAI/             # nhật ký sử dụng AI (Rubric TC2.3)
