@@ -73,7 +73,7 @@
     <p class="py-8 text-center text-slate-600">Không có bản ghi nào khớp bộ lọc. Thử nới khoảng thời gian.</p>
   } @else {
     <nz-table class="table-border table-cell-middle table-margin-bot" nzSize="middle" nzShowPagination="false"
-      [nzFrontPagination]="false" [nzData]="manager.listData().data || []" [nzScroll]="{ x: '1050px' }">
+      [nzFrontPagination]="false" [nzData]="manager.listData().data || []" [nzScroll]="{ x: '1120px' }">
       <thead>
         <tr>
           <th nzWidth="160px">Thời điểm</th>
@@ -81,7 +81,7 @@
           <th nzWidth="170px">Hành động</th>
           <th nzWidth="240px">Thực thể</th>
           <th nzWidth="200px">Lý do</th>
-          <th nzWidth="70px">IP</th>
+          <th nzWidth="140px">IP</th>
           <th nzWidth="60px" nzAlign="center"><span class="sr-only">Chi tiết</span></th>
         </tr>
       </thead>

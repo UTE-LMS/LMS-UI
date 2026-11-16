@@ -178,7 +178,8 @@ export class AnalyticsPageComponent implements OnInit {
 
   private loadLookups(): void {
     this.programVersionSvc.getProgramVersions(0, 100).pipe(map(page => page.content), catchError(() => of([])), takeUntilDestroyed(this.destroyRef)).subscribe(list => this.programVersions.set(list));
-    this.courseSvc.getCourses(0, 200).pipe(map(page => page.content), catchError(() => of([])), takeUntilDestroyed(this.destroyRef)).subscribe(list => this.courses.set(list));
+    // Backend giới hạn size <= 100 (@Max ở CourseController); quá giới hạn sẽ trả 400.
+    this.courseSvc.getCourses(0, 100).pipe(map(page => page.content), catchError(() => of([])), takeUntilDestroyed(this.destroyRef)).subscribe(list => this.courses.set(list));
     this.termSvc.getTerms().pipe(catchError(() => of([])), takeUntilDestroyed(this.destroyRef))
       .subscribe(list => this.terms.set(list));
     this.sectionSvc.getSections().pipe(catchError(() => of([])), takeUntilDestroyed(this.destroyRef))
