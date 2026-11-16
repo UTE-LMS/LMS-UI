@@ -1,7 +1,10 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { SystemConstant } from '@constants/system.constant';
 import { ICourseImportResultResponse } from '@models/course/course.model';
+import { AuthService } from '@services/auth/auth.service';
 import { CourseService } from '@services/course/course.service';
+import { FacultyService } from '@services/faculty/faculty.service';
 import { ToastrService } from 'ngx-toastr';
 import { of, throwError } from 'rxjs';
 import { CourseImportModalComponent } from './course-import-modal.component';
@@ -11,7 +14,23 @@ describe('CourseImportModalComponent (F03 US-09/AC-4)', () => {
   let component: CourseImportModalComponent;
 
   const courseSvc = {
+    downloadCoursesImportTemplate: vi.fn(() => of(new Blob(['code,name,credits,facultyCode\n'], { type: 'text/csv' }))),
     importCourses: vi.fn(),
+  };
+
+  const facultySvc = {
+    getFaculties: vi.fn(() => of({
+      content: [{ id: 'fac_1', code: 'FIT', name: 'Khoa CNTT', isActive: true }],
+      page: 0,
+      size: 100,
+      totalElements: 1,
+      totalPages: 1,
+      last: true,
+    })),
+  };
+
+  const authSvc = {
+    getRoles: vi.fn<() => string[]>(() => [SystemConstant.ROLE.ADMIN]),
   };
 
   const toastrSvc = {
@@ -23,11 +42,14 @@ describe('CourseImportModalComponent (F03 US-09/AC-4)', () => {
 
   beforeEach(async () => {
     vi.clearAllMocks();
+    authSvc.getRoles.mockReturnValue([SystemConstant.ROLE.ADMIN]);
 
     await TestBed.configureTestingModule({
       imports: [CourseImportModalComponent],
       providers: [
         { provide: CourseService, useValue: courseSvc },
+        { provide: FacultyService, useValue: facultySvc },
+        { provide: AuthService, useValue: authSvc },
         { provide: ToastrService, useValue: toastrSvc },
       ],
     }).compileComponents();
@@ -102,12 +124,26 @@ describe('CourseImportModalComponent (F03 US-09/AC-4)', () => {
     expect(component.importResult()).toBeNull();
   });
 
-  it('tải tệp mẫu CSV khi gọi downloadTemplate()', () => {
+  it('tải tệp mẫu CSV từ backend khi gọi downloadTemplate()', () => {
     const createElementSpy = vi.spyOn(document, 'createElement');
     component.downloadTemplate();
 
+    expect(courseSvc.downloadCoursesImportTemplate).toHaveBeenCalled();
     expect(createElementSpy).toHaveBeenCalledWith('a');
     createElementSpy.mockRestore();
+  });
+
+  it('ADMIN chọn Khoa mặc định thì gửi kèm facultyId khi importCourses', () => {
+    const validFile = new File(['code,name,credits\nCS101,Toan,3'], 'courses.csv', {
+      type: 'text/csv',
+    });
+    component.selectedFile.set(validFile);
+    component.selectedFacultyId.set('fac_1');
+    courseSvc.importCourses.mockReturnValue(of({ totalRows: 1, successCount: 1, failureCount: 0, errors: [] }));
+
+    component.submitImport();
+
+    expect(courseSvc.importCourses).toHaveBeenCalledWith(validFile, 'fac_1');
   });
 
   it('nạp dữ liệu thành công theo cơ chế Best-effort, phát emit importSuccess và hiển thị toastr', () => {

@@ -10,7 +10,6 @@ import {
   IAuthData, ILoginDTO, ILoginRequest, ILoginResponse,
   IRegisterDTO, IResetPasswordDTO, IResetPasswordRequsetDTO, IUserProfile,
 } from '@models/auth/auth.model';
-import { IRoleAssignment } from '@models/user/user.model';
 import { sha256 } from 'js-sha256';
 import { ToastrService } from 'ngx-toastr';
 import { catchError, map, Observable, of, tap, timer } from 'rxjs';
@@ -128,11 +127,11 @@ export class AuthService {
     this.setAuthData({
       avatar: '',
       expired: Date.now() + (res.expiresIn * 1000),
-      roles: [...new Set(user.roleAssignments.map(assignment => assignment.role))],
+      roles: [...new Set(user.roles ?? [])],
       fullName: user.fullName,
       userId: user.id,
       username: user.username,
-      roleAssignments: user.roleAssignments,
+      facultyId: user.facultyId ?? undefined,
     });
   }
 
@@ -144,10 +143,6 @@ export class AuthService {
 
   getRoles(): string[] {
     return this.getAuthData()?.roles ?? [];
-  }
-
-  getRoleAssignments(): IRoleAssignment[] {
-    return this.getAuthData()?.roleAssignments ?? [];
   }
 
   getUserId(): string {
@@ -309,5 +304,13 @@ export class AuthService {
     } else {
       return false;
     }
+  }
+
+  getFacultyId(): string | undefined {
+    return this.getAuthData()?.facultyId ?? undefined;
+  }
+
+  isProgramManager(): boolean {
+    return this.checkRole(SystemConstant.ROLE.PROGRAM_MANAGER);
   }
 }

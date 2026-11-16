@@ -18,7 +18,7 @@ export interface IFormErrorOutcome {
   summary: string | null;
 }
 
-/** `roleAssignments[0].programIds` → `roleAssignments.0.programIds` để FormGroup.get() tìm được. */
+/** `items[0].weight` → `items.0.weight` để FormGroup.get() tìm được. */
 const toControlPath = (field: string): string => field.replace(/\[(\d+)\]/g, '.$1').replace(/^\./, '');
 
 /**

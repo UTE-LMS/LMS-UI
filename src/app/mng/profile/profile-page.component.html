@@ -37,7 +37,7 @@
 
     <section aria-labelledby="role-heading">
       <h2 id="role-heading" class="text-base font-semibold mb-3">Vai trò và phạm vi</h2>
-      @if (p.roleAssignments.length === 0) {
+      @if (p.roles.length === 0) {
         <p class="text-sm text-slate-600">Chưa được gán vai trò nào.</p>
       } @else {
         <table class="w-full text-sm border border-slate-200 rounded">
@@ -45,10 +45,10 @@
             <tr><th class="text-left p-2 w-44">Vai trò</th><th class="text-left p-2">Phạm vi được thao tác</th></tr>
           </thead>
           <tbody>
-            @for (a of p.roleAssignments; track $index) {
+            @for (role of p.roles; track role) {
               <tr class="border-t border-slate-200">
-                <td class="p-2 font-semibold">{{ roleLabel(a.role) }}</td>
-                <td class="p-2" [title]="scopeIdsTooltip(a.scope)">{{ describeScope(a) }}</td>
+                <td class="p-2 font-semibold">{{ roleLabel(role) }}</td>
+                <td class="p-2">{{ describeRoleScope(role, p) }}</td>
               </tr>
             }
           </tbody>

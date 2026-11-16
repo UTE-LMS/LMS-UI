@@ -39,15 +39,6 @@
 </div>
 
 @if (activeTab() === 'COURSES') {
-<!-- ==================== TAB A: KHO HỌC PHẦN CẤP TRƯỜNG ==================== -->
-<div class="alert-banner mb-6">
-  <div class="alert-icon-box">
-    <i class="fa-solid fa-circle-info text-base"></i>
-  </div>
-  <div class="alert-text">
-    Kho học phần cấp trường (Master Catalog) do Quản trị viên quản lý thống nhất theo danh mục Phòng Đào tạo (ADR 0010). Các học phần được đưa vào từng phiên bản CTĐT và biên soạn đề cương theo Bộ môn.
-  </div>
-</div>
 
 <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
   <div class="search-box relative">
@@ -76,7 +67,7 @@
     <button nz-button nzType="default" (click)="manager.applySearch(true)">
       <i class="fa-solid fa-magnifying-glass mr-1.5"></i>Tìm kiếm
     </button>
-    @if (isAdmin()) {
+    @if (canManageCourses()) {
     <button
       nz-button
       nzType="default"
@@ -134,7 +125,7 @@
           >
             Xem đề cương
           </a>
-          @if (isAdmin()) {
+          @if (canManageCourses()) {
           <button
             type="button"
             class="table-action-link mr-3"
@@ -142,6 +133,8 @@
           >
             Sửa
           </button>
+          }
+          @if (isAdmin()) {
           <button
             type="button"
             class="table-action-link text-rose-600 hover:text-rose-700"
@@ -181,7 +174,7 @@
   } @else {
   <div class="py-10 text-center text-slate-500">
     <p class="mb-3">Chưa có học phần nào khớp điều kiện tra cứu.</p>
-    @if (isAdmin()) {
+    @if (canManageCourses()) {
     <button nz-button nzType="primary" (click)="openCreateCourseModal()">
       <i class="fa-solid fa-plus mr-1.5"></i>Thêm học phần mới
     </button>
@@ -190,15 +183,6 @@
   }
 </ng-template>
 } @else {
-<!-- ==================== TAB B: QUẢN LÝ HỌC KỲ (F05a US-18) ==================== -->
-<div class="alert-banner mb-6">
-  <div class="alert-icon-box">
-    <i class="fa-solid fa-calendar-check text-base"></i>
-  </div>
-  <div class="alert-text">
-    Danh mục Học kỳ dùng làm mốc thời gian hiệu lực cho các phiên bản Đề cương (US-10) và kiểm soát khóa sổ điểm lớp học phần (US-18). Mở lại học kỳ đã khóa sổ điểm bắt buộc phải có lý do giải trình.
-  </div>
-</div>
 
 <div class="flex items-center justify-between mb-4">
   <div class="text-sm text-slate-600">

@@ -82,7 +82,7 @@ export class ListSectionsComponent implements OnInit {
   );
 
   /** Giảng viên chọn được khi mở lớp: người dùng LECTURER đang ACTIVE (danh sách chỉ ADMIN tải được). */
-  readonly lecturerOptions = computed(() => this.users().filter(user => user.status === 'ACTIVE' && user.roleAssignments.some(a => a.role === SystemConstant.ROLE.LECTURER)));
+  readonly lecturerOptions = computed(() => this.users().filter(user => user.status === 'ACTIVE' && user.roles.includes(SystemConstant.ROLE.LECTURER)));
 
   readonly lecturerListAvailable = signal(false);
 

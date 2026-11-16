@@ -28,11 +28,11 @@ describe('DetailSyllabusComponent (F03 US-10, US-11, TD-27, ADR 0010)', () => {
     credits: 3,
   };
 
-  const mockDraftSyllabus: ISyllabus = {
+  const mockActiveSyllabus: ISyllabus = {
     id: syllabusId,
     courseId,
     version: '2026-v1',
-    status: 'DRAFT',
+    status: 'CONFIRMED',
     effectiveFromTermId: null,
     effectiveToTermId: null,
   };
@@ -59,9 +59,9 @@ describe('DetailSyllabusComponent (F03 US-10, US-11, TD-27, ADR 0010)', () => {
   ];
 
   const syllabusSvc = {
-    getSyllabusById: vi.fn(() => of(mockDraftSyllabus)),
-    updateSyllabusStatus: vi.fn(
-      (id: string, status: 'CONFIRMED' | 'ARCHIVED') => of({ ...mockDraftSyllabus, id, status }),
+    getSyllabusById: vi.fn(() => of(mockActiveSyllabus)),
+    lockSyllabus: vi.fn(
+      (id: string) => of({ ...mockActiveSyllabus, id, status: 'ARCHIVED' as const }),
     ),
   };
 
@@ -71,6 +71,7 @@ describe('DetailSyllabusComponent (F03 US-10, US-11, TD-27, ADR 0010)', () => {
 
   const cloSvc = {
     getClosBySyllabus: vi.fn(() => of(mockClos)),
+    getCloPiLinks: vi.fn(() => of([])),
     createClo: vi.fn(),
     updateClo: vi.fn(),
     deleteClo: vi.fn(() => of(undefined)),
@@ -82,12 +83,7 @@ describe('DetailSyllabusComponent (F03 US-10, US-11, TD-27, ADR 0010)', () => {
 
   const authSvc = {
     getRoles: vi.fn<() => string[]>(() => [SystemConstant.ROLE.PROGRAM_MANAGER]),
-    getRoleAssignments: vi.fn(() => [
-      {
-        role: SystemConstant.ROLE.PROGRAM_MANAGER,
-        scope: { programIds: [], courseIds: [courseId], sectionIds: [] },
-      },
-    ]),
+    getFacultyId: vi.fn<() => string | undefined>(() => 'fac_cntt_01'),
   };
 
   const alertSvc = {
@@ -95,9 +91,15 @@ describe('DetailSyllabusComponent (F03 US-10, US-11, TD-27, ADR 0010)', () => {
     error: vi.fn(),
   };
 
+  const modalSvc = {
+    confirm: vi.fn((opts: { nzOnOk?: () => void; }) => {
+      opts.nzOnOk?.();
+    }),
+  };
+
   beforeEach(async () => {
     vi.clearAllMocks();
-    syllabusSvc.getSyllabusById.mockReturnValue(of(mockDraftSyllabus));
+    syllabusSvc.getSyllabusById.mockReturnValue(of(mockActiveSyllabus));
     authSvc.getRoles.mockReturnValue([SystemConstant.ROLE.PROGRAM_MANAGER]);
 
     await TestBed.configureTestingModule({
@@ -120,7 +122,7 @@ describe('DetailSyllabusComponent (F03 US-10, US-11, TD-27, ADR 0010)', () => {
         { provide: TermService, useValue: termSvc },
         { provide: AuthService, useValue: authSvc },
         { provide: ToastrService, useValue: alertSvc },
-        { provide: NzModalService, useValue: { confirm: vi.fn() } },
+        { provide: NzModalService, useValue: modalSvc },
       ],
     }).compileComponents();
 
@@ -134,29 +136,34 @@ describe('DetailSyllabusComponent (F03 US-10, US-11, TD-27, ADR 0010)', () => {
     expect(sorted.map(c => c.code)).toEqual(['CLO1', 'CLO2']);
   });
 
-  it('PROGRAM_MANAGER trong scope được phép duyệt CONFIRMED (ADR 0014)', () => {
-    expect(component.canApproveSyllabus()).toBe(true);
+  it('PROGRAM_MANAGER trong scope được phép Khóa đề cương (canLockSyllabus = true)', () => {
+    expect(component.canLockSyllabus()).toBe(true);
   });
 
-  it('LECTURER KHÔNG có quyền duyệt CONFIRMED (ADR 0014)', () => {
+  it('LECTURER, ADMIN và QA chỉ được xem (canLockSyllabus = false, QA strictly read-only)', () => {
     component.userRoles.set([SystemConstant.ROLE.LECTURER]);
     fixture.detectChanges();
+    expect(component.canLockSyllabus()).toBe(false);
 
-    expect(component.canApproveSyllabus()).toBe(false);
-  });
-
-  it('ADMIN không có thẩm quyền học thuật để duyệt CONFIRMED đề cương (ADR 0010)', () => {
     component.userRoles.set([SystemConstant.ROLE.ADMIN]);
     fixture.detectChanges();
+    expect(component.canLockSyllabus()).toBe(false);
 
-    expect(component.canApproveSyllabus()).toBe(false);
+    component.userRoles.set([SystemConstant.ROLE.QA]);
+    fixture.detectChanges();
+    expect(component.canLockSyllabus()).toBe(false);
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.textContent).not.toContain('Phê duyệt Đề cương');
+    expect(compiled.textContent).not.toContain('Khóa đề cương');
   });
 
-  it('khóa đề cương khi ở trạng thái CONFIRMED (TD-27)', () => {
-    component.changeStatus('CONFIRMED');
+  it('confirmLockSyllabus mở modal xác nhận và gọi lockSyllabus chuyển sang ARCHIVED (TD-27)', () => {
+    component.confirmLockSyllabus();
     fixture.detectChanges();
 
-    expect(component.syllabus()?.status).toBe('CONFIRMED');
+    expect(modalSvc.confirm).toHaveBeenCalled();
+    expect(syllabusSvc.lockSyllabus).toHaveBeenCalledWith(syllabusId);
+    expect(component.syllabus()?.status).toBe('ARCHIVED');
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.textContent).toContain('TD-27');
   });

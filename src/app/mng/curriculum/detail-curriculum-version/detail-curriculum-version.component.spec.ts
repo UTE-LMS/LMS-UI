@@ -2,8 +2,6 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, provideRouter } from '@angular/router';
 import { SystemConstant } from '@constants/system.constant';
 import {
-  ICoursePiContribution,
-  ICoursePiContributionRequest,
   IPi,
   IPlo,
   IProgramCourse,
@@ -42,6 +40,7 @@ describe('DetailCurriculumVersionComponent (F02 US-06, US-07, US-08 UI.pdf Trang
     name: 'Công nghệ thông tin',
     level: 'Đại học',
     degree: 'Kỹ sư',
+    facultyId: 'fac_cntt_01',
   };
 
   // PLO với thứ tự Khoa: PLO1, PLO6, PLO7 (displayOrder 1, 2, 3)
@@ -51,6 +50,7 @@ describe('DetailCurriculumVersionComponent (F02 US-06, US-07, US-08 UI.pdf Trang
       programVersionId: '671dcba5f123456789abcdef',
       code: 'PLO6',
       displayOrder: 2,
+      category: 'SPECIALIZED',
       capabilityLevelRaw: 4,
       contentSummary: 'Làm việc nhóm',
     },
@@ -59,6 +59,7 @@ describe('DetailCurriculumVersionComponent (F02 US-06, US-07, US-08 UI.pdf Trang
       programVersionId: '671dcba5f123456789abcdef',
       code: 'PLO1',
       displayOrder: 1,
+      category: 'GENERAL',
       capabilityLevelRaw: 3,
       contentSummary: 'Kiến thức cơ bản',
     },
@@ -86,16 +87,6 @@ describe('DetailCurriculumVersionComponent (F02 US-06, US-07, US-08 UI.pdf Trang
     },
   ];
 
-  const mockContributions: ICoursePiContribution[] = [
-    {
-      id: 'contrib_1',
-      programVersionId: '671dcba5f123456789abcdef',
-      courseId: 'course_1',
-      piId: 'pi_1_1',
-      contribution: 'I',
-    },
-  ];
-
   const mockCourses: IProgramCourse[] = [
     {
       id: 'pc_1',
@@ -112,6 +103,7 @@ describe('DetailCurriculumVersionComponent (F02 US-06, US-07, US-08 UI.pdf Trang
 
   const versionSvc = {
     getProgramVersionById: vi.fn(() => of(mockVersion)),
+    lockProgramVersion: vi.fn(() => of({ ...mockVersion, status: 'ARCHIVED' as const })),
   };
 
   const programSvc = {
@@ -121,26 +113,12 @@ describe('DetailCurriculumVersionComponent (F02 US-06, US-07, US-08 UI.pdf Trang
   const ploPiSvc = {
     getPlos: vi.fn(() => of(mockPlos)),
     getPis: vi.fn(() => of(mockPis)),
-    getContributions: vi.fn(() => of(mockContributions)),
     getProgramCourses: vi.fn(() => of(mockCourses)),
-    createContribution: vi.fn((pvId: string, req: ICoursePiContributionRequest) => of({
-      id: 'contrib_new',
-      programVersionId: pvId,
-      courseId: req.courseId,
-      piId: req.piId,
-      contribution: req.contribution,
-    })),
-    deleteContribution: vi.fn(() => of(undefined)),
   };
 
   const authSvc = {
     getRoles: vi.fn<() => string[]>(() => [SystemConstant.ROLE.PROGRAM_MANAGER, SystemConstant.ROLE.QA]),
-    getRoleAssignments: vi.fn(() => [
-      {
-        role: SystemConstant.ROLE.PROGRAM_MANAGER,
-        scope: { programIds: ['671dcba5f123456789abcde1'] },
-      },
-    ]),
+    getFacultyId: vi.fn<() => string | undefined>(() => 'fac_cntt_01'),
   };
 
   const alertSvc = {
@@ -148,7 +126,16 @@ describe('DetailCurriculumVersionComponent (F02 US-06, US-07, US-08 UI.pdf Trang
     error: vi.fn(),
   };
 
+  const modalSvc = {
+    confirm: vi.fn((opts: { nzOnOk?: () => void; }) => {
+      opts.nzOnOk?.();
+    }),
+  };
+
   beforeEach(async () => {
+    vi.clearAllMocks();
+    versionSvc.getProgramVersionById.mockReturnValue(of(mockVersion));
+
     await TestBed.configureTestingModule({
       imports: [DetailCurriculumVersionComponent],
       providers: [
@@ -168,11 +155,19 @@ describe('DetailCurriculumVersionComponent (F02 US-06, US-07, US-08 UI.pdf Trang
         { provide: PloPiService, useValue: ploPiSvc },
         { provide: AuthService, useValue: authSvc },
         { provide: ToastrService, useValue: alertSvc },
+        { provide: (await import('ng-zorro-antd/modal')).NzModalService, useValue: modalSvc },
       ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(DetailCurriculumVersionComponent);
     component = fixture.componentInstance;
+    const realModal = fixture.debugElement.injector.get(
+      (await import('ng-zorro-antd/modal')).NzModalService,
+    );
+    vi.spyOn(realModal, 'confirm').mockImplementation(((opts?: { nzOnOk?: () => unknown; }) => {
+      opts?.nzOnOk?.();
+      return {} as never;
+    }) as never);
     fixture.detectChanges();
   });
 
@@ -196,9 +191,44 @@ describe('DetailCurriculumVersionComponent (F02 US-06, US-07, US-08 UI.pdf Trang
     expect(rows.length).toBe(4); // 2 PLO + 2 PI
     expect(rows[0].code).toBe('PLO1');
     expect(rows[0].isPlo).toBe(true);
+    expect(rows[0].categoryLabel).toBe('Kiến thức chung');
     expect(rows[1].code).toBe('PI1.1');
     expect(rows[1].isPlo).toBe(false);
     expect(rows[2].code).toBe('PLO6');
+    expect(rows[2].categoryLabel).toBe('Chuyên ngành');
     expect(rows[3].code).toBe('PI6.1');
+
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.textContent).toContain('Bậc 3');
+    expect(el.textContent).toContain('Bậc 4');
+    expect(el.textContent).toContain('Kiến thức chung');
+    expect(el.textContent).toContain('Chuyên ngành');
+  });
+
+  it('canImportProgramCourses chỉ bật khi phiên bản ở trạng thái ACTIVE (chưa khóa) và đúng quyền', () => {
+    // Mặc định mockVersion đang ACTIVE
+    expect(component.canImportProgramCourses()).toBe(true);
+
+    // Khi đã khóa (ARCHIVED) thì không hiển thị import nữa
+    component.version.set({ ...mockVersion, status: 'ARCHIVED' });
+    fixture.detectChanges();
+    expect(component.canImportProgramCourses()).toBe(false);
+
+    // QA không có quyền import ngay cả khi ACTIVE
+    component.version.set({ ...mockVersion, status: 'ACTIVE' });
+    component.userRoles.set([SystemConstant.ROLE.QA]);
+    expect(component.canImportProgramCourses()).toBe(false);
+  });
+
+  it('confirmLockVersion mở modal xác nhận và gọi lockProgramVersion chuyển phiên bản sang ARCHIVED', async () => {
+    expect(component.canManage()).toBe(true);
+    const realModal = fixture.debugElement.injector.get(
+      (await import('ng-zorro-antd/modal')).NzModalService,
+    );
+    component.confirmLockVersion();
+    expect(realModal.confirm).toHaveBeenCalled();
+    expect(versionSvc.lockProgramVersion).toHaveBeenCalledWith('671dcba5f123456789abcdef');
+    expect(component.version()?.status).toBe('ARCHIVED');
+    expect(alertSvc.success).toHaveBeenCalled();
   });
 });

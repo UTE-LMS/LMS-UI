@@ -4,161 +4,38 @@ import {
   CourseCategory,
   ICourse,
   IProgramCourse,
+  IProgramCourseCsvImportResponse,
 } from '@models/course/course.model';
+import { ProgramVersionStatus } from '@models/program/program-version.model';
+import { toApiError } from '@services/common/api-error.util';
 import { CourseService } from '@services/course/course.service';
 import { NzButtonModule } from 'ng-zorro-antd/button';
+import { NzModalModule } from 'ng-zorro-antd/modal';
 import { NzSelectModule } from 'ng-zorro-antd/select';
 import { NzTableModule } from 'ng-zorro-antd/table';
+import { ToastrService } from 'ngx-toastr';
 
 @Component({
   selector: 'app-program-courses-table',
-  template: `
-    <div class="section-card">
-      <div class="section-header flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
-        <div>
-          <h2 class="section-title text-base font-bold text-slate-900 m-0">
-            Kế hoạch Học phần trong Chương trình Đào tạo (US-09)
-          </h2>
-          <div class="section-description text-xs text-slate-500 mt-0.5">
-            Cấu hình học kỳ dự kiến, khối kiến thức, điều kiện học phần tiên quyết và học phần học trước
-          </div>
-        </div>
-
-        <div class="flex flex-wrap items-center gap-2.5">
-          <nz-select
-            class="w-40"
-            nzAllowClear
-            nzPlaceHolder="Lọc theo Học kỳ"
-            [ngModel]="filterSemester()"
-            (ngModelChange)="filterSemester.set($event)"
-          >
-            @for (sem of semesterOptions; track sem) {
-            <nz-option [nzValue]="sem" [nzLabel]="'Học kỳ ' + sem" />
-            }
-          </nz-select>
-
-          <nz-select
-            class="w-48"
-            nzAllowClear
-            nzPlaceHolder="Lọc theo Khối kiến thức"
-            [ngModel]="filterCategory()"
-            (ngModelChange)="filterCategory.set($event)"
-          >
-            @for (cat of categoryOptions; track cat.value) {
-            <nz-option [nzValue]="cat.value" [nzLabel]="cat.label" />
-            }
-          </nz-select>
-        </div>
-      </div>
-
-      <nz-table
-        #pcTable
-        [nzData]="filteredProgramCourses()"
-        [nzShowPagination]="false"
-        [nzFrontPagination]="false"
-        [nzScroll]="{ x: '960px' }"
-      >
-        <thead>
-          <tr>
-            <th nzWidth="24%">Mã & Tên học phần</th>
-            <th nzWidth="9%" nzAlign="center">Học kỳ</th>
-            <th nzWidth="9%" nzAlign="center">Tín chỉ</th>
-            <th nzWidth="12%" nzAlign="center">Loại / Khối</th>
-            <th nzWidth="15%">Học phần tiên quyết</th>
-            <th nzWidth="15%">Học phần học trước</th>
-            <th nzWidth="16%" nzAlign="right">Thao tác</th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (pc of filteredProgramCourses(); track pc.id) {
-          <tr>
-            <td>
-              <div class="font-bold text-slate-900">{{ getCourseCode(pc) }}</div>
-              <div class="text-xs text-slate-600">{{ getCourseName(pc) }}</div>
-            </td>
-            <td nzAlign="center">
-              <span>{{ pc.semester !== undefined && pc.semester !== null ? 'HK ' + pc.semester : '—' }}</span>
-            </td>
-            <td nzAlign="center">
-              <span class="font-semibold">{{ pc.credits ?? pc.course?.credits ?? '—' }}</span>
-            </td>
-            <td nzAlign="center">
-              <div class="flex flex-col items-center gap-1">
-                @if (pc.type === 'COMPULSORY') {
-                <span class="text-xs px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200 font-medium">
-                  Bắt buộc
-                </span>
-                } @else if (pc.type === 'ELECTIVE') {
-                <span class="text-xs px-2 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200 font-medium">
-                  Tự chọn
-                </span>
-                } @else {
-                <span class="text-slate-400 text-xs">—</span>
-                }
-                @if (pc.category) {
-                <span class="text-xs text-slate-500">{{ getCategoryLabel(pc.category) }}</span>
-                }
-              </div>
-            </td>
-            <td>
-              <div class="flex flex-wrap gap-1">
-                @for (reqId of pc.prerequisiteCourseIds ?? []; track reqId) {
-                <span class="text-xs px-2 py-0.5 rounded bg-rose-50 text-rose-700 border border-rose-200 font-medium">
-                  {{ getCourseCodeById(reqId) }}
-                </span>
-                } @empty {
-                <span class="text-slate-400 text-xs">—</span>
-                }
-              </div>
-            </td>
-            <td>
-              <div class="flex flex-wrap gap-1">
-                @for (prevId of pc.previousCourseIds ?? []; track prevId) {
-                <span class="text-xs px-2 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200 font-medium">
-                  {{ getCourseCodeById(prevId) }}
-                </span>
-                } @empty {
-                <span class="text-slate-400 text-xs">—</span>
-                }
-              </div>
-            </td>
-            <td nzAlign="right">
-              <div class="inline-flex flex-wrap items-center justify-end gap-2">
-                <button
-                  type="button"
-                  class="text-indigo-600 hover:underline text-xs font-medium bg-transparent border-0 cursor-pointer"
-                  (click)="openCloPiMatrix.emit(pc.courseId)"
-                >
-                  Liên kết CLO–PI
-                </button>
-              </div>
-            </td>
-          </tr>
-          } @empty {
-          <tr>
-            <td colspan="7" class="text-center py-8 text-slate-400">
-              Chưa có học phần nào khớp điều kiện trong phiên bản chương trình đào tạo này
-            </td>
-          </tr>
-          }
-        </tbody>
-      </nz-table>
-    </div>
-  `,
+  templateUrl: './program-courses-table.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     FormsModule,
     NzTableModule,
     NzButtonModule,
     NzSelectModule,
+    NzModalModule,
   ],
 })
 export class ProgramCoursesTableComponent implements OnInit {
   private readonly courseSvc = inject(CourseService);
+  private readonly alert = inject(ToastrService, { optional: true });
 
   readonly versionId = input.required<string>();
+  readonly versionStatus = input<ProgramVersionStatus | undefined>(undefined);
   readonly programCourses = input<IProgramCourse[]>([]);
   readonly canManage = input<boolean>(false);
+  readonly canImportCourses = input<boolean>(false);
 
   readonly changed = output<void>();
   readonly openCloPiMatrix = output<string>();
@@ -166,6 +43,13 @@ export class ProgramCoursesTableComponent implements OnInit {
   readonly allCourses = signal<ICourse[]>([]);
   readonly filterSemester = signal<number | null>(null);
   readonly filterCategory = signal<CourseCategory | null>(null);
+
+  // Modal Import Khung học phần CSV
+  readonly isImportModalVisible = signal(false);
+  readonly selectedFile = signal<File | null>(null);
+  readonly isImporting = signal(false);
+  readonly importResult = signal<IProgramCourseCsvImportResponse | null>(null);
+  readonly importErrorMsg = signal<string | null>(null);
 
   readonly semesterOptions = [1, 2, 3, 4, 5, 6, 7, 8];
 
@@ -206,6 +90,73 @@ export class ProgramCoursesTableComponent implements OnInit {
     });
   }
 
+  openImportModal(): void {
+    this.selectedFile.set(null);
+    this.importResult.set(null);
+    this.importErrorMsg.set(null);
+    this.isImportModalVisible.set(true);
+  }
+
+  closeImportModal(): void {
+    if (this.isImporting()) {
+      return;
+    }
+    this.isImportModalVisible.set(false);
+  }
+
+  onFileSelected(event: Event): void {
+    const inputEl = event.target as HTMLInputElement;
+    const file = inputEl.files?.[0] ?? null;
+    this.selectedFile.set(file);
+    this.importResult.set(null);
+    this.importErrorMsg.set(null);
+  }
+
+  downloadImportTemplate(): void {
+    this.courseSvc.downloadProgramCoursesImportTemplate(this.versionId()).subscribe({
+      next: blob => {
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', 'program-courses-template.csv');
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      },
+      error: err => {
+        const apiErr = toApiError(err);
+        this.alert?.error(apiErr?.message ?? 'Không thể tải tệp mẫu CSV');
+      },
+    });
+  }
+
+  submitImport(): void {
+    const file = this.selectedFile();
+    if (!file) {
+      return;
+    }
+    this.isImporting.set(true);
+    this.importErrorMsg.set(null);
+    this.importResult.set(null);
+
+    this.courseSvc.importProgramCoursesCsv(this.versionId(), file).subscribe({
+      next: res => {
+        this.isImporting.set(false);
+        this.importResult.set(res);
+        this.alert?.success(`Import thành công: ${res.importedCount} thêm mới, ${res.updatedCount} cập nhật`);
+        this.changed.emit();
+      },
+      error: err => {
+        this.isImporting.set(false);
+        const apiErr = toApiError(err);
+        const msg = apiErr?.message ?? 'Import khung học phần thất bại';
+        this.importErrorMsg.set(msg);
+        this.alert?.error(msg);
+      },
+    });
+  }
+
   getCategoryLabel(cat?: string): string {
     if (!cat) {
       return '—';
@@ -231,5 +182,14 @@ export class ProgramCoursesTableComponent implements OnInit {
       return fromPc;
     }
     return this.allCourses().find(c => c.id === courseId)?.code ?? courseId;
+  }
+
+  getCourseTooltip(courseId: string): string {
+    const fromPc = this.programCourses().find(p => p.courseId === courseId)?.course;
+    const found = fromPc ?? this.allCourses().find(c => c.id === courseId);
+    if (!found) {
+      return courseId;
+    }
+    return `${found.code} — ${found.name}`;
   }
 }

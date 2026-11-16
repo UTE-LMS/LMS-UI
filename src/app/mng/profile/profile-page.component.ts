@@ -4,7 +4,7 @@ import { Router } from '@angular/router';
 import { UrlConstant } from '@constants/url.constant';
 import { IUserProfile } from '@models/auth/auth.model';
 import { IUserError } from '@models/common/user-error.model';
-import { describeScope, roleLabel, scopeIdsTooltip } from '@mng/users/users.util';
+import { describeRoleScope, roleLabel } from '@mng/users/users.util';
 import { AuthService } from '@services/auth/auth.service';
 import { toUserError } from '@services/common/api-error.util';
 import { ErrorStateComponent } from '@widget/error-state/error-state.component';
@@ -27,8 +27,7 @@ export class ProfilePageComponent implements OnInit {
   private readonly router = inject(Router);
 
   protected readonly roleLabel = roleLabel;
-  protected readonly describeScope = describeScope;
-  protected readonly scopeIdsTooltip = scopeIdsTooltip;
+  protected readonly describeRoleScope = describeRoleScope;
 
   readonly profile = signal<IUserProfile | null>(null);
   readonly loading = signal(false);

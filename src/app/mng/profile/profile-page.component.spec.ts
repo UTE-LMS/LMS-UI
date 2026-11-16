@@ -15,7 +15,7 @@ describe('ProfilePageComponent (Tài khoản của tôi)', () => {
     authSvc = {
       // DỮ LIỆU THỬ NGHIỆM
       getProfile: vi.fn(() => of({ id: 'u1', username: 'gv.test', email: '', fullName: '', status: 'ACTIVE',
-        roleAssignments: [{ role: 'LECTURER', scope: { programIds: [], courseIds: ['c1'], sectionIds: [] } }] })),
+        roles: ['LECTURER'] })),
       logout: vi.fn(() => of(undefined)),
     };
     await TestBed.configureTestingModule({

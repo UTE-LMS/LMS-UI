@@ -1,7 +1,4 @@
 <div class="page-header mb-6">
-  <div class="text-xs uppercase tracking-wider font-semibold text-blue-600 mb-1">
-    Bộ môn & Giảng viên (ADR 0010)
-  </div>
   <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
     <div>
       <h1 class="text-2xl font-bold text-slate-900 tracking-tight m-0">
@@ -30,16 +27,6 @@
       </button>
       }
     </div>
-  </div>
-</div>
-
-<!-- Banner hướng dẫn quy trình Import CSV Đề cương (F03) -->
-<div class="alert-banner mb-6">
-  <div class="alert-icon-box">
-    <i class="fa-solid fa-circle-info text-base"></i>
-  </div>
-  <div class="alert-text">
-    <strong>Quản lý CTĐT (PROGRAM_MANAGER)</strong> nhập đề cương và danh sách CLO / liên kết CLO–PI thông qua <strong>Import CSV (3 bước: Chọn tệp → Kiểm tra → Lưu và xác nhận)</strong>, sau đó phê duyệt chuyển sang <strong>Chính thức (CONFIRMED)</strong>. Muốn chỉnh sửa nội dung đề cương, cập nhật tệp CSV và import lại.
   </div>
 </div>
 
@@ -78,7 +65,7 @@
   </div>
 
   <div class="flex items-center gap-3">
-    @if (!isAdmin() && scopeCourseIds().length > 0) {
+    @if (!isAdmin() && pmFacultyId()) {
     <button
       nz-button
       nzType="default"
@@ -86,7 +73,7 @@
       (click)="toggleShowAllCourses()"
     >
       <i class="fa-solid fa-filter mr-1.5"></i>
-      {{ showAllCourses() ? 'Chỉ hiện môn trong Scope phụ trách' : 'Tra cứu toàn bộ học phần trường' }}
+      {{ showAllCourses() ? 'Chỉ hiện môn thuộc Khoa phụ trách' : 'Tra cứu toàn bộ học phần trường' }}
     </button>
     }
 
@@ -148,10 +135,8 @@
           <span class="font-bold text-slate-900">{{ s.version }}</span>
         </td>
         <td nzAlign="center">
-          @if (s.status === 'CONFIRMED') {
-          <app-status-chip label="Đã duyệt (CONFIRMED)" tone="success" icon="fa-circle-check" />
-          } @else if (s.status === 'DRAFT') {
-          <app-status-chip label="Bản nháp (DRAFT)" tone="warning" icon="fa-pen-ruler" lineStyle="dashed" />
+          @if (isActiveOrConfirmed(s)) {
+          <app-status-chip label="Đang áp dụng" tone="success" icon="fa-circle-check" />
           } @else {
           <app-status-chip label="Lưu trữ (ARCHIVED)" tone="neutral" icon="fa-box-archive" />
           }
@@ -167,12 +152,23 @@
           }
         </td>
         <td nzAlign="right">
-          <a
-            class="table-action-link"
-            [routerLink]="['/mng/syllabi', s.id]"
-          >
-            Mở chi tiết & CLO <i class="fa-solid fa-arrow-right ml-1 text-xs"></i>
-          </a>
+          <div class="flex items-center justify-end gap-3">
+            <a
+              class="table-action-link"
+              [routerLink]="['/mng/syllabi', s.id]"
+            >
+              Mở chi tiết & CLO <i class="fa-solid fa-arrow-right ml-1 text-xs"></i>
+            </a>
+            @if (canLockSyllabus(s)) {
+            <button
+              type="button"
+              class="table-action-link text-rose-600 hover:text-rose-800"
+              (click)="confirmLockSyllabus(s)"
+            >
+              Khóa
+            </button>
+            }
+          </div>
         </td>
       </tr>
       }
@@ -200,7 +196,7 @@
   }
 </ng-template>
 
-<!-- Modal Import CSV Đề cương 3 bước (F03) -->
+<!-- Modal Import CSV Đề cương 2 bước (F03) -->
 <nz-modal
   [nzVisible]="isImportModalVisible()"
   nzTitle="Import CSV Đề cương Học phần (F03)"
@@ -209,7 +205,7 @@
   [nzFooter]="importModalFooter"
 >
   <ng-container *nzModalContent>
-    <!-- Thanh 3 bước -->
+    <!-- Thanh 2 bước -->
     <div class="flex items-center justify-between gap-2 mb-5 p-3 rounded-lg bg-slate-50 border border-slate-200 text-xs">
       <div class="flex items-center gap-2" [class.font-bold]="importStep() === 1" [class.text-blue-700]="importStep() === 1">
         <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-blue-600 text-white font-bold">1</span>
@@ -218,12 +214,7 @@
       <div class="h-px flex-1 bg-slate-300"></div>
       <div class="flex items-center gap-2" [class.font-bold]="importStep() === 2" [class.text-blue-700]="importStep() === 2">
         <span class="inline-flex items-center justify-center w-5 h-5 rounded-full" [class.bg-blue-600]="importStep() >= 2" [class.text-white]="importStep() >= 2" [class.bg-slate-300]="importStep() < 2">2</span>
-        <span>Kiểm tra dữ liệu</span>
-      </div>
-      <div class="h-px flex-1 bg-slate-300"></div>
-      <div class="flex items-center gap-2" [class.font-bold]="importStep() === 3" [class.text-blue-700]="importStep() === 3">
-        <span class="inline-flex items-center justify-center w-5 h-5 rounded-full" [class.bg-blue-600]="importStep() === 3" [class.text-white]="importStep() === 3" [class.bg-slate-300]="importStep() < 3">3</span>
-        <span>Lưu & Xác nhận</span>
+        <span>Xem trước & Xác nhận</span>
       </div>
     </div>
 
@@ -339,14 +330,6 @@
         </table>
       </div>
     </div>
-    } @else if (importStep() === 3 && importPreview(); as preview) {
-    <div class="p-4 rounded-lg bg-emerald-50 border border-emerald-200 text-sm text-emerald-900 space-y-2">
-      <div class="font-bold">Sẵn sàng xác nhận dữ liệu Import Đề cương</div>
-      <div>
-        Phiên bản <strong>{{ preview.version }}</strong> với <strong>{{ preview.cloCount }} CLO</strong> và
-        <strong>{{ preview.linkCount }} liên kết CLO–PI</strong> sẽ được xác nhận (VERIFIED).
-      </div>
-    </div>
     }
   </ng-container>
 
@@ -354,16 +337,13 @@
     <div class="flex justify-end gap-2">
       <button nz-button nzType="default" (click)="closeImportModal()">Hủy</button>
       @if (importStep() === 1) {
-      <button nz-button nzType="primary" [nzLoading]="isImporting()" (click)="runImportStep()">
-        Kiểm tra tệp CSV
+      <button nz-button nzType="primary" [nzLoading]="isImporting()" (click)="previewImportStep()">
+        Xem trước
       </button>
-      } @else if (importStep() === 2) {
-      <button nz-button nzType="default" (click)="importStep.set(1)">Quay lại</button>
-      <button nz-button nzType="primary" (click)="proceedToConfirmStep()">Tiếp tục xác nhận</button>
       } @else {
-      <button nz-button nzType="default" (click)="importStep.set(2)">Quay lại</button>
+      <button nz-button nzType="default" (click)="importStep.set(1)">Quay lại</button>
       <button nz-button nzType="primary" [nzLoading]="isConfirmingImport()" (click)="confirmImportStep()">
-        Lưu và xác nhận
+        Xác nhận Import
       </button>
       }
     </div>

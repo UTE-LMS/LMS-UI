@@ -175,6 +175,18 @@ export default defineConfig([
     ignores: [],
   },
   {
+    files: ["src/app/**/*.component.ts"],
+    rules: {
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector: "ClassDeclaration > Decorator[expression.callee.name='Component'] Property[key.name='template']",
+          message: "Không được viết inline template trong file .component.ts; hãy tách ra file .html và dùng templateUrl.",
+        },
+      ],
+    },
+  },
+  {
     files: ["**/*.{htm,html}"],
     extends: [
       ...angular.configs.templateRecommended,

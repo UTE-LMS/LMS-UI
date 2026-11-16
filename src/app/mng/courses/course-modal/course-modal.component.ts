@@ -1,6 +1,8 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import {
   ChangeDetectionStrategy,
   Component,
+  OnInit,
   effect,
   inject,
   input,
@@ -9,100 +11,26 @@ import {
   untracked,
 } from '@angular/core';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
+import { SystemConstant } from '@constants/system.constant';
 import { ICourse, ICourseRequest, ICourseUpdateRequest } from '@models/course/course.model';
+import { IFaculty } from '@models/faculty/faculty.model';
+import { AuthService } from '@services/auth/auth.service';
 import { toApiError } from '@services/common/api-error.util';
 import { CourseService } from '@services/course/course.service';
+import { FacultyService } from '@services/faculty/faculty.service';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzFormModule } from 'ng-zorro-antd/form';
 import { NzInputModule } from 'ng-zorro-antd/input';
-import { NzModalModule } from 'ng-zorro-antd/modal';
+import { NzModalModule, NzModalService } from 'ng-zorro-antd/modal';
+import { NzSelectModule } from 'ng-zorro-antd/select';
 import { ToastrService } from 'ngx-toastr';
 
 /**
- * Modal Thêm / Sửa Học phần trong Kho cấp trường (F03 US-09/AC-1, ADR 0010 - chỉ dành cho ADMIN).
+ * Modal Thêm / Sửa Học phần trong Kho cấp trường / theo Khoa (F03 US-09/AC-1, M4 PM Decentralization).
  */
 @Component({
   selector: 'app-course-modal',
-  template: `
-    <nz-modal
-      [nzVisible]="isVisible()"
-      [nzTitle]="editingCourse() ? 'Cập nhật học phần cấp trường' : 'Thêm học phần mới vào kho trường'"
-      [nzFooter]="modalFooterTpl"
-      [nzWidth]="520"
-      (nzOnCancel)="handleCancel()"
-      (nzVisibleChange)="onVisibleChange($event)"
-    >
-      <ng-container *nzModalContent>
-        <form [formGroup]="courseForm" nz-form nzLayout="vertical">
-          <nz-form-item>
-            <nz-form-label nzRequired nzFor="courseCode">Mã học phần</nz-form-label>
-            <nz-form-control nzErrorTip="Mã học phần bắt buộc, tối đa 64 ký tự (chữ, số, dấu gạch dưới, gạch ngang, dấu chấm)">
-              <input
-                nz-input
-                id="courseCode"
-                formControlName="code"
-                placeholder="Ví dụ: OOPR230279, APCM220307..."
-              />
-              <small class="text-xs text-slate-500 mt-1 block">
-                {{ editingCourse() ? 'Mã học phần là định danh bất biến sau khi khởi tạo.' : 'Định dạng chuẩn Phòng Đào tạo, duy nhất toàn trường.' }}
-              </small>
-            </nz-form-control>
-          </nz-form-item>
-
-          <nz-form-item>
-            <nz-form-label nzRequired nzFor="courseName">Tên học phần</nz-form-label>
-            <nz-form-control nzErrorTip="Tên học phần không được để trống (tối đa 255 ký tự)">
-              <input
-                nz-input
-                id="courseName"
-                formControlName="name"
-                placeholder="Ví dụ: Lập trình hướng đối tượng..."
-              />
-            </nz-form-control>
-          </nz-form-item>
-
-          <nz-form-item>
-            <nz-form-label nzFor="courseCredits">Số tín chỉ chuẩn</nz-form-label>
-            <nz-form-control nzErrorTip="Số tín chỉ phải là số nguyên không âm">
-              <input
-                nz-input
-                type="number"
-                min="0"
-                step="1"
-                id="courseCredits"
-                formControlName="credits"
-                placeholder="Để trống nếu chưa quy định (không tự gán 0)"
-              />
-            </nz-form-control>
-          </nz-form-item>
-        </form>
-      </ng-container>
-
-      <ng-template #modalFooterTpl>
-        <div class="flex items-center justify-end gap-2.5">
-          <button
-            nz-button
-            nzType="default"
-            type="button"
-            [disabled]="isSubmitting()"
-            (click)="handleCancel()"
-          >
-            Hủy
-          </button>
-          <button
-            nz-button
-            nzType="primary"
-            type="button"
-            [nzLoading]="isSubmitting()"
-            [disabled]="isSubmitting()"
-            (click)="submitCourse()"
-          >
-            {{ editingCourse() ? 'Lưu thay đổi' : 'Thêm học phần' }}
-          </button>
-        </div>
-      </ng-template>
-    </nz-modal>
-  `,
+  templateUrl: './course-modal.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     FormsModule,
@@ -111,12 +39,16 @@ import { ToastrService } from 'ngx-toastr';
     NzButtonModule,
     NzFormModule,
     NzInputModule,
+    NzSelectModule,
   ],
 })
-export class CourseModalComponent {
+export class CourseModalComponent implements OnInit {
   private readonly courseSvc = inject(CourseService);
+  private readonly facultySvc = inject(FacultyService, { optional: true });
+  private readonly authSvc = inject(AuthService, { optional: true });
   private readonly fb = inject(FormBuilder);
   private readonly alert = inject(ToastrService);
+  private readonly nzModalSvc = inject(NzModalService, { optional: true });
 
   readonly isVisible = input<boolean>(false);
   readonly editingCourse = input<ICourse | null>(null);
@@ -125,8 +57,10 @@ export class CourseModalComponent {
   readonly savedSuccess = output<ICourse>();
 
   readonly isSubmitting = signal(false);
+  readonly faculties = signal<IFaculty[]>([]);
 
   readonly courseForm: FormGroup = this.fb.group({
+    facultyId: [''],
     code: ['', [Validators.required, Validators.maxLength(64), Validators.pattern(/^[A-Za-z0-9_.-]+$/)]],
     name: ['', [Validators.required, Validators.maxLength(255)]],
     credits: [null as number | null, [Validators.min(0)]],
@@ -138,8 +72,15 @@ export class CourseModalComponent {
       const current = this.editingCourse();
       if (visible) {
         untracked(() => {
+          const roles = this.authSvc?.getRoles?.() ?? [];
+          const isPmOnly =
+            roles.includes(SystemConstant.ROLE.PROGRAM_MANAGER)
+            && !roles.includes(SystemConstant.ROLE.ADMIN);
+          const pmFacultyId = this.authSvc?.getFacultyId?.() ?? '';
+
           if (current) {
             this.courseForm.reset({
+              facultyId: current.facultyId ?? (isPmOnly ? pmFacultyId : ''),
               code: current.code,
               name: current.name,
               credits: current.credits ?? null,
@@ -147,14 +88,27 @@ export class CourseModalComponent {
             this.courseForm.get('code')?.disable();
           } else {
             this.courseForm.reset({
+              facultyId: isPmOnly ? pmFacultyId : '',
               code: '',
               name: '',
               credits: null,
             });
             this.courseForm.get('code')?.enable();
           }
+          if (isPmOnly) {
+            this.courseForm.get('facultyId')?.disable();
+          } else {
+            this.courseForm.get('facultyId')?.enable();
+          }
         });
       }
+    });
+  }
+
+  ngOnInit(): void {
+    this.facultySvc?.getFaculties(0, 100, undefined, true).subscribe({
+      next: res => this.faculties.set(res.content || []),
+      error: () => undefined,
     });
   }
 
@@ -178,6 +132,7 @@ export class CourseModalComponent {
     }
 
     const raw = this.courseForm.getRawValue() as {
+      facultyId: string;
       code: string;
       name: string;
       credits: number | string | null;
@@ -194,6 +149,7 @@ export class CourseModalComponent {
       const updatePayload: ICourseUpdateRequest = {
         name: raw.name.trim(),
         credits: parsedCredits,
+        ...(raw.facultyId ? { facultyId: raw.facultyId } : {}),
       };
       this.courseSvc.updateCourse(current.id, updatePayload).subscribe({
         next: saved => {
@@ -202,8 +158,11 @@ export class CourseModalComponent {
           this.visibleChange.emit(false);
           this.savedSuccess.emit(saved);
         },
-        error: err => {
+        error: (err: unknown) => {
           this.isSubmitting.set(false);
+          if (this.handleLockedCourseError(err)) {
+            return;
+          }
           const apiErr = toApiError(err);
           this.alert.error(apiErr?.message ?? 'Không thể cập nhật học phần');
         },
@@ -213,6 +172,7 @@ export class CourseModalComponent {
         code: raw.code.trim().toUpperCase(),
         name: raw.name.trim(),
         credits: parsedCredits,
+        ...(raw.facultyId ? { facultyId: raw.facultyId } : {}),
       };
       this.courseSvc.createCourse(createPayload).subscribe({
         next: saved => {
@@ -221,12 +181,38 @@ export class CourseModalComponent {
           this.visibleChange.emit(false);
           this.savedSuccess.emit(saved);
         },
-        error: err => {
+        error: (err: unknown) => {
           this.isSubmitting.set(false);
+          if (this.handleLockedCourseError(err)) {
+            return;
+          }
           const apiErr = toApiError(err);
           this.alert.error(apiErr?.message ?? 'Không thể thêm học phần');
         },
       });
     }
+  }
+
+  private handleLockedCourseError(err: unknown): boolean {
+    const apiErr = toApiError(err);
+    const httpErr = err as HttpErrorResponse | undefined;
+    const errBody = httpErr?.error as { code?: string; message?: string; } | undefined;
+    const code = apiErr?.code ?? errBody?.code;
+    const status = apiErr?.status ?? httpErr?.status;
+    if (status === 422 || code === 'COURSE_LOCKED_BY_PROGRAM_VERSION') {
+      const rawMsg = (apiErr?.message ?? errBody?.message ?? '').trim();
+      const msg =
+        rawMsg.length > 0
+          ? rawMsg
+          : 'Học phần đã thuộc về phiên bản CTĐT đang áp dụng (ACTIVE) hoặc lưu trữ (ARCHIVED). Không được chỉnh sửa.';
+      this.nzModalSvc?.warning({
+        nzTitle: 'Thao tác bị từ chối (422 Locked)',
+        nzContent: msg,
+        nzOkText: 'Đã hiểu',
+        nzWidth: 460,
+      });
+      return true;
+    }
+    return false;
   }
 }

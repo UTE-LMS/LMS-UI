@@ -31,10 +31,8 @@
         </span>
         @if (syllabus()?.status; as st) {
         <span>
-          @if (st === 'CONFIRMED') {
-          <app-status-chip label="Đã duyệt (CONFIRMED)" tone="success" icon="fa-circle-check" />
-          } @else if (st === 'DRAFT') {
-          <app-status-chip label="Bản nháp (DRAFT)" tone="warning" icon="fa-pen-ruler" lineStyle="dashed" />
+          @if (isActiveOrConfirmed()) {
+          <app-status-chip label="Đang áp dụng" tone="success" icon="fa-circle-check" />
           } @else {
           <app-status-chip label="Lưu trữ (ARCHIVED)" tone="neutral" icon="fa-box-archive" />
           }
@@ -43,7 +41,7 @@
       </div>
     </div>
 
-    <!-- Nút hành động của Trưởng bộ môn / Admin (ADR 0010) -->
+    <!-- Nút hành động: Khung bài đánh giá (F04) & Khóa đề cương cho PROGRAM_MANAGER (M4) -->
     <div class="flex flex-wrap items-center gap-2.5">
       <!-- F04: khung bài đánh giá theo đề cương (mẫu để sao chép sang bài của từng lớp) -->
       @if (syllabus()) {
@@ -52,32 +50,21 @@
         <i class="fa-solid fa-clipboard-list mr-1.5"></i>Khung bài đánh giá
       </a>
       }
-      @if (canApproveSyllabus() && syllabus()?.status === 'DRAFT') {
+      @if (canLockSyllabus()) {
       <button
         nz-button
-        nzType="primary"
-        class="bg-emerald-600 hover:bg-emerald-700 border-emerald-600 text-white rounded-lg font-medium"
-        (click)="changeStatus('CONFIRMED')"
+        nzDanger
+        class="rounded-lg font-medium"
+        (click)="confirmLockSyllabus()"
       >
-        <i class="fa-solid fa-check-double mr-1.5"></i>Phê duyệt Đề cương (CONFIRMED)
-      </button>
-      }
-
-      @if (canApproveSyllabus() && syllabus()?.status === 'CONFIRMED') {
-      <button
-        nz-button
-        nzType="default"
-        class="rounded-lg font-medium text-slate-700"
-        (click)="changeStatus('ARCHIVED')"
-      >
-        <i class="fa-solid fa-box-archive mr-1.5"></i>Chuyển vào Lưu trữ (ARCHIVED)
+        <i class="fa-solid fa-lock mr-1.5"></i>Khóa đề cương (ARCHIVED)
       </button>
       }
     </div>
   </div>
 
   <!-- Banner cảnh báo khóa đề cương khi CONFIRMED / ARCHIVED (TD-27) -->
-  @if (syllabus() && syllabus()?.status !== 'DRAFT') {
+  @if (syllabus()) {
   <div
     class="mb-6 p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 flex items-start gap-3 text-sm"
     role="status"
@@ -154,13 +141,29 @@
           <td>
             <div class="text-xs text-slate-700 space-y-1">
               <div>
-                <span class="text-slate-500">Tỷ trọng:</span>
-                <strong class="ml-1">{{ formatRatio(clo.measurement?.defaultWeight) }}</strong>
-              </div>
-              <div>
                 <span class="text-slate-500">Ngưỡng đạt:</span>
                 <strong class="ml-1">{{ formatRatio(clo.measurement?.defaultPassThreshold) }}</strong>
               </div>
+              @if (getLinksForClo(clo.id); as links) {
+              @if (links.length > 0) {
+              <div>
+                <span class="text-slate-500">Tỷ trọng CLO–PI:</span>
+                <div class="mt-0.5 flex flex-wrap gap-1">
+                  @for (link of links; track link.id) {
+                  <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-blue-50 text-blue-800 border border-blue-200 font-medium">
+                    <span>{{ getPiCode(link.piId) }}:</span>
+                    <strong>{{ formatWeight(link.weight) }}</strong>
+                  </span>
+                  }
+                </div>
+              </div>
+              } @else {
+              <div>
+                <span class="text-slate-500">Tỷ trọng:</span>
+                <strong class="ml-1">{{ formatRatio(clo.measurement?.defaultWeight) }}</strong>
+              </div>
+              }
+              }
             </div>
           </td>
         </tr>

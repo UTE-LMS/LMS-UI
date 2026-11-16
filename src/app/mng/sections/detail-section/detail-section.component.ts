@@ -144,7 +144,7 @@ export class DetailSectionComponent implements OnInit {
     () => new Map(this.users().map(user => [user.id, user.username])),
   );
 
-  readonly lecturerOptions = computed(() => this.users().filter(user => user.status === 'ACTIVE' && user.roleAssignments.some(a => a.role === SystemConstant.ROLE.LECTURER)));
+  readonly lecturerOptions = computed(() => this.users().filter(user => user.status === 'ACTIVE' && user.roles.includes(SystemConstant.ROLE.LECTURER)));
 
   readonly lecturerListAvailable = computed(() => this.isAdmin() && this.users().length > 0);
 

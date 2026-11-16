@@ -15,7 +15,6 @@ import { ICourse } from '@models/course/course.model';
 import { ISyllabus, ISyllabusCsvImportResponse } from '@models/course/syllabus.model';
 import { ITerm } from '@models/course/term.model';
 import { IProgramVersion } from '@models/program/program-version.model';
-import { IRoleAssignment } from '@models/user/user.model';
 import { AuthService } from '@services/auth/auth.service';
 import { toApiError } from '@services/common/api-error.util';
 import { CourseService } from '@services/course/course.service';
@@ -25,7 +24,7 @@ import { ProgramVersionService } from '@services/program/program-version.service
 import { StatusChipComponent } from '@widget/status-chip/status-chip.component';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzInputModule } from 'ng-zorro-antd/input';
-import { NzModalModule } from 'ng-zorro-antd/modal';
+import { NzModalModule, NzModalService } from 'ng-zorro-antd/modal';
 import { NzSelectModule } from 'ng-zorro-antd/select';
 import { NzTableModule } from 'ng-zorro-antd/table';
 import { ToastrService } from 'ngx-toastr';
@@ -33,7 +32,6 @@ import {
   catchError,
   debounceTime,
   distinctUntilChanged,
-  forkJoin,
   of,
   Subject,
   switchMap,
@@ -63,6 +61,7 @@ export class ListSyllabiComponent implements OnInit {
   private readonly termSvc = inject(TermService);
   private readonly authSvc = inject(AuthService);
   private readonly alert = inject(ToastrService);
+  private readonly modal = inject(NzModalService, { optional: true });
   private readonly destroyRef = inject(DestroyRef);
 
   private readonly searchCourseSubject$ = new Subject<string>();
@@ -76,12 +75,14 @@ export class ListSyllabiComponent implements OnInit {
   readonly currentCourseSearch = signal('');
 
   readonly userRoles = signal<string[]>([]);
-  readonly scopeCourseIds = signal<string[]>([]);
-  readonly scopeProgramIds = signal<string[]>([]);
+  readonly pmFacultyId = signal<string | undefined>(undefined);
   readonly showAllCourses = signal(false);
 
   readonly allCourses = signal<ICourse[]>([]);
-  readonly scopedCourses = signal<ICourse[]>([]);
+  readonly scopedCourses = computed(() => {
+    const fid = this.pmFacultyId();
+    return fid ? this.allCourses().filter(c => c.facultyId === fid) : [];
+  });
   readonly terms = signal<ITerm[]>([]);
   readonly programVersions = signal<IProgramVersion[]>([]);
   readonly selectedCourseId = signal<string>('');
@@ -89,9 +90,9 @@ export class ListSyllabiComponent implements OnInit {
   readonly isLoadingSyllabi = signal(false);
   readonly hasError = signal(false);
 
-  /** Modal Import CSV Đề cương 3 bước (Chọn tệp -> Kiểm tra -> Lưu và xác nhận) */
+  /** Modal Import CSV Đề cương 2 bước (Chọn tệp -> Xem trước & Xác nhận Import) */
   readonly isImportModalVisible = signal(false);
-  readonly importStep = signal<1 | 2 | 3>(1);
+  readonly importStep = signal<1 | 2>(1);
   readonly importVersion = signal('');
   readonly importProgramVersionId = signal('');
   readonly importEffectiveFromTermId = signal<string | null>(null);
@@ -103,15 +104,12 @@ export class ListSyllabiComponent implements OnInit {
   readonly isAdmin = computed(() => this.userRoles().includes(SystemConstant.ROLE.ADMIN));
 
   readonly filteredCourses = computed(() => {
-    const scopedIds = this.scopeCourseIds();
-    if (this.showAllCourses() || this.isAdmin() || scopedIds.length === 0) {
+    const fid = this.pmFacultyId();
+    if (this.showAllCourses() || this.isAdmin() || !fid) {
       return this.allCourses();
     }
-    const scoped = this.scopedCourses();
-    if (scoped.length > 0) {
-      return scoped;
-    }
-    return this.allCourses().filter(c => scopedIds.includes(c.id));
+    const facultyCourses = this.scopedCourses();
+    return facultyCourses.length > 0 ? facultyCourses : this.allCourses();
   });
 
   readonly selectedCourse = computed(() => {
@@ -119,21 +117,25 @@ export class ListSyllabiComponent implements OnInit {
     if (!id) {
       return null;
     }
-    return (
-      this.scopedCourses().find(c => c.id === id)
-      ?? this.allCourses().find(c => c.id === id)
-      ?? null
-    );
+    return this.allCourses().find(c => c.id === id) ?? null;
   });
 
-  /** Kiểm tra môn đang chọn có nằm trong scope của người dùng không */
+  /** Kiểm tra môn đang chọn có thuộc Khoa phụ trách của PM hay không */
   readonly isCourseInScope = computed(() => {
     const cid = this.selectedCourseId();
-    return !!cid && (this.scopeCourseIds().includes(cid) || this.scopeProgramIds().length > 0);
+    if (!cid || !this.userRoles().includes(SystemConstant.ROLE.PROGRAM_MANAGER)) {
+      return false;
+    }
+    const pmFacId = this.pmFacultyId();
+    const courseFacId = this.selectedCourse()?.facultyId;
+    if (pmFacId && courseFacId) {
+      return pmFacId === courseFacId;
+    }
+    return Boolean(pmFacId);
   });
 
   /**
-   * Quyền Import CSV đề cương: chỉ PROGRAM_MANAGER (không còn phân công GV bộ môn).
+   * Quyền Import CSV đề cương: chỉ PROGRAM_MANAGER (QA và ADMIN chỉ đọc).
    */
   readonly canImportSyllabus = computed(() => {
     if (!this.selectedCourseId() || this.isAdmin()) {
@@ -142,17 +144,47 @@ export class ListSyllabiComponent implements OnInit {
     return this.userRoles().includes(SystemConstant.ROLE.PROGRAM_MANAGER);
   });
 
+  isActiveOrConfirmed(s: ISyllabus): boolean {
+    return (s.status as string) === 'ACTIVE' || s.status === 'CONFIRMED';
+  }
+
+  canLockSyllabus(s: ISyllabus): boolean {
+    if (this.isAdmin() || !this.userRoles().includes(SystemConstant.ROLE.PROGRAM_MANAGER)) {
+      return false;
+    }
+    if (!this.isCourseInScope()) {
+      return false;
+    }
+    return this.isActiveOrConfirmed(s);
+  }
+
+  confirmLockSyllabus(s: ISyllabus): void {
+    if (!this.canLockSyllabus(s)) {
+      return;
+    }
+    this.modal?.confirm({
+      nzTitle: 'Khóa phiên bản đề cương học phần',
+      nzContent: `Bạn có chắc chắn muốn khóa phiên bản đề cương [${s.version}]? Sau khi khóa, đề cương sẽ chuyển sang trạng thái Lưu trữ (ARCHIVED), ngăn chặn hoàn toàn việc nhập điểm và không thể chỉnh sửa.`,
+      nzOkText: 'Khóa đề cương',
+      nzOkDanger: true,
+      nzOnOk: () => {
+        this.syllabusSvc.lockSyllabus(s.id).subscribe({
+          next: () => {
+            this.alert.success(`Phiên bản đề cương [${s.version}] đã được khóa (ARCHIVED).`);
+            this.loadSyllabi(this.selectedCourseId());
+          },
+          error: err => {
+            const apiErr = toApiError(err);
+            this.alert.error(apiErr?.message ?? 'Không thể khóa phiên bản đề cương');
+          },
+        });
+      },
+    });
+  }
+
   ngOnInit(): void {
     this.userRoles.set(this.authSvc.getRoles());
-    const assignments = this.authSvc.getRoleAssignments();
-    const courseIds = new Set<string>();
-    const programIds = new Set<string>();
-    assignments.forEach((a: IRoleAssignment) => {
-      (a.scope?.courseIds ?? []).forEach(id => courseIds.add(id));
-      (a.scope?.programIds ?? []).forEach(id => programIds.add(id));
-    });
-    this.scopeCourseIds.set(Array.from(courseIds));
-    this.scopeProgramIds.set(Array.from(programIds));
+    this.pmFacultyId.set(this.authSvc.getFacultyId?.());
 
     const queryCourseId = this.route.snapshot.queryParamMap.get('courseId');
     if (queryCourseId) {
@@ -212,26 +244,6 @@ export class ListSyllabiComponent implements OnInit {
       error: () => undefined,
     });
 
-    const scopedIds = this.scopeCourseIds();
-    if (scopedIds.length > 0) {
-      const requests = scopedIds.map(id => this.courseSvc.getCourseById(id).pipe(catchError(() => of(null))));
-      forkJoin(requests).subscribe(results => {
-        const validScoped = results.filter((c): c is ICourse => c !== null);
-        this.scopedCourses.set(validScoped);
-
-        const currentAll = this.allCourses();
-        const existingIds = new Set(currentAll.map(c => c.id));
-        const missing = validScoped.filter(c => !existingIds.has(c.id));
-        if (missing.length > 0) {
-          this.allCourses.set([...missing, ...currentAll]);
-        }
-
-        if (!preferredCourseId && !this.showAllCourses() && validScoped.length > 0) {
-          this.onCourseChange(validScoped[0].id);
-        }
-      });
-    }
-
     this.coursePage.set(0);
     this.currentCourseSearch.set('');
     this.courseSvc.getCourses(0, this.coursePageSize).subscribe({
@@ -251,10 +263,7 @@ export class ListSyllabiComponent implements OnInit {
             },
           });
         } else {
-          const currentScoped = this.scopedCourses();
-          const listIds = new Set(list.map(c => c.id));
-          const missingScoped = currentScoped.filter(c => !listIds.has(c.id));
-          this.allCourses.set([...missingScoped, ...list]);
+          this.allCourses.set(list);
           this.selectDefaultCourse(preferredCourseId);
         }
       },
@@ -323,7 +332,11 @@ export class ListSyllabiComponent implements OnInit {
     if (!termId) {
       return '—';
     }
-    return this.terms().find(t => t.id === termId)?.code ?? termId;
+    const term = this.terms().find(t => t.id === termId || t.code === termId);
+    if (!term) {
+      return termId;
+    }
+    return term.academicYear ? `${term.code} (${term.academicYear})` : term.code;
   }
 
   toggleShowAllCourses(): void {
@@ -350,7 +363,7 @@ export class ListSyllabiComponent implements OnInit {
   }
 
   onCourseScrollToBottom(): void {
-    if (!this.showAllCourses() && !this.isAdmin() && this.scopeCourseIds().length > 0) {
+    if (!this.showAllCourses() && !this.isAdmin() && Boolean(this.pmFacultyId())) {
       return;
     }
     if (
@@ -438,7 +451,7 @@ export class ListSyllabiComponent implements OnInit {
     this.selectedFile.set(file);
   }
 
-  runImportStep(): void {
+  previewImportStep(): void {
     const courseId = this.selectedCourseId();
     const version = this.importVersion().trim();
     const pvId = this.importProgramVersionId();
@@ -450,7 +463,7 @@ export class ListSyllabiComponent implements OnInit {
 
     this.isImporting.set(true);
     this.syllabusSvc
-      .importSyllabusCsv(courseId, version, pvId, file, this.importEffectiveFromTermId())
+      .previewImportSyllabusCsv(courseId, version, pvId, file, this.importEffectiveFromTermId() ?? undefined)
       .subscribe({
         next: res => {
           this.isImporting.set(false);
@@ -460,33 +473,40 @@ export class ListSyllabiComponent implements OnInit {
         error: err => {
           this.isImporting.set(false);
           const apiErr = toApiError(err);
-          this.alert.error(apiErr?.message ?? 'Import CSV đề cương thất bại');
+          this.alert.error(apiErr?.message ?? 'Xem trước CSV đề cương thất bại');
         },
       });
   }
 
-  proceedToConfirmStep(): void {
-    this.importStep.set(3);
+  runImportStep(): void {
+    this.previewImportStep();
   }
 
   confirmImportStep(): void {
-    const preview = this.importPreview();
-    if (!preview) {
+    const courseId = this.selectedCourseId();
+    const version = this.importVersion().trim();
+    const pvId = this.importProgramVersionId();
+    const file = this.selectedFile();
+    if (!courseId || !version || !pvId || !file) {
+      this.alert.warning('Thông tin import không hợp lệ');
       return;
     }
+
     this.isConfirmingImport.set(true);
-    this.syllabusSvc.confirmImport(preview.syllabusId).subscribe({
-      next: () => {
-        this.isConfirmingImport.set(false);
-        this.isImportModalVisible.set(false);
-        this.alert.success('Import và xác nhận đề cương thành công');
-        this.loadSyllabi(this.selectedCourseId());
-      },
-      error: err => {
-        this.isConfirmingImport.set(false);
-        const apiErr = toApiError(err);
-        this.alert.error(apiErr?.message ?? 'Không thể xác nhận dữ liệu import đề cương');
-      },
-    });
+    this.syllabusSvc
+      .importSyllabusCsv(courseId, version, pvId, file, this.importEffectiveFromTermId())
+      .subscribe({
+        next: () => {
+          this.isConfirmingImport.set(false);
+          this.isImportModalVisible.set(false);
+          this.alert.success('Import đề cương thành công (Đã kích hoạt & Xác nhận)');
+          this.loadSyllabi(this.selectedCourseId());
+        },
+        error: err => {
+          this.isConfirmingImport.set(false);
+          const apiErr = toApiError(err);
+          this.alert.error(apiErr?.message ?? 'Import đề cương thất bại');
+        },
+      });
   }
 }

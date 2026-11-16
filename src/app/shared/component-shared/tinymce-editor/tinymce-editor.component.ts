@@ -19,7 +19,7 @@ type OnTouchedCallback = () => void;
   // eslint-disable-next-line @angular-eslint/component-selector
   selector: 'tinymce-editor',
   imports: [EditorModule, FormsModule],
-  template: `<editor [(ngModel)]="value" (ngModelChange)="onEditorChange($event)" [init]="editorConfig" [disabled]="disabled()" (onBlur)="onTouched()"></editor>`,
+  templateUrl: './tinymce-editor.component.html',
   styles: `::ng-deep .tox-promotion, ::ng-deep .tox-statusbar__branding { display: none; }`,
   changeDetection: ChangeDetectionStrategy.OnPush,
   providers: [

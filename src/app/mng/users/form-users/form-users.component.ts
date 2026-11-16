@@ -1,21 +1,16 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, inject, input, OnInit, output, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { FormGroup, NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormControl, FormGroup, NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { SystemConstant } from '@constants/system.constant';
 import { MakeForm } from '@models/common/make-form.model';
 import { ModalData } from '@models/common/modal-data.model';
 import { IApiError } from '@models/common/response-data.model';
-import { ICourse } from '@models/course/course.model';
-import { IProgram } from '@models/program/program.model';
-import { IRoleAssignment, IUser, IUserCreateDTO, IUserUpdateDTO, UserRole } from '@models/user/user.model';
+import { IUser, IUserCreateDTO, IUserUpdateDTO, Role } from '@models/user/user.model';
 import { toApiError } from '@services/common/api-error.util';
 import { FormValidatorService } from '@services/common/form-validator.service';
-import { CourseService } from '@services/course/course.service';
-import { ProgramService } from '@services/program/program.service';
 import { UserService } from '@services/user/user.service';
-import { notBlankValidator, trimmedEmailValidator, trimmedMinLength } from '@validators/trimmed.validator';
-import { objectIdListValidator } from '@validators/object-id-list.validator';
 import { passwordBytesValidator } from '@validators/password-bytes.validator';
+import { notBlankValidator, trimmedEmailValidator, trimmedMinLength } from '@validators/trimmed.validator';
 import { FieldErrorDisplayComponent } from '@widget/field-error-display/field-error-display.component';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzGridModule } from 'ng-zorro-antd/grid';
@@ -23,10 +18,10 @@ import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzSelectModule } from 'ng-zorro-antd/select';
 import { NzTableModule } from 'ng-zorro-antd/table';
 import { ToastrService } from 'ngx-toastr';
-import { catchError, EMPTY, exhaustMap, filter, finalize, of, Subject, tap } from 'rxjs';
-import { IRoleAssignmentRow, ROLE_LABELS, toAssignmentRow, toRoleAssignment } from '../users.util';
+import { catchError, EMPTY, exhaustMap, filter, finalize, Subject, tap } from 'rxjs';
+import { describeRoleScope, ROLE_LABELS } from '../users.util';
 
-type RoleRowForm = FormGroup<MakeForm<IRoleAssignmentRow>>;
+type RoleRowForm = FormGroup<{ role: FormControl<Role>; }>;
 
 /** Tên trường backend có thể trả trong fieldErrors → ô nhập tương ứng trên form. */
 type ServerFieldKey = 'username' | 'email' | 'password' | 'fullName';
@@ -50,8 +45,6 @@ export class FormUsersComponent implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
   private readonly fb = inject(NonNullableFormBuilder);
   private readonly userSvc = inject(UserService);
-  private readonly programSvc = inject(ProgramService, { optional: true });
-  private readonly courseSvc = inject(CourseService, { optional: true });
   protected readonly formValidSvc = inject(FormValidatorService);
   private readonly alert = inject(ToastrService);
 
@@ -60,24 +53,20 @@ export class FormUsersComponent implements OnInit {
 
   form!: FormGroup<MakeForm<IUserCreateDTO>>;
 
-  /** Danh sách CTĐT trên hệ thống để chọn vào scope */
-  readonly programs = signal<IProgram[]>([]);
-
-  /** Danh sách Học phần cấp trường trên hệ thống để chọn vào scope (F03 ADR 0010) */
-  readonly courses = signal<ICourse[]>([]);
-
   protected readonly roleOptions = SystemConstant.ROLE_TITLE.map(item => ({ value: item.id, label: item.title.vi }));
-  protected readonly adminRole: UserRole = SystemConstant.ROLE.ADMIN;
-  private readonly defaultRole: UserRole = SystemConstant.ROLE.LECTURER;
+  protected readonly adminRole: Role = SystemConstant.ROLE.ADMIN;
+  protected readonly pmRole: Role = SystemConstant.ROLE.PROGRAM_MANAGER;
+  private readonly defaultRole: Role = SystemConstant.ROLE.LECTURER;
   protected readonly roleLabels = ROLE_LABELS;
+  protected readonly describeRoleScope = describeRoleScope;
 
-  /** Mỗi phần tử là một dòng "vai trò + phạm vi" (rulebook §3.1.10: signal các FormGroup con). */
+  /** Mỗi phần tử là một dòng chọn vai trò trong danh sách `roles`. */
   readonly roleForms = signal<RoleRowForm[]>([]);
 
   readonly isSubmitting = signal(false);
   /** Lỗi tổng của form, hiển thị ở thanh dưới (409/422/400 không gắn được vào ô nhập). */
   readonly formErrorMsg = signal('');
-  /** Lỗi nghiệp vụ của danh sách vai trò (chưa có dòng nào, dòng không hợp lệ). */
+  /** Lỗi nghiệp vụ của danh sách vai trò (chưa có vai trò nào). */
   readonly rolesErrorMsg = signal('');
   /** Lỗi theo trường do backend trả (400 fieldErrors, 409 trùng). Xóa khi người dùng sửa lại ô đó. */
   readonly serverFieldErrors = signal<Partial<Record<ServerFieldKey, string>>>({});
@@ -94,8 +83,6 @@ export class FormUsersComponent implements OnInit {
 
   ngOnInit(): void {
     this.createForm();
-    this.loadPrograms();
-    this.loadCourses();
   }
 
   createForm(): void {
@@ -104,7 +91,7 @@ export class FormUsersComponent implements OnInit {
       password: ['', [Validators.required, passwordBytesValidator]],
       email: ['', [Validators.required, notBlankValidator, trimmedEmailValidator]],
       fullName: ['', [Validators.required, notBlankValidator]],
-      roleAssignments: [[] as IRoleAssignment[], [Validators.required]],
+      roles: [[] as Role[], [Validators.required]],
     });
 
     const modalData = this.modalData();
@@ -117,7 +104,10 @@ export class FormUsersComponent implements OnInit {
       // Username bất biến và không đổi mật khẩu qua form này (API-CONTRACT.md §5.3.4)
       this.form.controls.username.disable();
       this.form.controls.password.disable();
-      this.roleForms.set(modalData.data.roleAssignments.map(item => this.createRoleForm(toAssignmentRow(item))));
+      const userRoles = modalData.data.roles ?? [];
+      this.roleForms.set(
+        userRoles.length ? userRoles.map(role => this.createRoleForm(role)) : [this.createRoleForm()],
+      );
     } else {
       this.roleForms.set([this.createRoleForm()]);
     }
@@ -130,12 +120,9 @@ export class FormUsersComponent implements OnInit {
     }
   }
 
-  private createRoleForm(row?: IRoleAssignmentRow): RoleRowForm {
+  private createRoleForm(role?: Role): RoleRowForm {
     return this.fb.group({
-      role: [row?.role ?? this.defaultRole, [Validators.required]],
-      programIds: [row?.programIds ?? [], [objectIdListValidator]],
-      courseIds: [row?.courseIds ?? [], [objectIdListValidator]],
-      sectionIds: [row?.sectionIds ?? [], [objectIdListValidator]],
+      role: [role ?? this.defaultRole, [Validators.required]],
     });
   }
 
@@ -145,46 +132,6 @@ export class FormUsersComponent implements OnInit {
 
   removeRole(index: number): void {
     this.roleForms.update(forms => forms.filter((_, current) => current !== index));
-  }
-
-  private loadPrograms(): void {
-    if (!this.programSvc) {
-      return;
-    }
-    this.programSvc.getPrograms(0, 100).pipe(
-      catchError(() => of({ content: [], totalElements: 0, totalPages: 0, page: 0, size: 0, last: true })),
-      takeUntilDestroyed(this.destroyRef),
-    ).subscribe(res => {
-      this.programs.set(res.content || []);
-    });
-  }
-
-  private loadCourses(): void {
-    if (!this.courseSvc) {
-      return;
-    }
-    this.courseSvc.getCourses(0, 100).pipe(
-      catchError(() => of({ content: [], totalElements: 0, totalPages: 0, page: 0, size: 0, last: true })),
-      takeUntilDestroyed(this.destroyRef),
-    ).subscribe(res => {
-      this.courses.set(res.content || []);
-    });
-  }
-
-  getMissingProgramIds(selectedIds: string[] | null | undefined): string[] {
-    if (!selectedIds?.length) {
-      return [];
-    }
-    const existingIds = new Set(this.programs().map(p => p.id));
-    return selectedIds.filter(id => !existingIds.has(id));
-  }
-
-  getMissingCourseIds(selectedIds: string[] | null | undefined): string[] {
-    if (!selectedIds?.length) {
-      return [];
-    }
-    const existingIds = new Set(this.courses().map(c => c.id));
-    return selectedIds.filter(id => !existingIds.has(id));
   }
 
   private clearServerError(key: ServerFieldKey): void {
@@ -201,13 +148,14 @@ export class FormUsersComponent implements OnInit {
     this.submit$.next();
   }
 
-  /** Đồng bộ các dòng vai trò vào control cha, rồi kiểm tra toàn bộ form và từng dòng. */
+  /** Đồng bộ các dòng vai trò vào control `roles`, rồi kiểm tra toàn bộ form. */
   private validateBeforeSubmit(): boolean {
     this.formErrorMsg.set('');
     this.rolesErrorMsg.set('');
 
     const rows = this.roleForms();
-    this.form.controls.roleAssignments.setValue(rows.map(row => toRoleAssignment(row.getRawValue())));
+    const uniqueRoles = [...new Set(rows.map(row => row.getRawValue().role))];
+    this.form.controls.roles.setValue(uniqueRoles);
 
     const rowsInvalid = rows.some(row => row.invalid);
     if (this.form.invalid || rowsInvalid) {
@@ -215,8 +163,6 @@ export class FormUsersComponent implements OnInit {
       rows.forEach(row => this.formValidSvc.validateAllFormFields(row));
       if (!rows.length) {
         this.rolesErrorMsg.set('Cần ít nhất một vai trò.');
-      } else if (rowsInvalid) {
-        this.rolesErrorMsg.set('Có mã phạm vi chưa đúng định dạng (24 ký tự hex).');
       }
       return false;
     }
@@ -257,7 +203,7 @@ export class FormUsersComponent implements OnInit {
       email: raw.email.trim().toLowerCase(),
       password: raw.password,
       fullName: raw.fullName.trim(),
-      roleAssignments: raw.roleAssignments,
+      roles: raw.roles,
     };
   }
 
@@ -265,7 +211,7 @@ export class FormUsersComponent implements OnInit {
     return {
       email: raw.email.trim().toLowerCase(),
       fullName: raw.fullName.trim(),
-      roleAssignments: raw.roleAssignments,
+      roles: raw.roles,
     };
   }
 
@@ -284,7 +230,7 @@ export class FormUsersComponent implements OnInit {
       const key = known.find(name => name === item.field);
       if (key) {
         fieldErrors[key] = item.message;
-      } else if (item.field.startsWith('roleAssignments')) {
+      } else if (item.field === 'roles' || item.field.startsWith('roles[')) {
         this.rolesErrorMsg.set(item.message);
       } else {
         unmapped.push(item.message);

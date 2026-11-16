@@ -1,0 +1,7 @@
+<editor
+  [(ngModel)]="value"
+  (ngModelChange)="onEditorChange($event)"
+  [init]="editorConfig"
+  [disabled]="disabled()"
+  (onBlur)="onTouched()"
+></editor>

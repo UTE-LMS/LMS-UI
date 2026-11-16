@@ -1,0 +1,233 @@
+<div class="section-card">
+  <div class="section-header flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
+    <div>
+      <h2 class="section-title text-base font-bold text-slate-900 m-0">
+        Kế hoạch Học phần trong Chương trình Đào tạo
+      </h2>
+      <div class="section-description text-xs text-slate-500 mt-0.5">
+        Cấu hình học kỳ dự kiến, khối kiến thức, điều kiện học phần tiên quyết và học phần học trước
+      </div>
+    </div>
+
+    <div class="flex flex-wrap items-center gap-2.5">
+      <nz-select
+        class="w-40"
+        nzAllowClear
+        nzPlaceHolder="Lọc theo Học kỳ"
+        [ngModel]="filterSemester()"
+        (ngModelChange)="filterSemester.set($event)"
+      >
+        @for (sem of semesterOptions; track sem) {
+        <nz-option [nzValue]="sem" [nzLabel]="'Học kỳ ' + sem" />
+        }
+      </nz-select>
+
+      <nz-select
+        class="w-48"
+        nzAllowClear
+        nzPlaceHolder="Lọc theo Khối kiến thức"
+        [ngModel]="filterCategory()"
+        (ngModelChange)="filterCategory.set($event)"
+      >
+        @for (cat of categoryOptions; track cat.value) {
+        <nz-option [nzValue]="cat.value" [nzLabel]="cat.label" />
+        }
+      </nz-select>
+
+      @if (canImportCourses()) {
+      <button
+        nz-button
+        nzType="primary"
+        type="button"
+        data-testid="btn-open-import-program-courses"
+        (click)="openImportModal()"
+      >
+        <i class="fa-solid fa-file-import mr-1.5"></i>Import Khung học phần (CSV)
+      </button>
+      }
+    </div>
+  </div>
+
+  <nz-table
+    #pcTable
+    [nzData]="filteredProgramCourses()"
+    [nzShowPagination]="false"
+    [nzFrontPagination]="false"
+    [nzScroll]="{ x: '960px' }"
+  >
+    <thead>
+      <tr>
+        <th nzWidth="24%">Mã &amp; Tên học phần</th>
+        <th nzWidth="9%" nzAlign="center">Học kỳ</th>
+        <th nzWidth="9%" nzAlign="center">Tín chỉ</th>
+        <th nzWidth="12%" nzAlign="center">Loại / Khối</th>
+        <th nzWidth="15%">Học phần tiên quyết</th>
+        <th nzWidth="15%">Học phần học trước</th>
+        <th nzWidth="16%" nzAlign="right">Thao tác</th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (pc of filteredProgramCourses(); track pc.id) {
+      <tr>
+        <td>
+          <div class="font-bold text-slate-900">{{ getCourseCode(pc) }}</div>
+          <div class="text-xs text-slate-600">{{ getCourseName(pc) }}</div>
+        </td>
+        <td nzAlign="center">
+          <span>{{ pc.semester !== undefined && pc.semester !== null ? 'HK ' + pc.semester : '—' }}</span>
+        </td>
+        <td nzAlign="center">
+          <span class="font-semibold">{{ pc.credits ?? pc.course?.credits ?? '—' }}</span>
+        </td>
+        <td nzAlign="center">
+          <div class="flex flex-col items-center gap-1">
+            @if (pc.type === 'COMPULSORY') {
+            <span class="text-xs px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200 font-medium">
+              Bắt buộc
+            </span>
+            } @else if (pc.type === 'ELECTIVE') {
+            <span class="text-xs px-2 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200 font-medium">
+              Tự chọn
+            </span>
+            } @else {
+            <span class="text-slate-400 text-xs">—</span>
+            }
+            @if (pc.category) {
+            <span class="text-xs text-slate-500">{{ getCategoryLabel(pc.category) }}</span>
+            }
+          </div>
+        </td>
+        <td>
+          <div class="flex flex-wrap gap-1">
+            @for (reqId of pc.prerequisiteCourseIds ?? []; track reqId) {
+            <span
+              class="text-xs px-2 py-0.5 rounded bg-rose-50 text-rose-700 border border-rose-200 font-medium"
+              [title]="getCourseTooltip(reqId)"
+            >
+              {{ getCourseCodeById(reqId) }}
+            </span>
+            } @empty {
+            <span class="text-slate-400 text-xs">—</span>
+            }
+          </div>
+        </td>
+        <td>
+          <div class="flex flex-wrap gap-1">
+            @for (prevId of pc.previousCourseIds ?? []; track prevId) {
+            <span
+              class="text-xs px-2 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200 font-medium"
+              [title]="getCourseTooltip(prevId)"
+            >
+              {{ getCourseCodeById(prevId) }}
+            </span>
+            } @empty {
+            <span class="text-slate-400 text-xs">—</span>
+            }
+          </div>
+        </td>
+        <td nzAlign="right">
+          <div class="inline-flex flex-wrap items-center justify-end gap-2">
+            <button
+              type="button"
+              class="text-indigo-600 hover:underline text-xs font-medium bg-transparent border-0 cursor-pointer"
+              (click)="openCloPiMatrix.emit(pc.courseId)"
+            >
+              Liên kết CLO–PI
+            </button>
+          </div>
+        </td>
+      </tr>
+      } @empty {
+      <tr>
+        <td colspan="7" class="text-center py-8 text-slate-400">
+          Chưa có học phần nào khớp điều kiện trong phiên bản chương trình đào tạo này
+        </td>
+      </tr>
+      }
+    </tbody>
+  </nz-table>
+</div>
+
+<!-- Modal Import Khung học phần theo học kỳ (CSV) -->
+<nz-modal
+  [(nzVisible)]="isImportModalVisible"
+  nzTitle="Import Khung học phần theo học kỳ (CSV)"
+  [nzWidth]="640"
+  (nzOnCancel)="closeImportModal()"
+  [nzFooter]="null"
+>
+  <ng-container *nzModalContent>
+    <div class="space-y-4">
+      <div class="p-3 rounded-lg bg-slate-50 border border-slate-200 space-y-2">
+        <div class="flex items-center justify-between gap-2">
+          <span class="text-xs font-medium text-slate-700">Tải tệp CSV mẫu khung học phần:</span>
+          <button
+            nz-button
+            nzType="default"
+            nzSize="small"
+            type="button"
+            data-testid="btn-download-program-courses-template"
+            (click)="downloadImportTemplate()"
+          >
+            <i class="fa-solid fa-download mr-1.5"></i> Tải file mẫu CSV
+          </button>
+        </div>
+        <div class="text-xs text-slate-600">
+          Cột hỗ trợ: <code>courseCode,semester,credits,type,category,previousCourseCodes,prerequisiteCourseCodes</code>
+        </div>
+      </div>
+
+      <div>
+        <label for="programCoursesCsvFile" class="block text-sm font-medium text-slate-700 mb-1">
+          Chọn tệp CSV <span class="text-rose-500">*</span>
+        </label>
+        <input
+          id="programCoursesCsvFile"
+          type="file"
+          accept=".csv,text/csv"
+          class="block w-full text-sm text-slate-600 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+          (change)="onFileSelected($event)"
+        />
+      </div>
+
+      @if (importErrorMsg()) {
+      <div class="p-3 rounded-lg bg-rose-50 border border-rose-200 text-xs text-rose-800" role="alert">
+        {{ importErrorMsg() }}
+      </div>
+      }
+
+      @if (importResult(); as res) {
+      <div class="space-y-3" data-testid="program-courses-import-result">
+        <div class="p-3 rounded-lg bg-emerald-50 border border-emerald-200 text-xs text-emerald-900">
+          Import hoàn tất: Thêm mới <strong>{{ res.importedCount }}</strong> học phần · Cập nhật <strong>{{ res.updatedCount }}</strong> học phần.
+        </div>
+        @if (res.warnings.length > 0) {
+        <div class="p-3 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-900">
+          <div class="font-semibold mb-1">Cảnh báo ({{ res.warnings.length }}):</div>
+          <ul class="list-disc pl-5 m-0 space-y-0.5">
+            @for (w of res.warnings; track w) {
+            <li>{{ w }}</li>
+            }
+          </ul>
+        </div>
+        }
+      </div>
+      }
+
+      <div class="flex justify-end gap-2 pt-3 border-t border-slate-100">
+        <button nz-button type="button" [disabled]="isImporting()" (click)="closeImportModal()">Đóng</button>
+        <button
+          nz-button
+          nzType="primary"
+          type="button"
+          data-testid="btn-submit-import-program-courses"
+          [nzLoading]="isImporting()"
+          [disabled]="!selectedFile() || isImporting()"
+          (click)="submitImport()"
+        >
+          Import CSV
+        </button>
+      </div>
+    </div>
+  </ng-container>
+</nz-modal>

@@ -29,7 +29,7 @@ describe('CloPiMatrixTableComponent (F03 US-12, TD-27, TD-28, Q22)', () => {
       id: syllabusId,
       courseId,
       version: '2026-v1',
-      status: 'DRAFT',
+      status: 'CONFIRMED',
     },
   ];
 

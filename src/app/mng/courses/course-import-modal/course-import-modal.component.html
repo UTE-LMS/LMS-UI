@@ -16,9 +16,10 @@
             Quy cách dữ liệu danh mục học phần
           </div>
           <p class="m-0 text-blue-800">
-            Tệp CSV cần có các cột bắt buộc: <code class="bg-white px-1 py-0.5 rounded border border-blue-200 font-mono text-blue-700">code</code> (mã học phần),
+            Tệp CSV gồm các cột: <code class="bg-white px-1 py-0.5 rounded border border-blue-200 font-mono text-blue-700">code</code> (mã học phần),
             <code class="bg-white px-1 py-0.5 rounded border border-blue-200 font-mono text-blue-700">name</code> (tên học phần),
-            <code class="bg-white px-1 py-0.5 rounded border border-blue-200 font-mono text-blue-700">credits</code> (số tín chỉ &ge; 0).
+            <code class="bg-white px-1 py-0.5 rounded border border-blue-200 font-mono text-blue-700">credits</code> (số tín chỉ &ge; 0),
+            và tùy chọn <code class="bg-white px-1 py-0.5 rounded border border-blue-200 font-mono text-blue-700">facultyCode</code> (mã Khoa).
             Hệ thống hỗ trợ tiếng Việt có dấu (UTF-8).
           </p>
         </div>
@@ -28,10 +29,40 @@
           (click)="downloadTemplate()"
         >
           <i class="fa-solid fa-download"></i>
-          Tải tệp mẫu CSV
+          Tải file mẫu CSV
         </button>
       </div>
     </div>
+
+    <!-- Phân quyền gán Khoa khi Import -->
+    @if (isAdmin()) {
+    <div class="mb-4 p-3.5 rounded-lg bg-slate-50 border border-slate-200 space-y-2">
+      <label for="courseImportDefaultFaculty" class="block text-xs font-semibold text-slate-700">
+        Khoa mặc định (tùy chọn)
+      </label>
+      <nz-select
+        id="courseImportDefaultFaculty"
+        class="w-full"
+        nzAllowClear
+        nzShowSearch
+        nzPlaceHolder="Chọn Khoa mặc định (để trống nếu gán theo facultyCode hoặc học phần chung)..."
+        [ngModel]="selectedFacultyId()"
+        (ngModelChange)="selectedFacultyId.set($event)"
+      >
+        @for (fac of activeFaculties(); track fac.id) {
+        <nz-option [nzValue]="fac.id" [nzLabel]="fac.code + ' - ' + fac.name" />
+        }
+      </nz-select>
+      <p class="m-0 text-xs text-slate-600 leading-relaxed">
+        Nếu file CSV có cột <code>facultyCode</code> (mã Khoa) thì từng dòng sẽ gán theo <code>facultyCode</code>; nếu để trống thì dùng Khoa mặc định đã chọn.
+      </p>
+    </div>
+    } @else if (isPmOnly()) {
+    <div class="mb-4 p-3 rounded-lg bg-emerald-50 border border-emerald-200 text-xs text-emerald-900 flex items-center gap-2">
+      <i class="fa-solid fa-building-user text-emerald-600"></i>
+      <span>Các học phần được import sẽ tự động gán vào Khoa bạn đang phụ trách.</span>
+    </div>
+    }
 
     <!-- Thông báo lỗi (nếu có lỗi validation client hoặc HTTP lỗi toàn cục) -->
     @if (errorMessage()) {

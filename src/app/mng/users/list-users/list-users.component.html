@@ -29,6 +29,18 @@
         }
       </div>
 
+      @if (isAdmin()) {
+      <button
+        id="btnOpenImportUsers"
+        nz-button
+        nzType="default"
+        type="button"
+        (click)="openImportModal()"
+      >
+        <i class="fa-solid fa-file-import mr-1.5 text-blue-600"></i>Import Người dùng (CSV)
+      </button>
+      }
+
       <!-- Nút Thêm người dùng -->
       <a
         nz-button
@@ -86,30 +98,29 @@
           </div>
         </td>
 
-        <!-- Vai trò: Chữ thường trang nhã theo UI.pdf trang 33 -->
+        <!-- Vai trò: mảng roles phẳng -->
         <td>
           <div class="flex flex-col gap-0.5">
-            @for (assignment of item.roleAssignments; track $index) {
+            @for (role of item.roles; track role) {
             <span class="user-role-text">
-              {{ roleLabel(assignment.role) }}
+              {{ roleLabel(role) }}
             </span>
             }
           </div>
         </td>
 
-        <!-- Phạm vi theo UI.pdf -->
+        <!-- Phạm vi theo vai trò & Khoa -->
         <td>
-          @for (assignment of item.roleAssignments; track $index) {
-          <div
-            class="user-scope-text"
-            [attr.title]="scopeIdsTooltip(assignment.scope) || null"
-          >
-            @if (describeScope(assignment) === 'Toàn hệ thống') {
-              <span class="text-slate-600">Toàn hệ thống</span>
-            } @else if (describeScope(assignment) === 'Chưa gán') {
-              <span class="text-slate-400 italic">Chưa gán</span>
+          @for (role of item.roles; track role) {
+          <div class="user-scope-text">
+            @if (role === 'PROGRAM_MANAGER') {
+              @if (item.facultyCode || item.facultyName) {
+                <span class="text-slate-800 font-medium">{{ describeRoleScope(role, item) }}</span>
+              } @else {
+                <span class="text-slate-400 italic">Chưa gán Khoa</span>
+              }
             } @else {
-              <span class="text-slate-800 font-medium">{{ describeScope(assignment) }}</span>
+              <span class="text-slate-600">{{ describeRoleScope(role, item) }}</span>
             }
           </div>
           }
@@ -201,3 +212,17 @@
   </div>
   }
 </ng-template>
+
+<app-csv-import-modal
+  [isVisible]="isImportModalVisible()"
+  (isVisibleChange)="isImportModalVisible.set($event)"
+  nzTitle="Import Người dùng từ CSV"
+  guideTitle="Quy cách tệp CSV danh sách Người dùng"
+  guideText="Các cột: username, email, password, fullName, roles (phân cách nhiều vai trò bằng dấu ; ví dụ LECTURER;QA), facultyCode (tùy chọn để gán Khoa cho PROGRAM_MANAGER), status (mặc định ACTIVE)."
+  templateFileName="users-template.csv"
+  keyColumnLabel="Username"
+  entityLabel="người dùng"
+  [downloadTemplateFn]="downloadUserTemplate"
+  [importFileFn]="importUserCsv"
+  (importSuccess)="onImportSuccess()"
+/>

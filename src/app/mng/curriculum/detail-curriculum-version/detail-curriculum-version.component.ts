@@ -1,14 +1,17 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
+import { SystemConstant } from '@constants/system.constant';
 import { IPi, IPlo, IProgramCourse } from '@models/program/plo-pi.model';
 import { IProgram } from '@models/program/program.model';
 import { IProgramVersion } from '@models/program/program-version.model';
+import { AuthService } from '@services/auth/auth.service';
 import { toApiError } from '@services/common/api-error.util';
 import { PloPiService } from '@services/program/plo-pi.service';
 import { ProgramVersionService } from '@services/program/program-version.service';
 import { ProgramService } from '@services/program/program.service';
 import { StatusChipComponent } from '@widget/status-chip/status-chip.component';
 import { NzButtonModule } from 'ng-zorro-antd/button';
+import { NzModalService } from 'ng-zorro-antd/modal';
 import { NzTableModule } from 'ng-zorro-antd/table';
 import { ToastrService } from 'ngx-toastr';
 import { forkJoin } from 'rxjs';
@@ -47,7 +50,9 @@ export class DetailCurriculumVersionComponent implements OnInit {
   private readonly versionSvc = inject(ProgramVersionService);
   private readonly programSvc = inject(ProgramService);
   private readonly ploPiSvc = inject(PloPiService);
+  private readonly authSvc = inject(AuthService, { optional: true });
   private readonly alert = inject(ToastrService);
+  private readonly modal = inject(NzModalService, { optional: true });
 
   readonly versionId = signal<string>('');
   readonly version = signal<IProgramVersion | null>(null);
@@ -62,8 +67,37 @@ export class DetailCurriculumVersionComponent implements OnInit {
   readonly activeTab = signal<'PLO_PI' | 'PROGRAM_COURSES' | 'CLO_PI_MATRIX'>('PLO_PI');
   readonly selectedMatrixCourseId = signal<string | null>(null);
 
+  readonly canManage = computed(() => {
+    const roles = this.userRoles();
+    if (!roles.includes(SystemConstant.ROLE.PROGRAM_MANAGER)) {
+      return false;
+    }
+    const pmFacultyId = this.authSvc?.getFacultyId?.();
+    const progFacultyId = this.program()?.facultyId;
+    if (pmFacultyId && progFacultyId) {
+      return pmFacultyId === progFacultyId;
+    }
+    return Boolean(pmFacultyId);
+  });
+
+  readonly canImportProgramCourses = computed(() => {
+    if (this.version()?.status !== 'ACTIVE') {
+      return false;
+    }
+    const roles = this.userRoles();
+    if (roles.includes(SystemConstant.ROLE.ADMIN)) {
+      return true;
+    }
+    if (roles.includes(SystemConstant.ROLE.PROGRAM_MANAGER)) {
+      const pmFacultyId = this.authSvc?.getFacultyId?.();
+      const progFacultyId = this.program()?.facultyId;
+      return pmFacultyId && progFacultyId ? pmFacultyId === progFacultyId : Boolean(pmFacultyId);
+    }
+    return false;
+  });
+
   private readonly ploCategoryLabels: Record<string, string> = {
-    GENERAL: 'Đại cương',
+    GENERAL: 'Kiến thức chung',
     SPECIALIZED: 'Chuyên ngành',
   };
 
@@ -117,6 +151,7 @@ export class DetailCurriculumVersionComponent implements OnInit {
   });
 
   ngOnInit(): void {
+    this.userRoles.set(this.authSvc?.getRoles?.() ?? []);
     const id = this.route.snapshot.paramMap.get('versionId');
     if (id) {
       this.versionId.set(id);
@@ -124,11 +159,39 @@ export class DetailCurriculumVersionComponent implements OnInit {
     }
   }
 
-  formatCohorts(cohorts?: string[]): string {
-    if (!cohorts || cohorts.length === 0) {
+  confirmLockVersion(): void {
+    const ver = this.version();
+    if (!ver || !this.canManage() || ver.status !== 'ACTIVE') {
+      return;
+    }
+
+    this.modal?.confirm({
+      nzTitle: 'Khóa phiên bản chương trình đào tạo',
+      nzContent: `Bạn có chắc chắn muốn khóa phiên bản CTĐT [${ver.version}]? Sau khi khóa, phiên bản sẽ chuyển sang trạng thái Đã lưu trữ (ARCHIVED), ngăn chặn hoàn toàn việc nhập điểm, sửa đổi đề cương và các cấu hình liên quan.`,
+      nzOkText: 'Khóa phiên bản',
+      nzOkType: 'primary',
+      nzOkDanger: true,
+      nzOnOk: () => {
+        this.versionSvc.lockProgramVersion(ver.id).subscribe({
+          next: updated => {
+            this.version.set(updated);
+            this.alert.success(`Phiên bản [${ver.version}] đã được khóa thành công`);
+          },
+          error: err => {
+            const apiErr = toApiError(err);
+            this.alert.error(apiErr?.message ?? 'Không thể khóa phiên bản CTĐT');
+          },
+        });
+      },
+    });
+  }
+
+  formatCohorts(cohort?: string): string {
+    const trimmed = cohort?.trim();
+    if (!trimmed) {
       return '—';
     }
-    return cohorts.join(', ');
+    return trimmed;
   }
 
   loadData(): void {

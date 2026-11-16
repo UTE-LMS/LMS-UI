@@ -1,6 +1,8 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  computed,
+  effect,
   ElementRef,
   inject,
   input,
@@ -8,26 +10,34 @@ import {
   signal,
   ViewChild,
 } from '@angular/core';
+import { FormsModule } from '@angular/forms';
+import { SystemConstant } from '@constants/system.constant';
 import { ICourseImportResultResponse } from '@models/course/course.model';
+import { IFaculty } from '@models/faculty/faculty.model';
+import { AuthService } from '@services/auth/auth.service';
 import { toApiError } from '@services/common/api-error.util';
 import { CourseService } from '@services/course/course.service';
+import { FacultyService } from '@services/faculty/faculty.service';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzModalModule } from 'ng-zorro-antd/modal';
+import { NzSelectModule } from 'ng-zorro-antd/select';
 import { NzTableModule } from 'ng-zorro-antd/table';
 import { ToastrService } from 'ngx-toastr';
 
 /**
- * Modal nạp danh mục học phần hàng loạt từ tệp CSV (F03 US-09/AC-4, ADR 0010 - Quản trị viên).
+ * Modal nạp danh mục học phần hàng loạt từ tệp CSV (F03 US-09/AC-4, ADR 0010 - ADMIN & PROGRAM_MANAGER).
  */
 @Component({
   selector: 'app-course-import-modal',
   templateUrl: './course-import-modal.component.html',
   styleUrl: './course-import-modal.component.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [NzModalModule, NzButtonModule, NzTableModule],
+  imports: [FormsModule, NzModalModule, NzButtonModule, NzSelectModule, NzTableModule],
 })
 export class CourseImportModalComponent {
   private readonly courseSvc = inject(CourseService);
+  private readonly facultySvc = inject(FacultyService, { optional: true });
+  private readonly authSvc = inject(AuthService, { optional: true });
   private readonly alert = inject(ToastrService);
 
   @ViewChild('fileInput') fileInputRef?: ElementRef<HTMLInputElement>;
@@ -41,6 +51,28 @@ export class CourseImportModalComponent {
   readonly isDragging = signal<boolean>(false);
   readonly importResult = signal<ICourseImportResultResponse | null>(null);
   readonly errorMessage = signal<string | null>(null);
+  readonly activeFaculties = signal<IFaculty[]>([]);
+  readonly selectedFacultyId = signal<string | null>(null);
+
+  readonly isAdmin = computed(() => this.authSvc?.getRoles().includes(SystemConstant.ROLE.ADMIN) ?? false);
+  readonly isPmOnly = computed(
+    () => (this.authSvc?.getRoles().includes(SystemConstant.ROLE.PROGRAM_MANAGER) ?? false) && !this.isAdmin(),
+  );
+
+  constructor() {
+    effect(() => {
+      if (this.isVisible() && this.isAdmin() && this.facultySvc) {
+        this.facultySvc.getFaculties(0, 100, undefined, true).subscribe({
+          next: res => {
+            this.activeFaculties.set((res.content ?? []).filter(f => f.isActive));
+          },
+          error: () => {
+            this.activeFaculties.set([]);
+          },
+        });
+      }
+    });
+  }
 
   handleCancel(): void {
     if (this.isLoading()) {
@@ -101,21 +133,22 @@ export class CourseImportModalComponent {
   }
 
   downloadTemplate(): void {
-    const csvContent =
-      '\uFEFFcode,name,credits\n' +
-      'MATH1301,Toán rời rạc,3\n' +
-      'ITEC2401,Lập trình nâng cao,3\n' +
-      'INSE3302,"Công nghệ phần mềm nâng cao, hướng dịch vụ",4\n';
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', 'courses_template.csv');
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    this.courseSvc.downloadCoursesImportTemplate().subscribe({
+      next: (blob) => {
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', 'courses-template.csv');
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      },
+      error: (err) => {
+        const apiErr = toApiError(err);
+        this.alert.error(apiErr?.message ?? 'Không thể tải tệp mẫu CSV');
+      },
+    });
   }
 
   submitImport(): void {
@@ -128,7 +161,12 @@ export class CourseImportModalComponent {
     this.isLoading.set(true);
     this.errorMessage.set(null);
 
-    this.courseSvc.importCourses(file).subscribe({
+    const facultyId = this.isAdmin() ? (this.selectedFacultyId() ?? undefined) : undefined;
+    const import$ = facultyId
+      ? this.courseSvc.importCourses(file, facultyId)
+      : this.courseSvc.importCourses(file);
+
+    import$.subscribe({
       next: (res) => {
         this.isLoading.set(false);
         this.importResult.set(res);
@@ -189,6 +227,7 @@ export class CourseImportModalComponent {
     this.isDragging.set(false);
     this.importResult.set(null);
     this.errorMessage.set(null);
+    this.selectedFacultyId.set(null);
     if (this.fileInputRef?.nativeElement) {
       this.fileInputRef.nativeElement.value = '';
     }

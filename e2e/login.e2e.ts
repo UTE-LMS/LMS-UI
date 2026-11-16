@@ -27,7 +27,7 @@ function loginResponse(role: string): string {
       email: 'nguoi.thu.nghiem@example.org',
       fullName: `Người dùng ${TEST_DATA_LABEL}`,
       status: 'ACTIVE',
-      roleAssignments: [{ role, scope: null }],
+      roles: [role],
     },
   });
 }

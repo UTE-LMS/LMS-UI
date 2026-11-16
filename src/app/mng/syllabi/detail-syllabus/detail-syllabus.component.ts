@@ -1,20 +1,22 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { SystemConstant } from '@constants/system.constant';
-import { IClo } from '@models/course/clo.model';
+import { IClo, ICloPiLink } from '@models/course/clo.model';
 import { ICourse } from '@models/course/course.model';
-import { ISyllabus, SyllabusStatus } from '@models/course/syllabus.model';
+import { ISyllabus } from '@models/course/syllabus.model';
 import { ITerm } from '@models/course/term.model';
-import { IRoleAssignment } from '@models/user/user.model';
+import { IPi } from '@models/program/plo-pi.model';
 import { AuthService } from '@services/auth/auth.service';
 import { toApiError } from '@services/common/api-error.util';
 import { CloService } from '@services/course/clo.service';
 import { CourseService } from '@services/course/course.service';
 import { SyllabusService } from '@services/course/syllabus.service';
 import { TermService } from '@services/course/term.service';
+import { PloPiService } from '@services/program/plo-pi.service';
 import { BloomLevelLabelComponent } from '@widget/level-label/bloom-level-label.component';
 import { StatusChipComponent } from '@widget/status-chip/status-chip.component';
 import { NzButtonModule } from 'ng-zorro-antd/button';
+import { NzModalService } from 'ng-zorro-antd/modal';
 import { NzTableModule } from 'ng-zorro-antd/table';
 import { ToastrService } from 'ngx-toastr';
 
@@ -36,42 +38,57 @@ export class DetailSyllabusComponent implements OnInit {
   private readonly syllabusSvc = inject(SyllabusService);
   private readonly courseSvc = inject(CourseService);
   private readonly cloSvc = inject(CloService);
+  private readonly ploPiSvc = inject(PloPiService, { optional: true });
   private readonly termSvc = inject(TermService);
   private readonly authSvc = inject(AuthService);
   private readonly alert = inject(ToastrService);
+  private readonly modal = inject(NzModalService, { optional: true });
 
   readonly syllabusId = signal<string>('');
   readonly syllabus = signal<ISyllabus | null>(null);
   readonly course = signal<ICourse | null>(null);
   readonly clos = signal<IClo[]>([]);
+  readonly cloPiLinks = signal<ICloPiLink[]>([]);
+  readonly pis = signal<IPi[]>([]);
   readonly terms = signal<ITerm[]>([]);
 
   readonly isLoading = signal(false);
   readonly hasError = signal(false);
   readonly userRoles = signal<string[]>([]);
-  readonly scopeCourseIds = signal<string[]>([]);
-  readonly scopeProgramIds = signal<string[]>([]);
 
   readonly isAdmin = computed(() => this.userRoles().includes(SystemConstant.ROLE.ADMIN));
 
+  readonly isActiveOrConfirmed = computed(() => {
+    const st = this.syllabus()?.status as string | undefined;
+    return st === 'ACTIVE' || st === 'CONFIRMED';
+  });
+
   readonly isCourseInScope = computed(() => {
     const cid = this.syllabus()?.courseId;
-    return !!cid && (this.scopeCourseIds().includes(cid) || this.scopeProgramIds().length > 0);
+    if (!cid || !this.userRoles().includes(SystemConstant.ROLE.PROGRAM_MANAGER)) {
+      return false;
+    }
+    const pmFacId = this.authSvc.getFacultyId?.();
+    const courseFacId = this.course()?.facultyId;
+    if (pmFacId && courseFacId) {
+      return pmFacId === courseFacId;
+    }
+    return Boolean(pmFacId);
   });
 
   /**
-   * Quyền phê duyệt đề cương CONFIRMED / ARCHIVED (ADR 0014):
-   * Chỉ duy nhất PROGRAM_MANAGER có môn học trong scope.
-   * ADMIN không có thẩm quyền học thuật để phê duyệt.
-   * Giảng viên (LECTURER) không có quyền duyệt đề cương.
+   * Quyền Khóa đề cương chuyển sang Lưu trữ (ARCHIVED):
+   * Chỉ duy nhất PROGRAM_MANAGER có môn học trong scope và đề cương đang ACTIVE / CONFIRMED.
+   * QA, ADMIN và LECTURER hoàn toàn chỉ đọc (Read-only).
    */
-  readonly canApproveSyllabus = computed(() => {
-    if (this.isAdmin()) {
+  readonly canLockSyllabus = computed(() => {
+    if (this.isAdmin() || !this.userRoles().includes(SystemConstant.ROLE.PROGRAM_MANAGER)) {
       return false;
     }
-    return (
-      this.userRoles().includes(SystemConstant.ROLE.PROGRAM_MANAGER) && this.isCourseInScope()
-    );
+    if (!this.isCourseInScope()) {
+      return false;
+    }
+    return this.isActiveOrConfirmed();
   });
 
   /** Sắp xếp CLO tăng dần theo số thứ tự trong mã CLO1, CLO2, ..., CLO10 */
@@ -86,15 +103,6 @@ export class DetailSyllabusComponent implements OnInit {
 
   ngOnInit(): void {
     this.userRoles.set(this.authSvc.getRoles());
-    const assignments = this.authSvc.getRoleAssignments();
-    const courseIds = new Set<string>();
-    const programIds = new Set<string>();
-    assignments.forEach((a: IRoleAssignment) => {
-      (a.scope?.courseIds ?? []).forEach(id => courseIds.add(id));
-      (a.scope?.programIds ?? []).forEach(id => programIds.add(id));
-    });
-    this.scopeCourseIds.set(Array.from(courseIds));
-    this.scopeProgramIds.set(Array.from(programIds));
 
     this.termSvc.getTerms().subscribe({
       next: list => this.terms.set(list || []),
@@ -132,6 +140,20 @@ export class DetailSyllabusComponent implements OnInit {
             this.hasError.set(true);
           },
         });
+        this.cloSvc.getCloPiLinks?.(id).subscribe({
+          next: links => {
+            const safeLinks = links || [];
+            this.cloPiLinks.set(safeLinks);
+            const pvIds = Array.from(new Set(safeLinks.map(l => l.programVersionId).filter(Boolean)));
+            if (pvIds.length > 0 && this.ploPiSvc) {
+              this.ploPiSvc.getPis(pvIds[0]).subscribe({
+                next: piList => this.pis.set(piList || []),
+                error: () => undefined,
+              });
+            }
+          },
+          error: () => this.cloPiLinks.set([]),
+        });
       },
       error: () => {
         this.isLoading.set(false);
@@ -144,7 +166,26 @@ export class DetailSyllabusComponent implements OnInit {
     if (!termId) {
       return '—';
     }
-    return this.terms().find(t => t.id === termId)?.code ?? termId;
+    const term = this.terms().find(t => t.id === termId || t.code === termId);
+    if (!term) {
+      return termId;
+    }
+    return term.academicYear ? `${term.code} (${term.academicYear})` : term.code;
+  }
+
+  getLinksForClo(cloId: string): ICloPiLink[] {
+    return this.cloPiLinks().filter(l => l.cloId === cloId);
+  }
+
+  getPiCode(piId: string): string {
+    return this.pis().find(p => p.id === piId)?.code ?? piId;
+  }
+
+  formatWeight(val?: number | null): string {
+    if (val === null || val === undefined) {
+      return '—';
+    }
+    return String(val);
   }
 
   formatRatio(val?: number | null): string {
@@ -154,24 +195,28 @@ export class DetailSyllabusComponent implements OnInit {
     return `${Math.round(val * 10000) / 100}% (${val})`;
   }
 
-  changeStatus(nextStatus: SyllabusStatus): void {
+  confirmLockSyllabus(): void {
     const syl = this.syllabus();
-    if (!syl || !this.canApproveSyllabus()) {
+    if (!syl || !this.canLockSyllabus()) {
       return;
     }
 
-    this.syllabusSvc.updateSyllabusStatus(syl.id, nextStatus).subscribe({
-      next: updated => {
-        this.syllabus.set(updated);
-        this.alert.success(
-          nextStatus === 'CONFIRMED'
-            ? 'Đã phê duyệt đề cương chính thức (CONFIRMED). Danh sách CLO đã được khóa bảo vệ.'
-            : 'Đã chuyển đề cương vào lưu trữ (ARCHIVED).',
-        );
-      },
-      error: err => {
-        const apiErr = toApiError(err);
-        this.alert.error(apiErr?.message ?? 'Không thể chuyển trạng thái đề cương');
+    this.modal?.confirm({
+      nzTitle: 'Khóa phiên bản đề cương học phần',
+      nzContent: `Bạn có chắc chắn muốn khóa phiên bản đề cương [${syl.version}]? Sau khi khóa, đề cương sẽ chuyển sang trạng thái Lưu trữ (ARCHIVED), ngăn chặn hoàn toàn việc nhập điểm và không thể chỉnh sửa.`,
+      nzOkText: 'Khóa đề cương',
+      nzOkDanger: true,
+      nzOnOk: () => {
+        this.syllabusSvc.lockSyllabus(syl.id).subscribe({
+          next: updated => {
+            this.syllabus.set(updated);
+            this.alert.success(`Phiên bản đề cương [${syl.version}] đã được khóa (ARCHIVED).`);
+          },
+          error: err => {
+            const apiErr = toApiError(err);
+            this.alert.error(apiErr?.message ?? 'Không thể khóa phiên bản đề cương');
+          },
+        });
       },
     });
   }

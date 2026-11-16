@@ -1,0 +1,99 @@
+<nz-modal
+  [nzVisible]="isVisible()"
+  [nzTitle]="editingCourse() ? 'Cập nhật học phần cấp trường' : 'Thêm học phần mới vào kho trường'"
+  [nzFooter]="modalFooterTpl"
+  [nzWidth]="520"
+  (nzOnCancel)="handleCancel()"
+  (nzVisibleChange)="onVisibleChange($event)"
+>
+  <ng-container *nzModalContent>
+    @if (editingCourse()) {
+      <div class="mb-4 p-3 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-900 leading-relaxed">
+        <i class="fa-solid fa-triangle-exclamation text-amber-600 mr-1.5"></i>
+        Lưu ý: Nếu học phần đã thuộc về phiên bản CTĐT đang áp dụng (<strong>ACTIVE</strong>) hoặc lưu trữ (<strong>ARCHIVED</strong>), hệ thống sẽ khóa và từ chối chỉnh sửa tên hoặc số tín chỉ (422 Locked).
+      </div>
+    }
+    <form [formGroup]="courseForm" nz-form nzLayout="vertical">
+      <nz-form-item>
+        <nz-form-label nzFor="courseFacultyId">Khoa quản lý</nz-form-label>
+        <nz-form-control>
+          <nz-select
+            id="courseFacultyId"
+            formControlName="facultyId"
+            nzPlaceHolder="Chọn Khoa quản lý..."
+          >
+            @for (fac of faculties(); track fac.id) {
+              <nz-option [nzValue]="fac.id" [nzLabel]="fac.code + ' - ' + fac.name" />
+            }
+          </nz-select>
+        </nz-form-control>
+      </nz-form-item>
+
+      <nz-form-item>
+        <nz-form-label nzRequired nzFor="courseCode">Mã học phần</nz-form-label>
+        <nz-form-control nzErrorTip="Mã học phần bắt buộc, tối đa 64 ký tự (chữ, số, dấu gạch dưới, gạch ngang, dấu chấm)">
+          <input
+            nz-input
+            id="courseCode"
+            formControlName="code"
+            placeholder="Ví dụ: OOPR230279, APCM220307..."
+          />
+          <small class="text-xs text-slate-500 mt-1 block">
+            {{ editingCourse() ? 'Mã học phần là định danh bất biến sau khi khởi tạo.' : 'Định dạng chuẩn Phòng Đào tạo, duy nhất toàn trường.' }}
+          </small>
+        </nz-form-control>
+      </nz-form-item>
+
+      <nz-form-item>
+        <nz-form-label nzRequired nzFor="courseName">Tên học phần</nz-form-label>
+        <nz-form-control nzErrorTip="Tên học phần không được để trống (tối đa 255 ký tự)">
+          <input
+            nz-input
+            id="courseName"
+            formControlName="name"
+            placeholder="Ví dụ: Lập trình hướng đối tượng..."
+          />
+        </nz-form-control>
+      </nz-form-item>
+
+      <nz-form-item>
+        <nz-form-label nzFor="courseCredits">Số tín chỉ chuẩn</nz-form-label>
+        <nz-form-control nzErrorTip="Số tín chỉ phải là số nguyên không âm">
+          <input
+            nz-input
+            type="number"
+            min="0"
+            step="1"
+            id="courseCredits"
+            formControlName="credits"
+            placeholder="Để trống nếu chưa quy định (không tự gán 0)"
+          />
+        </nz-form-control>
+      </nz-form-item>
+    </form>
+  </ng-container>
+
+  <ng-template #modalFooterTpl>
+    <div class="flex items-center justify-end gap-2.5">
+      <button
+        nz-button
+        nzType="default"
+        type="button"
+        [disabled]="isSubmitting()"
+        (click)="handleCancel()"
+      >
+        Hủy
+      </button>
+      <button
+        nz-button
+        nzType="primary"
+        type="button"
+        [nzLoading]="isSubmitting()"
+        [disabled]="isSubmitting()"
+        (click)="submitCourse()"
+      >
+        {{ editingCourse() ? 'Lưu thay đổi' : 'Thêm học phần' }}
+      </button>
+    </div>
+  </ng-template>
+</nz-modal>

@@ -7,8 +7,7 @@ import { BLOOM_KIND, describeLevel } from './level-label.util';
 @Component({
   selector: 'app-bloom-level-label',
   imports: [StatusChipComponent],
-  template: `<app-status-chip [label]="display().label" [description]="display().description" [icon]="display().icon"
-    [tone]="display().tone" [lineStyle]="display().lineStyle" />`,
+  templateUrl: './bloom-level-label.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class BloomLevelLabelComponent {

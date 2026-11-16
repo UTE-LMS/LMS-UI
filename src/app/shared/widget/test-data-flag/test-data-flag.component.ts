@@ -6,8 +6,7 @@ import { ChangeDetectionStrategy, Component } from '@angular/core';
  */
 @Component({
   selector: 'app-test-data-flag',
-  template: `<span class="inline-flex items-center gap-1 rounded border border-dashed border-slate-500 px-2 py-0.5 text-[11px] font-bold tracking-wide text-slate-700">
-    <i class="fa-solid fa-flask" aria-hidden="true"></i>DỮ LIỆU THỬ NGHIỆM</span>`,
+  templateUrl: './test-data-flag.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class TestDataFlagComponent {}

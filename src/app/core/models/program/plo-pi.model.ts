@@ -58,21 +58,4 @@ export interface IPiRequest {
   reviewNote?: string;
 }
 
-export type PiContributionType = 'I' | 'R' | 'M';
-
-export interface ICoursePiContribution {
-  id: string;
-  programVersionId: string;
-  courseId: string;
-  piId: string;
-  contribution: PiContributionType;
-  verification?: IVerificationResponse;
-}
-
-export interface ICoursePiContributionRequest {
-  courseId: string;
-  piId: string;
-  contribution: PiContributionType;
-}
-
 export type { ICourse, IProgramCourse } from '@models/course/course.model';
