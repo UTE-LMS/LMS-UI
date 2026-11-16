@@ -12,6 +12,8 @@ import { sectionsMngMenu } from '@mng/sections/sections.menu';
 import { syllabiMngMenu } from '@mng/syllabi/syllabi.menu';
 import { calculationsMngMenu } from '@mng/calculations/calculations.menu';
 import { reportsMngMenu } from '@mng/reports/reports.menu';
+import { analyticsMngMenu } from '@mng/analytics/analytics.menu';
+import { auditLogsMngMenu } from '@mng/audit-logs/audit-logs.menu';
 import { usersMngMenu } from '@mng/users/users.menu';
 import { AuthService } from '@services/auth/auth.service';
 import { NzButtonModule } from 'ng-zorro-antd/button';
@@ -70,8 +72,10 @@ export class ManagementHeaderComponent implements OnInit {
     ...sectionsMngMenu,
     ...calculationsMngMenu,
     ...reportsMngMenu,
+    ...analyticsMngMenu,
     ...programsMngMenu,
     ...usersMngMenu,
+    ...auditLogsMngMenu,
   ];
 
   /** Lọc các mục menu phù hợp với vai trò của người dùng hiện tại */
@@ -100,10 +104,12 @@ export class ManagementHeaderComponent implements OnInit {
     const measurement = [
       ...byRoute(UrlConstant.ROUTE.MANAGEMENT.CALCULATIONS),
       ...byRoute(UrlConstant.ROUTE.MANAGEMENT.REPORTS),
+      ...byRoute(UrlConstant.ROUTE.MANAGEMENT.ANALYTICS),
     ];
     const system = [
       ...byRoute(UrlConstant.ROUTE.MANAGEMENT.PROGRAMS),
       ...byRoute(UrlConstant.ROUTE.MANAGEMENT.USERS),
+      ...byRoute(UrlConstant.ROUTE.MANAGEMENT.AUDIT_LOGS),
     ];
 
     const groups: { label: string | null; items: ISiderMenu[]; }[] = [];

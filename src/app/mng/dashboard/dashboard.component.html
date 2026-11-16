@@ -1,59 +1,124 @@
-<app-breadcrumb [breadcrumb]="breadcrumbObj" />
-<div nz-row>
-  <div nz-col nzSpan="12">
-    <span class="text-xl font-bold uppercase">{{breadcrumbObj.heading}}</span>
-  </div>
-  <div nz-col nzSpan="12" class="text-right">
-    <button nz-button class="nz-btn-green"><i class="fa-solid fa-plus mr-1"></i>Thêm mới</button>
-  </div>
+<div class="page-header mb-6">
+  <h1 class="text-2xl font-bold text-slate-900 tracking-tight m-0">Tổng quan</h1>
+  <div class="title-underline"></div>
+  <p class="text-sm text-slate-600 mt-2">Xin chào {{ username || 'bạn' }}. Số liệu dưới đây chỉ thuộc phạm vi bạn được phân công.</p>
 </div>
-<hr>
 
-Upload single file ID:<br>
-
-<app-upload-file class="w-full" returnType="id" subFolderOnServer="test"
-  [acceptFilesExtension]="'.pdf,.doc,.docx'" [isUploadMultiFile]="false"
-  [listFilesPatch]="fileSvc.extractFileFromListId([exampleForm.get('fieldOneFileId')?.value].flat())"
-  (returnedListId)="fileSvc.setIdFileToForm($any($event), 'fieldOneFileId', exampleForm)" />
-
-<br>
-
-Upload multi file ID:<br>
-<app-upload-file class="w-full" returnType="id" subFolderOnServer="test"
-  [acceptFilesExtension]="'.pdf,.doc,.docx'" [isUploadMultiFile]="true"
-  [listFilesPatch]="fileSvc.extractFileFromListId([exampleForm.get('fieldMultiFileId')?.value].flat())"
-  (returnedListId)="fileSvc.setListIdFileToForm($any($event), 'fieldMultiFileId', exampleForm)" />
-
-<br>
-
-Upload single file Info:<br>
-<app-upload-file class="w-full" returnType="fileInfo" subFolderOnServer="test"
-  [isUploadMultiFile]="false"
-  [listFilesPatch]="fileSvc.extractFileFromListFileInfo([exampleForm.get('fieldOneFileInfo')?.value].flat())"
-  (returnedListId)="fileSvc.setFileInfoToForm($any($event), 'fieldOneFileInfo', exampleForm)" />
-
-<br>
-
-Upload multi file Info:<br>
-<app-upload-file class="w-full" returnType="fileInfo" subFolderOnServer="test"
-  [isUploadMultiFile]="true"
-  [listFilesPatch]="fileSvc.extractFileFromListFileInfo([exampleForm.get('fieldMultiFileInfo')?.value].flat())"
-  (returnedListId)="fileSvc.setListFileInfoToForm($any($event), 'fieldMultiFileInfo', exampleForm)" />
-
-<button type="button" (click)="viewFormValue()">View form value</button>
-
-<br>
-
-TinyMCE Editor:<br>
-<button type="button" (click)="patchFormValue()">Patch form value to editor</button>
-<div nz-row>
-  <div nz-col nzSpan="24" [formGroup]="exampleForm">
-    <!-- <tinymce-editor formControlName="editorData" /> -->
-    <tinymce-editor [(ngModel)]="editorData" [ngModelOptions]="{standalone:true}" />
+@if (loadFailed()) {
+  <div class="rounded-md border border-red-200 bg-red-50 p-4 text-red-800" role="alert">
+    Không tải được dữ liệu tổng quan. Kiểm tra kết nối rồi
+    <button nz-button nzType="link" type="button" class="p-0" (click)="load()">thử lại</button>.
   </div>
-</div>
-<br>
-Data:<br>
-@for (item of latexSvc.renderHtml(editorData()); track item) {
-<span [innerHTML]="item"></span>
 }
+
+<section class="grid gap-3 sm:grid-cols-3" aria-label="Số liệu nhanh">
+  <a class="rounded-lg border border-slate-200 bg-white p-4 hover:border-blue-400" [routerLink]="route.SECTIONS">
+    <span class="block text-sm text-slate-600">Lớp học phần trong phạm vi</span>
+    <b class="block text-2xl tabular-nums mt-1">{{ sections() === null ? placeholder.NONE : sections()!.length }}</b>
+  </a>
+  <a class="rounded-lg border border-slate-200 bg-white p-4 hover:border-blue-400" [routerLink]="route.CALCULATIONS">
+    <span class="block text-sm text-slate-600">Lần tính đã chạy</span>
+    <b class="block text-2xl tabular-nums mt-1">{{ runs().length }}</b>
+    @if (runningRuns() > 0 || failedRuns() > 0) {
+      <span class="block text-xs text-slate-600 mt-1">
+        {{ runningRuns() }} đang chạy · {{ failedRuns() }} lỗi
+      </span>
+    }
+  </a>
+  <div class="rounded-lg border border-slate-200 bg-white p-4">
+    <span class="block text-sm text-slate-600">Lần tính gần nhất</span>
+    @if (latestRun(); as run) {
+      <b class="block text-lg tabular-nums mt-1">{{ (run.finishedAt ?? run.startedAt) | date: 'dd/MM/yyyy HH:mm' }}</b>
+      <span class="block text-xs text-slate-600">{{ run.official ? 'Chính thức' : 'Không chính thức' }} · phạm vi {{ run.scope }}</span>
+    } @else {
+      <b class="block text-lg mt-1 text-slate-600">{{ placeholder.NONE }}</b>
+    }
+  </div>
+</section>
+
+@if (loading() && runs().length === 0) {
+  <p class="text-slate-600 mt-6"><i class="fa-solid fa-spinner fa-spin mr-1.25" aria-hidden="true"></i>Đang tải…</p>
+} @else if (latestRun(); as run) {
+  <div class="flex flex-wrap items-center gap-3 mt-6">
+    <app-unofficial-label [isOfficial]="run.official" />
+    <app-stale-warning [isStale]="run.stale" [reason]="run.staleReason" />
+  </div>
+
+  <div class="grid gap-4 mt-4 lg:grid-cols-2">
+    <section class="rounded-lg border border-slate-200 bg-white p-4" aria-labelledby="pi-heading">
+      <div class="flex items-baseline gap-2">
+        <h2 id="pi-heading" class="text-base font-semibold m-0">Mức đạt theo PI</h2>
+        <span class="text-xs text-slate-600">lần tính gần nhất</span>
+      </div>
+      @if (piResults().length === 0) {
+        <p class="text-sm text-slate-600 mt-3">Lần tính này chưa có kết quả cấp PI.</p>
+      } @else {
+        <ul class="mt-3 flex flex-col gap-2">
+          @for (r of piResults(); track r.id) {
+            <li class="flex items-center gap-3 text-sm">
+              <b class="w-20 shrink-0">{{ r.subjectCode || r.subjectId }}</b>
+              @if (r.mean === null || r.mean === undefined) {
+                <span class="flex-1 text-slate-600">{{ placeholder.INSUFFICIENT }}</span>
+              } @else {
+                <span class="flex-1 h-2 rounded bg-slate-100" aria-hidden="true">
+                  <span class="block h-2 rounded bg-blue-600" [style.width.%]="meterWidth(r.mean)"></span>
+                </span>
+                <b class="w-12 text-right tabular-nums">{{ (r.mean * 100) | number: '1.0-1' }}%</b>
+              }
+              <span class="w-20 text-right text-xs text-slate-600 tabular-nums"
+                [title]="'Đủ dữ liệu / ghi danh'">{{ r.evaluated }}/{{ r.counts?.enrolled ?? '—' }}</span>
+            </li>
+          }
+        </ul>
+        <p class="text-xs text-slate-600 mt-3">Số bên phải: sinh viên đủ dữ liệu / ghi danh.
+          <a [routerLink]="route.CALCULATIONS">Xem chi tiết đo lường</a></p>
+      }
+    </section>
+
+    <section class="rounded-lg border border-slate-200 bg-white p-4" aria-labelledby="plo-heading">
+      <h2 id="plo-heading" class="text-base font-semibold m-0">PLO</h2>
+      @if (ploResults().length === 0) {
+        <p class="text-sm text-slate-600 mt-3">Chưa có kết quả cấp PLO (cần đủ PI có dữ liệu).</p>
+      } @else {
+        <table class="w-full text-sm mt-3">
+          <thead class="text-left text-slate-600">
+            <tr><th class="py-1">PLO</th><th class="py-1 text-right">Mức đạt TB</th><th class="py-1 text-right">Đủ DL / ghi danh</th></tr>
+          </thead>
+          <tbody>
+            @for (r of ploResults(); track r.id) {
+              <tr class="border-t border-slate-100">
+                <td class="py-1.5 font-semibold">{{ r.subjectCode || r.subjectId }}</td>
+                <td class="py-1.5 text-right tabular-nums">
+                  @if (r.mean === null || r.mean === undefined) {
+                    <span class="text-slate-600">{{ placeholder.INSUFFICIENT }}</span>
+                  } @else { {{ (r.mean * 100) | number: '1.0-1' }}% }
+                </td>
+                <td class="py-1.5 text-right tabular-nums text-slate-600">{{ r.evaluated }}/{{ r.counts?.enrolled ?? '—' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    </section>
+  </div>
+} @else if (!loadFailed()) {
+  <p class="mt-6 rounded-md border border-dashed border-slate-300 p-4 text-slate-600">
+    Chưa có lần tính nào hoàn tất trong phạm vi của bạn. Nhập điểm cho bài đánh giá rồi vào
+    <a [routerLink]="route.CALCULATIONS">Đo lường</a> để chạy tính.
+  </p>
+}
+
+<section class="mt-8" aria-labelledby="links-heading">
+  <h2 id="links-heading" class="text-base font-semibold mb-3">Đi tới</h2>
+  <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+    @for (l of quickLinks; track l.link) {
+      <a class="flex gap-3 rounded-lg border border-slate-200 bg-white p-4 hover:border-blue-400" [routerLink]="l.link">
+        <i class="fa-solid text-blue-700 text-lg mt-0.5" [class]="l.icon" aria-hidden="true"></i>
+        <span>
+          <b class="block text-sm text-slate-900">{{ l.title }}</b>
+          <small class="text-slate-600">{{ l.hint }}</small>
+        </span>
+      </a>
+    }
+  </div>
+</section>

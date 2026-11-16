@@ -1,6 +1,7 @@
 import {
   AssessmentPhase, AssessmentStatus, AssessmentType,
 } from '@models/assessment/assessment.model';
+import { ImportBatchStatus } from '@models/assessment/score-import.model';
 import { IStatusDisplay } from '@models/common/status-display.model';
 
 /**
@@ -64,6 +65,48 @@ export const BLOOM_LEVEL_OPTIONS: readonly ISelectOption<number>[] = [
 export function bloomLabel(level: number): string {
   return BLOOM_LEVEL_OPTIONS.find(o => o.value === level)?.label ?? `${level}`;
 }
+
+/**
+ * Trạng thái lần nhập điểm (ImportBatchStatus). Quy tắc lấy từ ImportBatchServiceImpl:
+ * chỉ VALIDATED mới lưu được; CONFIRMED và ROLLED_BACK không hủy được nữa.
+ */
+export const IMPORT_BATCH_STATUS_DISPLAY: Record<ImportBatchStatus, IStatusDisplay> = {
+  UPLOADED: {
+    label: 'Đã tải lên',
+    description: 'Tệp đã tải lên, chưa kiểm tra. Chưa có điểm nào được ghi.',
+    icon: 'fa-cloud-arrow-up',
+    tone: 'neutral',
+    lineStyle: 'dashed',
+  },
+  VALIDATED: {
+    label: 'Hợp lệ, chờ lưu',
+    description: 'Tệp không có lỗi. Bấm Lưu để ghi điểm vào hệ thống.',
+    icon: 'fa-circle-check',
+    tone: 'info',
+    lineStyle: 'solid',
+  },
+  HAS_ERRORS: {
+    label: 'Có lỗi, chưa lưu',
+    description: 'Tệp còn dòng lỗi nên không lưu được, kể cả các dòng hợp lệ. Sửa tệp rồi nhập lại.',
+    icon: 'fa-triangle-exclamation',
+    tone: 'danger',
+    lineStyle: 'solid',
+  },
+  CONFIRMED: {
+    label: 'Đã lưu',
+    description: 'Điểm đã được ghi. Không hủy được; muốn đổi điểm thì nhập tệp mới.',
+    icon: 'fa-lock',
+    tone: 'success',
+    lineStyle: 'solid',
+  },
+  ROLLED_BACK: {
+    label: 'Đã hủy',
+    description: 'Lần nhập đã hủy trước khi lưu; không có điểm nào được ghi.',
+    icon: 'fa-ban',
+    tone: 'neutral',
+    lineStyle: 'dotted',
+  },
+};
 
 export function toOptions<T extends string>(labels: Readonly<Record<T, string>>): ISelectOption<T>[] {
   return (Object.keys(labels) as T[]).map(value => ({ value, label: labels[value] }));

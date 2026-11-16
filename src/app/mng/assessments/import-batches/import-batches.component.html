@@ -1,0 +1,138 @@
+<div class="page-header mb-6 flex flex-wrap items-end gap-3">
+  <div>
+    @if (assessment(); as a) {
+      <a class="text-sm font-medium text-blue-800 hover:underline" [routerLink]="urlConst.ASSESSMENT_DETAIL(a.id)">
+        <i class="fa-solid fa-arrow-left mr-1" aria-hidden="true"></i>Về bài {{ a.name }}
+      </a>
+    }
+    <h1 class="text-2xl font-bold text-slate-900 tracking-tight m-0 mt-1">Lịch sử nhập điểm</h1>
+    <div class="title-underline"></div>
+  </div>
+  <span class="flex-1"></span>
+  @if (assessment(); as a) {
+    <a nz-button nzType="primary" [routerLink]="urlConst.ASSESSMENT_SCORE_IMPORT(a.id)">
+      <i class="fa-solid fa-file-import mr-1.25" aria-hidden="true"></i>Nhập điểm mới
+    </a>
+  }
+</div>
+
+@if (error(); as e) {
+  <app-error-state [error]="e" [retrying]="loading()" (retry)="load()" />
+} @else if (loading() && batches().length === 0) {
+  <p class="text-slate-600"><i class="fa-solid fa-spinner fa-spin mr-1.25" aria-hidden="true"></i>Đang tải lịch sử nhập điểm…</p>
+} @else if (sortedBatches().length === 0) {
+  <p class="rounded-md border border-dashed border-slate-300 p-4 text-slate-600">
+    Bài này chưa có lần nhập điểm nào. Bấm <b>Nhập điểm mới</b> để tải tệp điểm đầu tiên.
+  </p>
+} @else {
+  <nz-table class="table-border table-cell-middle table-margin-bot" nzSize="middle" nzShowPagination="false"
+    [nzFrontPagination]="false" [nzData]="sortedBatches()" [nzScroll]="{ x: '960px' }">
+    <thead>
+      <tr>
+        <th nzWidth="260px">Tệp</th>
+        <th nzWidth="160px">Người tải lên</th>
+        <th nzWidth="150px">Thời gian</th>
+        <th nzWidth="180px">Trạng thái</th>
+        <th nzWidth="130px" nzAlign="right">Hợp lệ / lỗi</th>
+        <th nzWidth="80px" nzAlign="center"><span class="sr-only">Chi tiết</span></th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (b of sortedBatches(); track b.id) {
+        <tr [class.bg-blue-50]="selected()?.id === b.id">
+          <td><b class="break-all">{{ b.fileName }}</b></td>
+          <td>{{ b.uploadedBy }}</td>
+          <td class="tabular-nums">{{ b.createdAt | date: 'dd/MM/yyyy HH:mm' }}</td>
+          <td><app-display-chip [display]="statusDisplay[b.status]" /></td>
+          <td nzAlign="right" class="tabular-nums">
+            @if (b.stats) { {{ b.stats.validRows }} / {{ b.stats.errorRows }} } @else { <span class="text-slate-600">—</span> }
+          </td>
+          <td nzAlign="center">
+            <button nz-button nzType="link" nzSize="small" type="button" (click)="select(b)"
+              [attr.aria-expanded]="selected()?.id === b.id">{{ selected()?.id === b.id ? 'Ẩn' : 'Xem' }}</button>
+          </td>
+        </tr>
+      }
+    </tbody>
+  </nz-table>
+}
+
+@if (selected(); as b) {
+  <section class="mt-6 rounded-lg border border-slate-200 bg-white p-4" aria-labelledby="batch-heading">
+    <div class="flex flex-wrap items-center gap-3">
+      <h2 id="batch-heading" class="text-lg font-semibold m-0 break-all">{{ b.fileName }}</h2>
+      <app-display-chip [display]="statusDisplay[b.status]" />
+      <span class="flex-1"></span>
+      @if (canRollback(b)) {
+        <button nz-button nzDanger type="button" [nzLoading]="rollingBack()" (click)="confirmRollback(b)">
+          <i class="fa-solid fa-ban mr-1.25" aria-hidden="true"></i>Hủy lần nhập
+        </button>
+      }
+    </div>
+    <p class="text-sm text-slate-600 mt-1">{{ statusDisplay[b.status].description }}</p>
+
+    <dl class="grid gap-x-6 gap-y-2 text-sm mt-4 sm:grid-cols-[180px_1fr_180px_1fr]">
+      <dt class="text-slate-600">Dòng trong tệp</dt><dd class="tabular-nums">{{ b.stats?.totalRows ?? '—' }}</dd>
+      <dt class="text-slate-600">Dòng hợp lệ / lỗi</dt>
+      <dd class="tabular-nums">{{ b.stats ? b.stats.validRows + ' / ' + b.stats.errorRows : '—' }}</dd>
+      <dt class="text-slate-600">Ô điểm hợp lệ trong tệp</dt><dd class="tabular-nums">{{ b.stats?.scoreCount ?? '—' }}</dd>
+      <dt class="text-slate-600">Nguồn tệp</dt><dd>{{ b.sourceSystem || '—' }}</dd>
+      <dt class="text-slate-600">Khi trùng điểm cũ</dt><dd>{{ b.reimportPolicy || '—' }}</dd>
+      <dt class="text-slate-600">Người lưu</dt>
+      <dd>{{ b.confirmedBy ? b.confirmedBy + ' · ' + (b.confirmedAt | date: 'dd/MM/yyyy HH:mm') : 'Chưa lưu' }}</dd>
+    </dl>
+
+    <div class="flex flex-wrap items-center gap-3 mt-5">
+      <h3 class="text-base font-semibold m-0">Dòng lỗi</h3>
+      <span class="text-sm text-slate-600 tabular-nums">{{ errorsTotal() }} dòng</span>
+      <span class="flex-1"></span>
+      @if (errorTypes().length > 1) {
+        <label class="text-sm" for="err-type">Loại lỗi</label>
+        <select id="err-type" class="ant-input w-auto" [value]="errorTypeFilter() ?? ''"
+          (change)="errorTypeFilter.set($any($event.target).value || null)">
+          <option value="">Tất cả</option>
+          @for (t of errorTypes(); track t) { <option [value]="t">{{ t }}</option> }
+        </select>
+      }
+    </div>
+
+    @if (errorsLoading()) {
+      <p class="text-slate-600 mt-2"><i class="fa-solid fa-spinner fa-spin mr-1.25" aria-hidden="true"></i>Đang tải lỗi…</p>
+    } @else if (visibleErrors().length === 0) {
+      <p class="text-sm text-slate-600 mt-2">Lần nhập này không có dòng lỗi.</p>
+    } @else {
+      <nz-table class="table-border table-cell-middle mt-2" nzSize="small" nzShowPagination="false"
+        [nzFrontPagination]="false" [nzData]="visibleErrors()" [nzScroll]="{ x: '760px' }">
+        <thead>
+          <tr>
+            <th nzWidth="80px" nzAlign="right">Dòng</th>
+            <th nzWidth="160px">Cột</th>
+            <th nzWidth="200px">Loại lỗi</th>
+            <th nzWidth="120px">Giá trị gốc</th>
+            <th nzWidth="200px">Mô tả</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (e of visibleErrors(); track e.rowNumber + '-' + e.column + '-' + e.errorType) {
+            <tr>
+              <td nzAlign="right" class="tabular-nums">{{ e.rowNumber }}</td>
+              <td>{{ e.column || '—' }}</td>
+              <td class="font-mono text-xs">{{ e.errorType }}</td>
+              <td class="font-mono text-xs break-all">{{ e.rawValue ?? '(trống)' }}</td>
+              <td>{{ e.message }}</td>
+            </tr>
+          }
+        </tbody>
+      </nz-table>
+      @if (errorsTotal() > errorsPageSize) {
+        <div class="flex items-center gap-2 mt-2">
+          <button nz-button nzSize="small" type="button" [disabled]="errorsPage() <= 1"
+            (click)="loadErrors(errorsPage() - 1)">← Trước</button>
+          <span class="text-sm text-slate-600">Trang {{ errorsPage() }}</span>
+          <button nz-button nzSize="small" type="button" [disabled]="errorsPage() * errorsPageSize >= errorsTotal()"
+            (click)="loadErrors(errorsPage() + 1)">Sau →</button>
+        </div>
+      }
+    }
+  </section>
+}

@@ -1,0 +1,4 @@
+/* Ô "chưa có dữ liệu": gạch chéo để không bị đọc nhầm là thanh 0% (không chỉ dựa vào màu). */
+.chart-nodata {
+  background: repeating-linear-gradient(135deg, #f7f9fb 0 6px, #dde2ea 6px 8px);
+}

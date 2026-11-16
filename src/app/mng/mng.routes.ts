@@ -109,6 +109,29 @@ export const mngRoutes: Routes = [
         title: `Báo cáo QA & Truy vết | ${SystemConstant.WEB_NAME}`,
       },
       {
+        path: 'analytics',
+        canActivate: [canActiveGuard],
+        data: {
+          listRoles: ALL_MNG_ROLES,
+          rolesRelation: 'OR',
+        },
+        loadChildren: () => import('./analytics/analytics.routes').then(m => m.analyticsRoutes),
+        title: `Phân tích đa chiều | ${SystemConstant.WEB_NAME}`,
+      },
+      {
+        path: 'audit-logs',
+        canActivate: [canActiveGuard],
+        data: { listRoles: [SystemConstant.MNG_ROLE.ADMIN], rolesRelation: 'OR' },
+        loadChildren: () => import('./audit-logs/audit-logs.routes').then(m => m.auditLogsRoutes),
+        title: `Nhật ký thao tác | ${SystemConstant.WEB_NAME}`,
+      },
+      {
+        // Mọi vai trò đã đăng nhập đều xem được hồ sơ của chính mình
+        path: 'profile',
+        loadComponent: () => import('./profile/profile-page.component').then(m => m.ProfilePageComponent),
+        title: `Tài khoản của tôi | ${SystemConstant.WEB_NAME}`,
+      },
+      {
         // Không đặt listRoles: ai đã đăng nhập cũng xem được trang giải thích này
         path: 'forbidden',
         loadComponent: () => import('./forbidden/forbidden.component').then(m => m.ForbiddenComponent),
