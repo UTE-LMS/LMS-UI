@@ -63,6 +63,24 @@
     </div>
   </div>
 
+  <!-- Banner cảnh báo khóa đề cương khi CONFIRMED / ARCHIVED (TD-27) -->
+  @if (syllabus()) {
+  <div
+    class="mb-6 p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 flex items-start gap-3 text-sm"
+    role="status"
+  >
+    <i class="fa-solid fa-lock text-amber-600 mt-0.5 text-base"></i>
+    <div>
+      <div class="font-semibold">
+        Đề cương đã được phê duyệt chính thức (CONFIRMED) hoặc lưu trữ (TD-27)
+      </div>
+      <div class="text-xs text-amber-800 mt-0.5">
+        Danh sách CLO và liên kết CLO–PI của phiên bản này đã bị khóa cứng để bảo toàn tính toàn vẹn cho dữ liệu đo lường lịch sử. Nếu cần điều chỉnh chuẩn đầu ra cho học kỳ mới, vui lòng tạo phiên bản đề cương mới.
+      </div>
+    </div>
+  </div>
+  }
+
   <!-- Bảng Danh sách Chuẩn đầu ra Học phần (CLO) -->
   <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-2xs">
     <div class="flex items-center justify-between mb-4">
