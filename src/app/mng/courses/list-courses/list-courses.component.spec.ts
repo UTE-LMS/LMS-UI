@@ -63,6 +63,7 @@ describe('ListCoursesComponent (F03 US-09/AC-1 & F05a US-18)', () => {
 
   const authSvc = {
     getRoles: vi.fn<() => string[]>(() => [SystemConstant.ROLE.ADMIN]),
+    getFacultyId: vi.fn<() => string | undefined>(() => 'fac_cntt_01'),
   };
 
   const alertSvc = {
@@ -72,11 +73,13 @@ describe('ListCoursesComponent (F03 US-09/AC-1 & F05a US-18)', () => {
 
   const modalSvc = {
     confirm: vi.fn(),
+    warning: vi.fn(),
   };
 
   beforeEach(async () => {
     vi.clearAllMocks();
     authSvc.getRoles.mockReturnValue([SystemConstant.ROLE.ADMIN]);
+    authSvc.getFacultyId.mockReturnValue('fac_cntt_01');
 
     await TestBed.configureTestingModule({
       imports: [ListCoursesComponent],
@@ -106,11 +109,33 @@ describe('ListCoursesComponent (F03 US-09/AC-1 & F05a US-18)', () => {
     expect(compiled.textContent).toContain('—');
   });
 
-  it('ẩn các nút Thêm/Sửa/Xóa học phần và Nhập từ CSV đối với vai trò không phải ADMIN (ADR 0010)', () => {
+  it('PROGRAM_MANAGER được thêm và sửa học phần thuộc Khoa phụ trách (M4 Decentralization)', () => {
     component.userRoles.set([SystemConstant.ROLE.PROGRAM_MANAGER]);
     fixture.detectChanges();
 
     expect(component.isAdmin()).toBe(false);
+    expect(component.isProgramManager()).toBe(true);
+    expect(component.canManageCourses()).toBe(true);
+    expect(component.canManageTerms()).toBe(false);
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('Nhập từ CSV');
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('Thêm học phần mới');
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.textContent).toContain('Thêm học phần mới');
+    expect(compiled.textContent).toContain('Sửa');
+
+    courseSvc.getCourses.mockClear();
+    component.manager.triggerReload();
+    fixture.detectChanges();
+    expect(courseSvc.getCourses).toHaveBeenCalledWith(0, 10, '', 'fac_cntt_01');
+  });
+
+  it('ẩn các nút Thêm/Sửa/Xóa học phần và Nhập từ CSV đối với vai trò không phải ADMIN và không phải PROGRAM_MANAGER', () => {
+    component.userRoles.set([SystemConstant.ROLE.LECTURER]);
+    fixture.detectChanges();
+
+    expect(component.isAdmin()).toBe(false);
+    expect(component.canManageCourses()).toBe(false);
     expect(component.canManageTerms()).toBe(false);
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.textContent).not.toContain('Thêm học phần mới');

@@ -27,3 +27,16 @@ export interface IPagedResults<T> {
   totalPages: number;
   last: boolean;
 }
+
+export interface ICsvImportRowError {
+  row: number;
+  key: string;
+  message: string;
+}
+
+export interface ICsvImportResultResponse {
+  totalRows: number;
+  successCount: number;
+  failureCount: number;
+  errors: ICsvImportRowError[];
+}

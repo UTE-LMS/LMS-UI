@@ -73,13 +73,6 @@ export const ENROLLMENT_STATUS_DISPLAY: Record<EnrollmentStatus, IStatusDisplay>
 };
 
 export const SYLLABUS_STATUS_DISPLAY: Record<SyllabusStatus, IStatusDisplay> = {
-  DRAFT: {
-    label: 'Nháp',
-    description: 'Đề cương chưa được Trưởng bộ môn duyệt.',
-    icon: 'fa-pen-ruler',
-    tone: 'warning',
-    lineStyle: 'dashed',
-  },
   CONFIRMED: {
     label: 'Đã duyệt',
     description: 'Đề cương đã được Trưởng bộ môn duyệt.',

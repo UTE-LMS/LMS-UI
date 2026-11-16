@@ -2,7 +2,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { IPagedResults } from '@models/common/response-data.model';
-import { IUser } from '@models/user/user.model';
+import { IUser, Role } from '@models/user/user.model';
 import { AuthService } from '@services/auth/auth.service';
 import { UserService } from '@services/user/user.service';
 import { NzModalService } from 'ng-zorro-antd/modal';
@@ -10,13 +10,13 @@ import { ToastrService } from 'ngx-toastr';
 import { Observable, of, throwError } from 'rxjs';
 import { ListUsersComponent } from './list-users.component';
 
-const makeUser = (id: string, username: string, status: 'ACTIVE' | 'LOCKED', role: IUser['roleAssignments'][0]['role'] = 'LECTURER'): IUser => ({
+const makeUser = (id: string, username: string, status: 'ACTIVE' | 'LOCKED', role: Role = 'LECTURER'): IUser => ({
   id,
   username,
   email: `${username}@example.test`,
   fullName: `Họ tên ${username}`,
   status,
-  roleAssignments: [{ role, scope: null }],
+  roles: [role],
   createdAt: '2026-10-27T05:00:00Z',
   updatedAt: '2026-10-27T06:00:00Z',
 });
@@ -91,6 +91,21 @@ describe('ListUsersComponent (F01 US-02)', () => {
     expect(content).toContain('Bị khóa');
     // Không hiển thị ô nào có thể chứa băm mật khẩu
     expect(content.toLowerCase()).not.toContain('passwordhash');
+  });
+
+  it('hiển thị Khoa phụ trách cho người dùng PROGRAM_MANAGER trong cột Phạm vi', async () => {
+    const pmAssigned: IUser = {
+      ...makeUser('pm1', 'pm.fit', 'ACTIVE', 'PROGRAM_MANAGER'),
+      facultyCode: 'FIT',
+      facultyName: 'Khoa Công nghệ Thông tin',
+    };
+    const pmUnassigned: IUser = makeUser('pm2', 'pm.none', 'ACTIVE', 'PROGRAM_MANAGER');
+    userSvc.filter.mockImplementation(() => of(page([pmAssigned, pmUnassigned])));
+
+    await setup();
+    const content = text();
+    expect(content).toContain('FIT - Khoa Công nghệ Thông tin');
+    expect(content).toContain('Chưa gán Khoa');
   });
 
   it('trạng thái rỗng: có hướng dẫn việc kế tiếp', async () => {

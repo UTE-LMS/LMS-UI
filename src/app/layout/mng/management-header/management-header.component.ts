@@ -7,6 +7,7 @@ import langDataVi from '@languages/vi.json';
 import { ISiderMenu } from '@models/common/sider-menu.model';
 import { coursesMngMenu } from '@mng/courses/courses.menu';
 import { curriculumMngMenu } from '@mng/curriculum/curriculum.menu';
+import { facultiesMngMenu } from '@mng/faculties/faculties.menu';
 import { programsMngMenu } from '@mng/programs/programs.menu';
 import { sectionsMngMenu } from '@mng/sections/sections.menu';
 import { syllabiMngMenu } from '@mng/syllabi/syllabi.menu';
@@ -73,6 +74,7 @@ export class ManagementHeaderComponent implements OnInit {
     ...calculationsMngMenu,
     ...reportsMngMenu,
     ...analyticsMngMenu,
+    ...facultiesMngMenu,
     ...programsMngMenu,
     ...usersMngMenu,
     ...auditLogsMngMenu,
@@ -107,6 +109,7 @@ export class ManagementHeaderComponent implements OnInit {
       ...byRoute(UrlConstant.ROUTE.MANAGEMENT.ANALYTICS),
     ];
     const system = [
+      ...byRoute(UrlConstant.ROUTE.MANAGEMENT.FACULTIES),
       ...byRoute(UrlConstant.ROUTE.MANAGEMENT.PROGRAMS),
       ...byRoute(UrlConstant.ROUTE.MANAGEMENT.USERS),
       ...byRoute(UrlConstant.ROUTE.MANAGEMENT.AUDIT_LOGS),

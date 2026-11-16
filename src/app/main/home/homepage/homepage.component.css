@@ -1,0 +1,31 @@
+.homepage-container {
+  min-height: calc(100vh - 200px);
+}
+
+.plo-tree-table .pi-row td {
+  border-bottom-style: dashed;
+  border-bottom-color: #f1f5f9;
+}
+
+.line-clamp-1 {
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.homepage-container .nz-btn-purple,
+.homepage-container .nz-btn-purple:not([disabled]):hover,
+.homepage-container .nz-btn-purple:not([disabled]):focus {
+  background-color: #5b21b6;
+  border-color: #5b21b6;
+  color: #fff;
+}
+
+.homepage-container .nz-btn-green,
+.homepage-container .nz-btn-green:not([disabled]):hover,
+.homepage-container .nz-btn-green:not([disabled]):focus {
+  background-color: #15803d;
+  border-color: #15803d;
+  color: #fff;
+}

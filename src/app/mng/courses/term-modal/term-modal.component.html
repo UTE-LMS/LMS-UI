@@ -1,0 +1,92 @@
+<nz-modal
+  [nzVisible]="isVisible()"
+  [nzTitle]="editingTerm() ? 'Cập nhật thông tin học kỳ' : 'Thêm học kỳ mới'"
+  [nzFooter]="modalFooterTpl"
+  [nzWidth]="520"
+  (nzOnCancel)="handleCancel()"
+  (nzVisibleChange)="onVisibleChange($event)"
+>
+  <ng-container *nzModalContent>
+    <form [formGroup]="termForm" nz-form nzLayout="vertical">
+      <nz-form-item>
+        <nz-form-label nzRequired nzFor="termCode">Mã học kỳ</nz-form-label>
+        <nz-form-control nzErrorTip="Mã học kỳ từ 2–30 ký tự (chữ, số, gạch ngang, gạch dưới)">
+          <input
+            nz-input
+            id="termCode"
+            formControlName="code"
+            placeholder="Ví dụ: 2026-HK1, 2026-HK2..."
+          />
+        </nz-form-control>
+      </nz-form-item>
+
+      <nz-form-item>
+        <nz-form-label nzFor="academicYear">Năm học</nz-form-label>
+        <nz-form-control>
+          <input
+            nz-input
+            id="academicYear"
+            formControlName="academicYear"
+            placeholder="Ví dụ: 2026-2027"
+          />
+        </nz-form-control>
+      </nz-form-item>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <nz-form-item>
+          <nz-form-label nzFor="startDate">Ngày bắt đầu</nz-form-label>
+          <nz-form-control>
+            <input
+              nz-input
+              type="date"
+              id="startDate"
+              formControlName="startDate"
+            />
+          </nz-form-control>
+        </nz-form-item>
+
+        <nz-form-item>
+          <nz-form-label nzFor="endDate">Ngày kết thúc</nz-form-label>
+          <nz-form-control>
+            <input
+              nz-input
+              type="date"
+              id="endDate"
+              formControlName="endDate"
+            />
+          </nz-form-control>
+        </nz-form-item>
+      </div>
+
+      @if (termForm.hasError('dateRangeInvalid')) {
+      <div class="text-rose-600 text-xs mt-1" role="alert">
+        Ngày kết thúc học kỳ không được trước ngày bắt đầu (US-18/AC-1).
+      </div>
+      }
+    </form>
+  </ng-container>
+
+  <ng-template #modalFooterTpl>
+    <div class="flex items-center justify-end gap-2.5">
+      <button
+        nz-button
+        nzType="default"
+        type="button"
+        [disabled]="isSubmitting()"
+        (click)="handleCancel()"
+      >
+        Hủy
+      </button>
+      <button
+        nz-button
+        nzType="primary"
+        type="button"
+        [nzLoading]="isSubmitting()"
+        [disabled]="isSubmitting()"
+        (click)="submitTerm()"
+      >
+        {{ editingTerm() ? 'Lưu thay đổi' : 'Tạo học kỳ' }}
+      </button>
+    </div>
+  </ng-template>
+</nz-modal>

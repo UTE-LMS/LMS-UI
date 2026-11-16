@@ -1,22 +1,9 @@
-import { SystemConstant } from '@constants/system.constant';
-
-/** 7 giá trị enum vai trò của backend (API-CONTRACT.md §5.3.2). */
-export type UserRole = (typeof SystemConstant.ROLE)[keyof typeof SystemConstant.ROLE];
+/** 4 vai trò cốt lõi của backend (OBE v0.7 / ADR 0014). */
+export type Role = 'ADMIN' | 'PROGRAM_MANAGER' | 'LECTURER' | 'QA';
+export type UserRole = Role;
 
 /** Trạng thái tài khoản: ACTIVE cho phép đăng nhập, LOCKED bị khóa (§5.3.5). */
 export type UserStatus = 'ACTIVE' | 'LOCKED';
-
-/** Phạm vi của một vai trò. Mảng chứa ObjectId 24 ký tự hex. */
-export interface IUserScope {
-  programIds: string[];
-  courseIds: string[];
-  sectionIds: string[];
-}
-
-export interface IRoleAssignment {
-  role: UserRole;
-  scope: IUserScope | null;
-}
 
 /** Body của POST /api/v1/users (CreateUserRequest). */
 export interface IUserCreateDTO {
@@ -24,7 +11,8 @@ export interface IUserCreateDTO {
   email: string;
   password: string;
   fullName: string;
-  roleAssignments: IRoleAssignment[];
+  facultyId?: string | null;
+  roles: Role[];
 }
 
 /** Body của PUT /api/v1/users/{id}: không có username và password (UpdateUserRequest). */
@@ -42,7 +30,10 @@ export interface IUser {
   email: string;
   fullName: string;
   status: UserStatus;
-  roleAssignments: IRoleAssignment[];
+  facultyId?: string | null;
+  facultyCode?: string;
+  facultyName?: string;
+  roles: Role[];
   createdAt: string;
   updatedAt: string;
 }

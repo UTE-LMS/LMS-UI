@@ -26,20 +26,40 @@ export const UrlConstant = {
     AUTH_LOGOUT: environment.serverUrl + 'api/v1/auth/logout',
     AUTH_ME: environment.serverUrl + 'api/v1/auth/me',
     USERS: environment.serverUrl + 'api/v1/users',
+    USER_IMPORT_TEMPLATE: environment.serverUrl + 'api/v1/users/import-template',
+    USER_IMPORT: environment.serverUrl + 'api/v1/users/import',
+
+    // F02a - Khoa & Điều phối viên (ADR / R2)
+    FACULTIES: environment.serverUrl + 'api/v1/faculties',
+    FACULTY_IMPORT_TEMPLATE: environment.serverUrl + 'api/v1/faculties/import-template',
+    FACULTY_IMPORT: environment.serverUrl + 'api/v1/faculties/import',
+    FACULTY_DETAIL: (id: string) => `${environment.serverUrl}api/v1/faculties/${id}`,
+    FACULTY_STATUS: (id: string) => `${environment.serverUrl}api/v1/faculties/${id}/status`,
+    FACULTY_PROGRAM_MANAGERS: (id: string) => `${environment.serverUrl}api/v1/faculties/${id}/program-managers`,
+    FACULTY_PMS: (id: string) => `${environment.serverUrl}api/v1/faculties/${id}/program-managers`,
+    FACULTY_PROGRAM_MANAGER_DELETE: (facultyId: string, userId: string) => `${environment.serverUrl}api/v1/faculties/${facultyId}/program-managers/${userId}`,
+    FACULTY_PM_DETAIL: (facultyId: string, userId: string) => `${environment.serverUrl}api/v1/faculties/${facultyId}/program-managers/${userId}`,
+    FACULTY_TRANSFER_PM: environment.serverUrl + 'api/v1/faculties/transfer-program-manager',
+    FACULTY_TRANSFER_PROGRAM_MANAGER: environment.serverUrl + 'api/v1/faculties/transfer-program-manager',
 
     // F02 - Chương trình đào tạo và phiên bản (API-CONTRACT.md §6.1)
     PROGRAMS: environment.serverUrl + 'api/v1/programs',
     PROGRAM_VERSIONS: environment.serverUrl + 'api/v1/program-versions',
     PROGRAM_VERSION_IMPORT_TEMPLATE: environment.serverUrl + 'api/v1/program-versions/import-template',
     PROGRAM_VERSION_IMPORT: environment.serverUrl + 'api/v1/program-versions/import',
+    PROGRAM_VERSION_IMPORT_PREVIEW: environment.serverUrl + 'api/v1/program-versions/import/preview',
     PROGRAM_VERSION_CONFIRM_IMPORT: (id: string) => `${environment.serverUrl}api/v1/program-versions/${id}/confirm-import`,
+    PROGRAM_VERSION_LOCK: (id: string) => `${environment.serverUrl}api/v1/program-versions/${id}/lock`,
     PROGRAM_VERSION_DETAIL: (id: string) => `${environment.serverUrl}api/v1/program-versions/${id}`,
     PROGRAM_VERSION_STATUS: (id: string) => `${environment.serverUrl}api/v1/program-versions/${id}/status`,
+    PROGRAM_VERSION_SYLLABI: (pvId: string) => `${environment.serverUrl}api/v1/program-versions/${pvId}/syllabi`,
     PLOS: (pvId: string) => `${environment.serverUrl}api/v1/program-versions/${pvId}/plos`,
     PLO_DETAIL: (pvId: string, id: string) => `${environment.serverUrl}api/v1/program-versions/${pvId}/plos/${id}`,
     PIS: (pvId: string) => `${environment.serverUrl}api/v1/program-versions/${pvId}/pis`,
     PI_DETAIL: (pvId: string, id: string) => `${environment.serverUrl}api/v1/program-versions/${pvId}/pis/${id}`,
     PROGRAM_COURSES: (pvId: string) => `${environment.serverUrl}api/v1/program-versions/${pvId}/courses`,
+    PROGRAM_COURSE_IMPORT_TEMPLATE: (pvId: string) => `${environment.serverUrl}api/v1/program-versions/${pvId}/courses/import-template`,
+    PROGRAM_COURSE_IMPORT: (pvId: string) => `${environment.serverUrl}api/v1/program-versions/${pvId}/courses/import`,
 
     // F03 & F05a (Terms, Courses, Syllabi, CLOs, CLO-PI Links)
     TERMS: environment.serverUrl + 'api/v1/terms',
@@ -47,6 +67,7 @@ export const UrlConstant = {
     TERM_STATUS: (id: string) => `${environment.serverUrl}api/v1/terms/${id}/status`,
 
     COURSES: environment.serverUrl + 'api/v1/courses',
+    COURSE_IMPORT_TEMPLATE: environment.serverUrl + 'api/v1/courses/import-template',
     COURSE_IMPORT: environment.serverUrl + 'api/v1/courses/import',
     COURSE_DETAIL: (id: string) => `${environment.serverUrl}api/v1/courses/${id}`,
     PROGRAM_COURSE_DETAIL: (pvId: string, courseId: string) => `${environment.serverUrl}api/v1/program-versions/${pvId}/courses/${courseId}`,
@@ -54,7 +75,10 @@ export const UrlConstant = {
     COURSE_SYLLABI: (courseId: string) => `${environment.serverUrl}api/v1/courses/${courseId}/syllabi`,
     COURSE_SYLLABI_IMPORT_TEMPLATE: (courseId: string) => `${environment.serverUrl}api/v1/courses/${courseId}/syllabi/import-template`,
     COURSE_SYLLABI_IMPORT: (courseId: string) => `${environment.serverUrl}api/v1/courses/${courseId}/syllabi/import`,
+    COURSE_SYLLABI_IMPORT_PREVIEW: (courseId: string) => `${environment.serverUrl}api/v1/courses/${courseId}/syllabi/import/preview`,
+    SYLLABUS_IMPORT_PREVIEW: (courseId: string) => `${environment.serverUrl}api/v1/courses/${courseId}/syllabi/import/preview`,
     SYLLABUS_CONFIRM_IMPORT: (id: string) => `${environment.serverUrl}api/v1/syllabi/${id}/confirm-import`,
+    SYLLABUS_LOCK: (id: string) => `${environment.serverUrl}api/v1/syllabi/${id}/lock`,
     SYLLABUS_DETAIL: (id: string) => `${environment.serverUrl}api/v1/syllabi/${id}`,
     SYLLABUS_STATUS: (id: string) => `${environment.serverUrl}api/v1/syllabi/${id}/status`,
 
@@ -131,6 +155,8 @@ export const UrlConstant = {
 
       USERS: '/mng/users',
       USERS_NEW: '/mng/users/new',
+
+      FACULTIES: '/mng/faculties',
 
       PROGRAMS: '/mng/programs',
       CURRICULUM: '/mng/curriculum',

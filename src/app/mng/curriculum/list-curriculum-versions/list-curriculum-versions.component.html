@@ -42,14 +42,6 @@
     }
   </div>
 
-  <!-- Alert Banner nghiệp vụ (UI.pdf Trang 3) -->
-  <div class="ui-alert-banner">
-    <i class="fa-solid fa-circle-info ui-alert-icon"></i>
-    <div class="ui-alert-text">
-      Chương trình đang áp dụng không sửa trực tiếp được. Sửa bản đang áp dụng sẽ tạo phiên bản nháp mới, bản cũ vẫn giữ để đọc lại báo cáo.
-    </div>
-  </div>
-
   <!-- Table Bảng danh sách phiên bản -->
   <div class="ui-pdf-table-wrapper">
     <nz-table
@@ -77,7 +69,7 @@
               <a
                 class="version-code-link"
                 [routerLink]="['/mng/curriculum/versions', item.id]"
-                title="Bấm để xem chi tiết phiên bản CTĐT, PLO · PI và ma trận I/R/M"
+                title="Bấm để xem chi tiết phiên bản CTĐT, PLO · PI"
               >
                 <span>{{ item.version }}</span>
                 <i class="fa-solid fa-arrow-up-right-from-square text-xs opacity-60 ml-1.5"></i>
@@ -100,13 +92,6 @@
               icon="fa-circle-check"
               description="Phiên bản đang được áp dụng chính thức"
             />
-            } @else if (item.status === 'DRAFT') {
-            <app-status-chip
-              label="Nháp"
-              tone="warning"
-              icon="fa-file-lines"
-              description="Bản nháp đang soạn thảo, chưa áp dụng"
-            />
             } @else {
             <app-status-chip
               label="Đã lưu trữ"
@@ -117,7 +102,7 @@
             }
           </td>
           <td>
-            <span>{{ formatCohorts(item.applicableCohorts) }}</span>
+            <span>{{ formatCohorts(item.applicableCohort) }}</span>
           </td>
           <td nzAlign="center">
             <span>{{ getPloCount(item.id) }}</span>
@@ -127,29 +112,20 @@
           </td>
           <td nzAlign="right">
             <div class="flex items-center justify-end gap-3">
-              @if (item.status === 'DRAFT') {
-                <a
-                  class="table-action-link"
-                  [routerLink]="['/mng/curriculum/versions', item.id]"
-                >
-                  Xem
-                </a>
-                @if (canManage()) {
-                <button
-                  type="button"
-                  class="table-action-link text-emerald-600 hover:text-emerald-800"
-                  (click)="confirmActivateVersion(item)"
-                >
-                  Áp dụng
-                </button>
-                }
-              } @else {
-                <a
-                  class="table-action-link"
-                  [routerLink]="['/mng/curriculum/versions', item.id]"
-                >
-                  Xem
-                </a>
+              <a
+                class="table-action-link"
+                [routerLink]="['/mng/curriculum/versions', item.id]"
+              >
+                Xem
+              </a>
+              @if (canManage() && item.status === 'ACTIVE') {
+              <button
+                type="button"
+                class="table-action-link text-rose-600 hover:text-rose-800"
+                (click)="confirmLockVersion(item)"
+              >
+                Khóa
+              </button>
               }
             </div>
           </td>
@@ -179,19 +155,19 @@
   </div>
 </div>
 
-<!-- Modal Import CSV Phiên bản CTĐT 3 bước -->
+<!-- Modal Import CSV Phiên bản CTĐT 3 bước (Chọn tệp & Phiên bản -> Xem trước & Xác nhận PLO/PI -> Khung học phần) -->
 <nz-modal
   [(nzVisible)]="isImportModalVisible"
   nzTitle="Import phiên bản CTĐT từ CSV"
-  [nzWidth]="640"
+  [nzWidth]="760"
   (nzOnCancel)="closeImportModal()"
   [nzFooter]="null"
 >
   <ng-container *nzModalContent>
     <nz-steps [nzCurrent]="importStep()" nzSize="small" class="mb-6">
-      <nz-step nzTitle="Chọn tệp"></nz-step>
-      <nz-step nzTitle="Kiểm tra"></nz-step>
-      <nz-step nzTitle="Lưu và xác nhận"></nz-step>
+      <nz-step nzTitle="Chọn tệp & Phiên bản"></nz-step>
+      <nz-step nzTitle="Xem trước & Xác nhận PLO/PI"></nz-step>
+      <nz-step nzTitle="Import Khung học phần"></nz-step>
     </nz-steps>
 
     @if (importStep() === 0) {
@@ -209,11 +185,59 @@
         />
       </div>
 
-      <div class="flex items-center justify-between p-3 rounded-lg bg-slate-50 border border-slate-200">
-        <span class="text-xs text-slate-600">Tải tệp CSV mẫu đúng định dạng PLO, PI, Học phần:</span>
-        <button nz-button nzType="default" nzSize="small" type="button" (click)="downloadImportTemplate()">
-          <i class="fa-solid fa-download mr-1.5"></i> Tải tệp mẫu
-        </button>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div>
+          <label for="importApplicableCohortInput" class="block text-sm font-medium text-slate-700 mb-1">
+            Khóa đào tạo
+          </label>
+          <input
+            nz-input
+            id="importApplicableCohortInput"
+            maxlength="50"
+            [ngModel]="importApplicableCohort()"
+            (ngModelChange)="importApplicableCohort.set($event)"
+            placeholder="Ví dụ: K2024"
+          />
+        </div>
+        <div>
+          <label for="importDurationYearsInput" class="block text-sm font-medium text-slate-700 mb-1">
+            Thời gian đào tạo (năm)
+          </label>
+          <input
+            nz-input
+            id="importDurationYearsInput"
+            type="number"
+            min="0"
+            step="0.5"
+            [ngModel]="importDurationYears()"
+            (ngModelChange)="importDurationYears.set($event)"
+            placeholder="Ví dụ: 4"
+          />
+        </div>
+        <div>
+          <label for="importTotalCreditsInput" class="block text-sm font-medium text-slate-700 mb-1">
+            Tổng tín chỉ
+          </label>
+          <input
+            nz-input
+            id="importTotalCreditsInput"
+            type="number"
+            min="0"
+            step="1"
+            [ngModel]="importTotalCredits()"
+            (ngModelChange)="importTotalCredits.set($event)"
+            placeholder="Ví dụ: 150"
+          />
+        </div>
+      </div>
+
+      <div class="p-3 rounded-lg bg-slate-50 border border-slate-200 space-y-2">
+        <div class="flex items-center justify-between gap-2">
+          <span class="text-xs font-medium text-slate-700">Tải tệp CSV mẫu đúng định dạng PLO, PI, Học phần:</span>
+          <button nz-button nzType="default" nzSize="small" type="button" (click)="downloadImportTemplate()">
+            <i class="fa-solid fa-download mr-1.5"></i> Tải file mẫu CSV
+          </button>
+        </div>
       </div>
 
       <div>
@@ -237,9 +261,9 @@
           type="button"
           [nzLoading]="isImporting()"
           [disabled]="!importVersion().trim() || !selectedFile()"
-          (click)="submitImportCheck()"
+          (click)="submitPreview()"
         >
-          Kiểm tra CSV
+          Xem trước
         </button>
       </div>
     </div>
@@ -247,8 +271,11 @@
     @if (importResult(); as res) {
     <div class="space-y-4">
       <div class="p-4 rounded-lg bg-blue-50 border border-blue-200 text-sm text-blue-900">
-        Đã nạp tạm phiên bản <strong>{{ res.version }}</strong> (trạng thái: <code>{{ res.verificationStatus }}</code>):
+        Kết quả xem trước phiên bản <strong>{{ res.version }}</strong> (sẽ tự động lưu ở trạng thái <code>ACTIVE</code> & <code>VERIFIED</code>):
         <ul class="list-disc pl-5 mt-2 space-y-1">
+          <li>Khóa đào tạo: <strong>{{ res.applicableCohort || '—' }}</strong></li>
+          <li>Thời gian đào tạo: <strong>{{ res.durationYears ?? '—' }} năm</strong></li>
+          <li>Tổng tín chỉ: <strong>{{ res.totalCredits ?? '—' }}</strong></li>
           <li>Số PLO: <strong>{{ res.ploCount }}</strong></li>
           <li>Số PI: <strong>{{ res.piCount }}</strong></li>
           <li>Số Học phần gắn vào CTĐT: <strong>{{ res.courseCount }}</strong></li>
@@ -266,6 +293,37 @@
       </div>
       }
 
+      @if (previewRows().length > 0) {
+      <div class="max-h-60 overflow-y-auto border border-slate-200 rounded-lg">
+        <nz-table
+          #previewTable
+          [nzData]="previewRows()"
+          [nzShowPagination]="false"
+          [nzFrontPagination]="false"
+          nzSize="small"
+        >
+          <thead>
+            <tr>
+              <th nzWidth="120px">Mã</th>
+              <th nzWidth="90px">Loại</th>
+              <th nzWidth="120px" nzAlign="center">Mức năng lực</th>
+              <th>Nội dung tóm tắt</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of previewRows(); track row.code) {
+            <tr>
+              <td><span class="font-semibold text-slate-900">{{ row.code }}</span></td>
+              <td><span class="text-xs px-1.5 py-0.5 rounded bg-slate-100 text-slate-700">{{ row.typeLabel }}</span></td>
+              <td nzAlign="center">{{ row.capabilityLevel ?? '—' }}</td>
+              <td class="text-slate-700 text-xs">{{ row.content }}</td>
+            </tr>
+            }
+          </tbody>
+        </nz-table>
+      </div>
+      }
+
       <div class="flex justify-end gap-2 pt-3 border-t border-slate-100">
         <button nz-button type="button" (click)="importStep.set(0)">Chọn lại tệp</button>
         <button
@@ -273,24 +331,86 @@
           nzType="primary"
           type="button"
           [nzLoading]="isImporting()"
-          (click)="confirmImportSave()"
+          (click)="confirmImport()"
         >
-          Lưu và xác nhận
+          Xác nhận Import
         </button>
       </div>
     </div>
     }
-    } @else {
-    <div class="space-y-4 text-center py-4">
-      <i class="fa-solid fa-circle-check text-4xl text-emerald-500"></i>
-      <div class="text-base font-semibold text-slate-900">
-        Đã lưu và xác nhận phiên bản CTĐT [{{ importResult()?.version }}]!
+    } @else if (importStep() === 2) {
+    <div class="space-y-4">
+      <div class="p-4 rounded-lg bg-emerald-50 border border-emerald-200 text-sm text-emerald-900">
+        Đã tạo phiên bản CTĐT <strong>{{ importResult()?.version }}</strong> ở trạng thái <code>ACTIVE</code> (Đang áp dụng).
+        Vui lòng tải lên và import <strong>Khung học phần theo học kỳ</strong> (bắt buộc) để hoàn tất phiên bản.
       </div>
-      <div class="text-xs text-slate-500">
-        Phiên bản hiện ở trạng thái Bản nháp (DRAFT) và sẵn sàng để phê duyệt áp dụng.
+
+      <div class="p-3 rounded-lg bg-slate-50 border border-slate-200 space-y-2">
+        <div class="flex items-center justify-between gap-2">
+          <span class="text-xs font-medium text-slate-700">Tải tệp CSV mẫu Khung học phần theo học kỳ:</span>
+          <button nz-button nzType="default" nzSize="small" type="button" (click)="downloadCoursesImportTemplate()">
+            <i class="fa-solid fa-download mr-1.5"></i> Tải file mẫu CSV
+          </button>
+        </div>
+        <div class="text-xs text-slate-600 leading-relaxed">
+          Các cột hỗ trợ: <code>courseCode</code>, <code>semester</code>, <code>credits</code>, <code>type</code> (<code>REQUIRED</code> | <code>ELECTIVE</code>), <code>category</code>, <code>previousCourseCodes</code>, <code>prerequisiteCourseCodes</code>.
+        </div>
       </div>
-      <div class="pt-2">
-        <button nz-button nzType="primary" type="button" (click)="closeImportModal()">Đóng</button>
+
+      <div>
+        <label for="programCoursesCsvFile" class="block text-sm font-medium text-slate-700 mb-1">
+          Chọn tệp CSV Khung học phần
+        </label>
+        <input
+          id="programCoursesCsvFile"
+          type="file"
+          accept=".csv,text/csv"
+          class="block w-full text-sm text-slate-600 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+          (change)="onCoursesFileSelected($event)"
+        />
+      </div>
+
+      @if (coursesImportResult(); as cRes) {
+      <div class="p-3 rounded-lg bg-blue-50 border border-blue-200 text-xs text-blue-900 space-y-1">
+        <div>
+          Kết quả import khung học phần: Thêm mới <strong>{{ cRes.importedCount }}</strong>, cập nhật <strong>{{ cRes.updatedCount }}</strong> học phần.
+        </div>
+        @if (cRes.warnings.length > 0) {
+        <div class="text-amber-800 pt-1">
+          <div class="font-semibold">Cảnh báo:</div>
+          <ul class="list-disc pl-5 space-y-0.5">
+            @for (w of cRes.warnings; track w) {
+            <li>{{ w }}</li>
+            }
+          </ul>
+        </div>
+        }
+      </div>
+      }
+
+      <div class="flex justify-end gap-2 pt-3 border-t border-slate-100">
+        @if (!coursesImportResult()) {
+        <button
+          nz-button
+          nzType="primary"
+          type="button"
+          [nzLoading]="isImportingCourses()"
+          [disabled]="!selectedCoursesFile()"
+          (click)="submitCoursesImport()"
+        >
+          Import Khung học phần
+        </button>
+        } @else {
+        <button nz-button type="button" (click)="finishImportModal()">Hoàn tất</button>
+        <a
+          nz-button
+          nzType="primary"
+          [routerLink]="['/mng/curriculum/versions', createdProgramVersionId()]"
+          (click)="finishImportModal()"
+        >
+          Xem chi tiết phiên bản
+        </a>
+        }
       </div>
     </div>
     }

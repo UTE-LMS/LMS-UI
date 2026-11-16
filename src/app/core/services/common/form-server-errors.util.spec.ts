@@ -6,8 +6,8 @@ import { applyApiErrorToForm, applyFieldErrors, SERVER_ERROR_KEY, serverErrorOf 
 const makeForm = () => new FormGroup({
   username: new FormControl('ad', { nonNullable: true, validators: [Validators.required] }),
   email: new FormControl('a@example.test', { nonNullable: true }),
-  roleAssignments: new FormArray([
-    new FormGroup({ programIds: new FormControl<string[]>([], { nonNullable: true }) }),
+  items: new FormArray([
+    new FormGroup({ weight: new FormControl<number>(0, { nonNullable: true }) }),
   ]),
 });
 
@@ -56,11 +56,11 @@ describe('applyFieldErrors - gắn fieldErrors vào Reactive Form (US-40/AC-1)',
     expect(serverErrorOf(form.controls.email)).toBe('Email không đúng định dạng. Email đã tồn tại.');
   });
 
-  it('hỗ trợ đường dẫn lồng nhau kiểu roleAssignments[0].programIds', () => {
+  it('hỗ trợ đường dẫn lồng nhau kiểu items[0].weight', () => {
     const form = makeForm();
-    const unmatched = applyFieldErrors(form, [{ field: 'roleAssignments[0].programIds', message: 'Mã CTĐT không tồn tại' }]);
+    const unmatched = applyFieldErrors(form, [{ field: 'items[0].weight', message: 'Trọng số không hợp lệ' }]);
     expect(unmatched).toEqual([]);
-    expect(serverErrorOf(form.get('roleAssignments.0.programIds'))).toBe('Mã CTĐT không tồn tại');
+    expect(serverErrorOf(form.get('items.0.weight'))).toBe('Trọng số không hợp lệ');
   });
 
   it('trường không có trên form được trả về trong unmatched thay vì bị nuốt', () => {

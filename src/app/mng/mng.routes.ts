@@ -31,10 +31,20 @@ export const mngRoutes: Routes = [
         loadChildren: () => import('./users/users.routes').then(m => m.usersRoutes),
       },
       {
+        path: 'faculties',
+        canActivate: [canActiveGuard],
+        data: { listRoles: [SystemConstant.MNG_ROLE.ADMIN], rolesRelation: 'OR' },
+        loadChildren: () => import('./faculties/faculties.routes').then(m => m.facultiesRoutes),
+        title: `Quản lý Khoa | ${SystemConstant.WEB_NAME}`,
+      },
+      {
         path: 'programs',
         canActivate: [canActiveGuard],
         data: {
-          listRoles: [SystemConstant.MNG_ROLE.ADMIN],
+          listRoles: [
+            SystemConstant.MNG_ROLE.ADMIN,
+            SystemConstant.MNG_ROLE.PROGRAM_MANAGER,
+          ],
           rolesRelation: 'OR',
         },
         loadChildren: () => import('./programs/programs.routes').then(m => m.programsRoutes),

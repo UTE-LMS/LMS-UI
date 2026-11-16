@@ -29,22 +29,12 @@
         }
       </div>
 
-      @if (isAdmin()) {
+      @if (canManage()) {
       <button nz-button nzType="primary" class="add-program-btn" (click)="openCreateModal()">
         <i class="fa-solid fa-plus mr-1.5"></i>Thêm chương trình đào tạo
       </button>
       }
     </div>
-  </div>
-</div>
-
-<!-- Banner nhắc nhở quy tắc phiên bản khớp thiết kế UI.pdf trang 3 -->
-<div class="alert-banner mb-6">
-  <div class="alert-icon-box">
-    <i class="fa-solid fa-circle-info text-base"></i>
-  </div>
-  <div class="alert-text">
-    Chương trình đang áp dụng không sửa trực tiếp được. Sửa bản đang áp dụng sẽ tạo phiên bản nháp mới, bản cũ vẫn giữ để đọc lại báo cáo.
   </div>
 </div>
 
@@ -64,7 +54,7 @@
         <th nzWidth="360px">Tên chương trình đào tạo</th>
         <th nzWidth="180px">Bậc đào tạo</th>
         <th nzWidth="180px">Loại văn bằng</th>
-        @if (isAdmin()) {
+        @if (canManage()) {
         <th nzAlign="right" nzWidth="100px">Thao tác</th>
         }
       </tr>
@@ -92,7 +82,7 @@
           >
             Xem phiên bản
           </a>
-          @if (isAdmin()) {
+          @if (canManage()) {
           <button
             type="button"
             class="table-action-link"
@@ -142,7 +132,7 @@
   } @else {
   <div class="py-10 text-center text-slate-500">
     <p class="mb-3">Chưa có chương trình đào tạo nào trong hệ thống.</p>
-    @if (isAdmin()) {
+    @if (canManage()) {
     <button nz-button nzType="primary" (click)="openCreateModal()">
       <i class="fa-solid fa-plus mr-1.5"></i>Thêm chương trình đầu tiên
     </button>
@@ -168,6 +158,32 @@
 
   <ng-template #modalContentTpl>
     <form [formGroup]="programForm" class="py-1">
+      @if (editingProgramId()) {
+      <div class="mb-4 p-3 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-900 leading-relaxed">
+        <i class="fa-solid fa-triangle-exclamation text-amber-600 mr-1.5"></i>
+        Lưu ý: Nếu chương trình đào tạo đã có phiên bản ban hành (<strong>ACTIVE</strong> hoặc <strong>ARCHIVED</strong>), hệ thống sẽ khóa và từ chối chỉnh sửa thông tin định danh (422 Locked).
+      </div>
+      }
+
+      <div class="mb-4">
+        <label class="font-medium text-slate-800 text-sm mb-1.5 block">
+          Khoa quản lý <span class="text-rose-500 font-bold">*</span>
+        </label>
+        <nz-select
+          formControlName="facultyId"
+          class="w-full custom-select"
+          nzPlaceHolder="Chọn Khoa quản lý..."
+          [nzDisabled]="isProgramManager() && !isAdmin()"
+        >
+          @for (fac of faculties(); track fac.id) {
+          <nz-option [nzValue]="fac.id" [nzLabel]="fac.code + ' - ' + fac.name"></nz-option>
+          }
+        </nz-select>
+        @if (isProgramManager() && !isAdmin()) {
+        <small class="form-hint">Khoa quản lý được cố định theo phạm vi phân quyền của Quản lý CTĐT.</small>
+        }
+      </div>
+
       <div class="mb-4">
         <label class="font-medium text-slate-800 text-sm mb-1.5 block">
           Mã chương trình (Mã CTĐT) <span class="text-rose-500 font-bold">*</span>

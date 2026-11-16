@@ -1,11 +1,14 @@
 import { IVerificationResponse } from '@models/program/program-verification.model';
 
-export type SyllabusStatus = 'DRAFT' | 'CONFIRMED' | 'ARCHIVED';
+export type SyllabusStatus = 'CONFIRMED' | 'ARCHIVED';
 
 export interface ISyllabus {
   id: string;
   courseId: string;
   version: string;
+  programVersionId?: string;
+  courseCode?: string;
+  courseName?: string;
   effectiveFromTermId?: string | null;
   effectiveToTermId?: string | null;
   status: SyllabusStatus;

@@ -9,8 +9,7 @@ import { StatusChipComponent } from '../status-chip/status-chip.component';
 @Component({
   selector: 'app-display-chip',
   imports: [StatusChipComponent],
-  template: `<app-status-chip [label]="display().label" [description]="display().description" [icon]="display().icon"
-    [tone]="display().tone" [lineStyle]="display().lineStyle" />`,
+  templateUrl: './display-chip.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class DisplayChipComponent {

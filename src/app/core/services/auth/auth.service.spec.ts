@@ -5,10 +5,11 @@ import { SystemConstant } from '@constants/system.constant';
 import { UrlConstant } from '@constants/url.constant';
 import { INLINE_ERRORS } from '@interceptors/http-context.token';
 import { ILoginResponse } from '@models/auth/auth.model';
+import { Role } from '@models/user/user.model';
 import { ToastrService } from 'ngx-toastr';
 import { AuthService } from './auth.service';
 
-const loginResponse = (expiresIn = 3600): ILoginResponse => ({
+const loginResponse = (expiresIn = 3600, facultyId?: string, roles: Role[] = ['ADMIN', 'LECTURER']): ILoginResponse => ({
   accessToken: 'token-gia-lap',
   tokenType: 'Bearer',
   expiresIn,
@@ -18,14 +19,12 @@ const loginResponse = (expiresIn = 3600): ILoginResponse => ({
     email: 'admin@example.test',
     fullName: 'Quản trị thử nghiệm',
     status: 'ACTIVE',
-    roleAssignments: [
-      { role: 'ADMIN', scope: null },
-      { role: 'LECTURER', scope: { programIds: [], courseIds: ['671dcba5f123456789abcd01'], sectionIds: [] } },
-    ],
+    facultyId,
+    roles,
   },
 });
 
-describe('AuthService (F01 US-01)', () => {
+describe('AuthService (F01 US-01 & M01 Faculty Scope)', () => {
   let service: AuthService;
   let http: HttpTestingController;
 
@@ -62,6 +61,18 @@ describe('AuthService (F01 US-01)', () => {
     expect(service.getRoles()).toEqual(['ADMIN', 'LECTURER']);
     expect(service.checkRole(SystemConstant.ROLE.ADMIN)).toBe(true);
     expect(service.checkRole(SystemConstant.ROLE.QA)).toBe(false);
+  });
+
+  it('lưu trữ và trích xuất facultyId, nhận diện PROGRAM_MANAGER chính xác', () => {
+    expect(service.getFacultyId()).toBeUndefined();
+    expect(service.isProgramManager()).toBe(false);
+
+    service.login({ username: 'pm_user', password: 'Password123!' }).subscribe();
+    const req = http.expectOne(UrlConstant.API.AUTH_LOGIN);
+    req.flush(loginResponse(3600, '671dcba5f123456789abcde0', ['PROGRAM_MANAGER']));
+
+    expect(service.getFacultyId()).toBe('671dcba5f123456789abcde0');
+    expect(service.isProgramManager()).toBe(true);
   });
 
   it('US-01/AC-2: lỗi đăng nhập do form tự hiển thị (INLINE_ERRORS) và không lưu phiên', () => {
@@ -132,6 +143,52 @@ describe('AuthService (F01 US-01)', () => {
     const req = http.expectOne(UrlConstant.API.AUTH_ME);
     expect(req.request.method).toBe('GET');
     expect(req.request.context.get(INLINE_ERRORS)).toBe(true);
-    req.flush({ id: 'u1', username: 'gv.test', email: '', fullName: '', status: 'ACTIVE', roleAssignments: [] });
+    req.flush({ id: 'u1', username: 'gv.test', email: '', fullName: '', status: 'ACTIVE', roles: [] });
+  });
+
+  it('doLoginForm và doLoginGoogle gọi đúng endpoint', () => {
+    service.doLoginForm({ email: 'test@example.com', password: '123' }).subscribe();
+    const reqForm = http.expectOne(UrlConstant.API.LOGIN_ADMIN);
+    expect(reqForm.request.method).toBe('POST');
+    reqForm.flush({});
+
+    service.doLoginGoogle('mock-token').subscribe();
+    const reqGoogle = http.expectOne(`${UrlConstant.API.LOGIN_ADMIN}/google`);
+    expect(reqGoogle.request.method).toBe('POST');
+    expect(reqGoogle.request.headers.get('accessToken')).toBe('mock-token');
+    reqGoogle.flush({});
+  });
+
+  it('doRegisterForm và doResetPassword gọi đúng endpoint cho STUDENT và từ chối vai trò khác', () => {
+    service.doRegisterForm('STUDENT', { email: 'st@example.com' }).subscribe();
+    const regReq = http.expectOne(`${UrlConstant.API.LOGIN_ADMIN}/register`);
+    expect(regReq.request.method).toBe('POST');
+    regReq.flush({ message: 'Success' });
+
+    let unsuppMessage = '';
+    service.doRegisterForm('OTHER', {}).subscribe(res => {
+      unsuppMessage = res.message;
+    });
+    expect(unsuppMessage).toBeTruthy();
+
+    service.doResetPasswordRequest('STUDENT', { email: 'st@example.com' }).subscribe();
+    const reqForgot = http.expectOne(`${UrlConstant.API.LOGIN_ADMIN}/forgot-password`);
+    expect(reqForgot.request.method).toBe('POST');
+    reqForgot.flush({ message: 'Sent' });
+
+    service.doResetPasswordRequest('OTHER', {}).subscribe(res => {
+      unsuppMessage = res.message;
+    });
+    expect(unsuppMessage).toBeTruthy();
+
+    service.doResetPasswordUpdate('STUDENT', { password: 'new' }, 'ts123').subscribe();
+    const reqReset = http.expectOne(`${UrlConstant.API.LOGIN_ADMIN}/reset-password`);
+    expect(reqReset.request.headers.get('thiSinhId')).toBe('ts123');
+    reqReset.flush({ message: 'Updated' });
+
+    service.doResetPasswordUpdate('OTHER', {}, 'ts123').subscribe(res => {
+      unsuppMessage = res.message;
+    });
+    expect(unsuppMessage).toBeTruthy();
   });
 });

@@ -1,61 +1,24 @@
-.login-page { display: flex; flex-wrap: wrap; min-height: 100vh; width: 100%; }
-
-.login-hero {
-  position: relative;
-  flex: 1 1 560px;
-  display: flex; flex-direction: column; justify-content: space-between; gap: 48px;
-  padding: 52px 64px 60px; color: #fff;
-  background-color: #0e1828;
-  background-image: radial-gradient(rgba(255, 255, 255, 0.06) 1px, transparent 1px);
-  background-size: 20px 20px;
+/* Chuẩn giao diện youth.hcmute.edu.vn kết hợp tỷ lệ tương phản WCAG AA (>= 4.5:1) */
+#lnk-forgot-pass {
+  color: #005a94;
+  cursor: pointer;
+  font-weight: 500;
 }
 
-.login-logo { display: inline-flex; align-items: center; gap: 10px; font-weight: 700; font-size: 18px; letter-spacing: .04em; color: #fff; }
-.loms-mark {
-  width: 28px; height: 28px; border-radius: 6px; padding: 2px;
-  background-color: #fff; object-fit: contain; flex-shrink: 0;
+#btn-login-google.nz-btn-red,
+#btn-login-google.nz-btn-red:not([disabled]):hover,
+#btn-login-google.nz-btn-red:not([disabled]):focus {
+  background-color: #c62828;
+  border-color: #c62828;
+  color: #fff;
 }
 
-.login-title { margin: 0; font-size: 40px; line-height: 1.22; font-weight: 700; letter-spacing: -.02em; color: #fff; }
-.login-lead { margin: 0; font-size: 15px; color: #94a3b8; }
-.login-chain { margin: 0; font-size: 14px; color: #cbd5e1; }
-.login-chain b { font-weight: 600; }
-.login-chain .chain-clo { color: #2dd4bf; }
-.login-chain .chain-pi { color: #a78bfa; }
-.login-chain .chain-improve { color: #fbbf24; }
-
-.login-accent-bar {
-  position: absolute; left: 0; right: 0; bottom: 0; height: 4px;
-  display: grid; grid-template-columns: repeat(4, 1fr);
-}
-.login-accent-bar span:nth-child(1) { background-color: #f97316; }
-.login-accent-bar span:nth-child(2) { background-color: #8b5cf6; }
-.login-accent-bar span:nth-child(3) { background-color: #0ea5e9; }
-.login-accent-bar span:nth-child(4) { background-color: #10b981; }
-
-.login-form-wrap {
-  flex: 1 1 440px; display: flex; align-items: center; justify-content: center;
-  padding: 48px 32px; background-color: #e9eef5;
-}
-.login-card {
-  width: 100%; max-width: 400px; display: flex; flex-direction: column; gap: 18px;
-  background-color: #ffffff; padding: 36px 32px; border-radius: 14px;
-  box-shadow: 0 12px 32px rgba(15, 25, 42, 0.08);
-  border: 1px solid #e2e8f0;
-}
-.login-submit-btn {
-  background-color: #0f192a !important; border-color: #0f192a !important;
-  font-weight: 600; border-radius: 8px;
-}
-.login-submit-btn:hover { background-color: #1e293b !important; border-color: #1e293b !important; }
-.login-muted { color: #64748b; }
 .login-alert {
-  padding: 10px 12px; border-radius: 6px; font-size: 14px;
-  color: #b42318; background: #fef6f5; border: 1px solid #f3b8b2;
-}
-
-@media (max-width: 767px) {
-  .login-hero { padding: 32px 24px 40px; gap: 24px; }
-  .login-title { font-size: 28px; }
-  .login-card { padding: 28px 20px; }
+  padding: 10px 14px;
+  border-radius: 6px;
+  border: 1px solid #fecaca;
+  background-color: #fef2f2;
+  color: #b91c1c;
+  font-size: 13.5px;
+  line-height: 1.45;
 }

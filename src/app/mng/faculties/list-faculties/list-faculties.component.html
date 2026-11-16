@@ -1,0 +1,587 @@
+<div class="page-header mb-6">
+  <div class="text-xs uppercase tracking-wider font-semibold text-blue-600 mb-1">Hệ thống</div>
+  <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+    <div>
+      <h1 class="text-2xl font-bold text-slate-900 tracking-tight m-0">Quản lý Khoa</h1>
+      <div class="title-underline"></div>
+    </div>
+    <div class="flex flex-wrap items-center gap-3">
+      <!-- Ô tìm kiếm Khoa -->
+      <div class="search-box relative">
+        <i class="fa-solid fa-magnifying-glass search-icon"></i>
+        <input
+          nz-input
+          type="text"
+          class="search-input"
+          placeholder="Tìm mã hoặc tên khoa..."
+          [ngModel]="searchKeyword()"
+          (ngModelChange)="searchKeyword.set($event)"
+        />
+        @if (searchKeyword()) {
+        <button
+          type="button"
+          class="search-clear-btn"
+          (click)="clearSearch()"
+          aria-label="Xóa tìm kiếm"
+        >
+          <i class="fa-solid fa-circle-xmark"></i>
+        </button>
+        }
+      </div>
+
+      @if (isAdmin()) {
+      <button
+        id="btnOpenImportFaculty"
+        nz-button
+        nzType="default"
+        type="button"
+        (click)="openImportModal()"
+      >
+        <i class="fa-solid fa-file-import mr-1.5 text-blue-600"></i>Import Khoa (CSV)
+      </button>
+      <button
+        id="btnOpenCreateFaculty"
+        nz-button
+        nzType="primary"
+        class="add-faculty-btn"
+        (click)="openCreateModal()"
+      >
+        <i class="fa-solid fa-plus mr-1.5"></i>Thêm khoa mới
+      </button>
+      }
+    </div>
+  </div>
+</div>
+
+<div class="table-card">
+  <nz-table
+    class="custom-admin-table"
+    nzSize="middle"
+    nzShowPagination="false"
+    [nzData]="displayFaculties()"
+    [nzLoading]="manager.isLoading()"
+    [nzNoResult]="stateTpl"
+    [nzScroll]="{ x: '960px' }"
+  >
+    <thead>
+      <tr>
+        <th nzWidth="130px">Mã khoa</th>
+        <th nzWidth="250px">Tên khoa</th>
+        <th nzWidth="240px">Mô tả</th>
+        <th nzWidth="140px">Trạng thái</th>
+        <th nzWidth="120px" nzAlign="center">Số lượng PM</th>
+        <th nzWidth="150px">Ngày tạo</th>
+        @if (isAdmin()) {
+        <th nzAlign="right" nzWidth="210px">Thao tác</th>
+        }
+      </tr>
+    </thead>
+    <tbody>
+      @for (item of displayFaculties(); track item.id) {
+      <tr class="ui-pdf-row faculty-row" [attr.data-id]="item.id">
+        <td>
+          <span class="faculty-code-text">{{ item.code }}</span>
+        </td>
+        <td>
+          <span class="faculty-name-text">{{ item.name }}</span>
+        </td>
+        <td>
+          @if (item.description) {
+          <span class="faculty-desc-text">{{ item.description }}</span>
+          } @else {
+          <span class="text-slate-400 italic">—</span>
+          }
+        </td>
+        <td>
+          <button
+            type="button"
+            class="status-btn status-toggle-btn"
+            [attr.aria-label]="(isFacultyActive(item) ? 'Vô hiệu hóa ' : 'Kích hoạt ') + item.code"
+            [title]="isFacultyActive(item) ? 'Bấm để vô hiệu hóa Khoa' : 'Bấm để kích hoạt Khoa'"
+            (click)="toggleFacultyStatus(item)"
+          >
+            @if (selectedSwitcherId() === item.id) {
+            <i class="fa-solid fa-spinner fa-spin text-xs text-blue-600"></i>
+            } @else {
+            <span
+              class="status-dot"
+              [class.status-dot-active]="isFacultyActive(item)"
+              [class.status-dot-locked]="!isFacultyActive(item)"
+            ></span>
+            }
+            <span class="status-label">
+              {{ isFacultyActive(item) ? 'Hoạt động' : 'Vô hiệu hóa' }}
+            </span>
+          </button>
+        </td>
+        <td nzAlign="center">
+          <span class="pm-count-badge pm-count">{{ item.programManagerCount ?? 0 }}</span>
+        </td>
+        <td>
+          <span class="faculty-date-text">
+            {{ item.createdAt ? (item.createdAt | date: 'dd/MM/yyyy HH:mm') : '—' }}
+          </span>
+        </td>
+        @if (isAdmin()) {
+        <td nzAlign="right">
+          <div class="inline-flex items-center justify-end gap-3">
+            <button
+              type="button"
+              class="table-action-link btn-manage-pm"
+              aria-label="Quản lý PM"
+              (click)="openPmModal(item)"
+            >
+              Quản lý PM
+            </button>
+            <button
+              type="button"
+              class="table-action-link btn-edit-faculty"
+              aria-label="Sửa khoa"
+              (click)="openEditModal(item)"
+            >
+              Sửa
+            </button>
+            <button
+              type="button"
+              class="table-action-link"
+              [class.text-rose-600]="isFacultyActive(item)"
+              [class.text-emerald-600]="!isFacultyActive(item)"
+              (click)="toggleFacultyStatus(item)"
+            >
+              {{ isFacultyActive(item) ? 'Khóa' : 'Mở' }}
+            </button>
+          </div>
+        </td>
+        }
+      </tr>
+      }
+    </tbody>
+  </nz-table>
+
+  <div class="table-footer-pagination pt-4 mt-3 border-t border-slate-100">
+    <app-table-paginate
+      class="w-full block"
+      [pageConfig]="manager.listData()"
+      (pageChange)="manager.pageChange($event)"
+    />
+  </div>
+</div>
+
+<ng-template #stateTpl>
+  @if (manager.isLoading()) {
+  <div class="py-10 text-center text-slate-500">
+    <i class="fa-solid fa-spinner fa-spin text-xl mb-2 text-blue-600"></i>
+    <p class="m-0 text-sm">Đang tải danh sách Khoa...</p>
+  </div>
+  } @else if (manager.hasError()) {
+  <div class="py-10 text-center" role="alert">
+    <div class="inline-flex items-center justify-center w-10 h-10 rounded-full bg-rose-50 text-rose-500 mb-2">
+      <i class="fa-solid fa-circle-exclamation text-lg"></i>
+    </div>
+    <p class="mb-3 text-rose-600 font-medium">Không tải được danh sách Khoa.</p>
+    <button nz-button type="button" (click)="manager.triggerReload()">
+      <i class="fa-solid fa-rotate-right mr-1.5"></i>Thử lại
+    </button>
+  </div>
+  } @else if (searchKeyword() && (!displayFaculties() || displayFaculties().length === 0)) {
+  <div class="py-10 text-center text-slate-500">
+    <i class="fa-solid fa-magnifying-glass text-xl mb-2 text-slate-400"></i>
+    <p class="m-0 text-sm">Không tìm thấy Khoa phù hợp với từ khóa "{{ searchKeyword() }}".</p>
+    <button nz-button nzType="link" (click)="clearSearch()" class="mt-1">Xóa bộ lọc</button>
+  </div>
+  } @else {
+  <div class="py-10 text-center text-slate-500">
+    <p class="mb-3">Chưa có Khoa nào trong hệ thống.</p>
+    @if (isAdmin()) {
+    <button nz-button nzType="primary" (click)="openCreateModal()">
+      <i class="fa-solid fa-plus mr-1.5"></i>Thêm khoa đầu tiên
+    </button>
+    }
+  </div>
+  }
+</ng-template>
+
+<!-- ==================== MODAL CẢNH BÁO 422 KHI VÔ HIỆU HÓA KHOA ==================== -->
+@if (activeProgramWarningModalVisible()) {
+<div
+  id="activeProgramWarningModal"
+  class="modal-backdrop fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50"
+  role="alertdialog"
+  aria-modal="true"
+>
+  <div class="modal-box bg-white p-6 rounded-xl max-w-md w-full shadow-xl border border-slate-200">
+    <div class="flex items-start gap-3 mb-3">
+      <div class="w-9 h-9 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+        <i class="fa-solid fa-triangle-exclamation text-base"></i>
+      </div>
+      <div>
+        <h3 class="text-base font-bold text-slate-900 m-0">Không thể vô hiệu hóa Khoa</h3>
+        <p id="activeProgramWarningMessage" class="text-sm text-slate-600 mt-1.5 mb-0 leading-relaxed">
+          {{ activeProgramWarningMessage() }}
+        </p>
+      </div>
+    </div>
+    <div class="flex justify-end mt-5">
+      <button
+        id="btnCloseActiveProgramWarning"
+        type="button"
+        nz-button
+        nzType="primary"
+        class="modal-submit-btn"
+        (click)="closeActiveProgramWarning()"
+      >
+        Đã hiểu
+      </button>
+    </div>
+  </div>
+</div>
+}
+
+<!-- ==================== MODAL THÊM / SỬA KHOA ==================== -->
+@if (isModalVisible()) {
+<div
+  id="facultyFormModal"
+  class="modal-backdrop fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-40"
+  role="dialog"
+  aria-modal="true"
+>
+  <div class="bg-white rounded-xl max-w-lg w-full shadow-xl border border-slate-200 overflow-hidden">
+    <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+      <h3 class="text-lg font-bold text-slate-900 m-0">
+        {{ editingFacultyId() ? 'Sửa thông tin Khoa' : 'Thêm Khoa mới' }}
+      </h3>
+      <button
+        type="button"
+        class="text-slate-400 hover:text-slate-600 bg-transparent border-0 cursor-pointer"
+        aria-label="Đóng"
+        (click)="closeModal()"
+      >
+        <i class="fa-solid fa-xmark text-lg"></i>
+      </button>
+    </div>
+
+    <form [formGroup]="facultyForm" (ngSubmit)="submitFaculty()" class="p-6">
+      @if (formErrorMsg()) {
+      <div class="p-3 mb-4 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-sm">
+        {{ formErrorMsg() }}
+      </div>
+      }
+
+      <div class="mb-4">
+        <label class="font-medium text-slate-800 text-sm mb-1.5 block" for="facultyCodeInput">
+          Mã khoa <span class="text-rose-500 font-bold">*</span>
+        </label>
+        <input
+          id="facultyCodeInput"
+          nz-input
+          formControlName="code"
+          placeholder="Ví dụ: FIT, FME, FEE..."
+          class="custom-modal-input"
+        />
+        <small class="form-hint">
+          {{ editingFacultyId() ? 'Không đổi được sau khi tạo.' : 'Từ 2-20 ký tự (chữ in hoa, số, gạch nối, gạch dưới).' }}
+        </small>
+        @if ((facultyForm.get('code')?.dirty || facultyForm.get('code')?.touched) && facultyForm.get('code')?.hasError('required')) {
+        <div class="text-rose-600 text-xs mt-1">Mã khoa không được để trống.</div>
+        }
+        @if ((facultyForm.get('code')?.dirty || facultyForm.get('code')?.touched) && facultyForm.get('code')?.hasError('pattern')) {
+        <div class="text-rose-600 text-xs mt-1">Mã khoa chỉ gồm chữ, số, dấu gạch nối hoặc gạch dưới (2-20 ký tự).</div>
+        }
+      </div>
+
+      <div class="mb-4">
+        <label class="font-medium text-slate-800 text-sm mb-1.5 block" for="facultyNameInput">
+          Tên khoa <span class="text-rose-500 font-bold">*</span>
+        </label>
+        <input
+          id="facultyNameInput"
+          nz-input
+          formControlName="name"
+          placeholder="Ví dụ: Khoa Công nghệ Thông tin..."
+          class="custom-modal-input"
+        />
+        @if ((facultyForm.get('name')?.dirty || facultyForm.get('name')?.touched) && (facultyForm.get('name')?.hasError('required') || facultyForm.get('name')?.hasError('blank'))) {
+        <div class="text-rose-600 text-xs mt-1">Tên khoa không được để trống.</div>
+        }
+      </div>
+
+      <div class="mb-2">
+        <label class="font-medium text-slate-800 text-sm mb-1.5 block" for="facultyDescriptionInput">
+          Mô tả
+        </label>
+        <textarea
+          id="facultyDescriptionInput"
+          nz-input
+          rows="3"
+          formControlName="description"
+          placeholder="Mô tả ngắn gọn chức năng, lĩnh vực đào tạo của Khoa..."
+          class="w-full rounded-lg border-slate-300 text-sm"
+        ></textarea>
+      </div>
+
+      <div class="flex items-center justify-end gap-2.5 pt-4 mt-4 border-t border-slate-100">
+        <button
+          type="button"
+          nz-button
+          nzType="default"
+          class="modal-cancel-btn"
+          [disabled]="isSubmitting()"
+          (click)="closeModal()"
+        >
+          Hủy
+        </button>
+        <button
+          id="btnSubmitFaculty"
+          type="submit"
+          nz-button
+          nzType="primary"
+          class="modal-submit-btn"
+          [nzLoading]="isSubmitting()"
+          [disabled]="facultyForm.invalid || isSubmitting()"
+        >
+          <i class="fa-solid fa-check mr-1.5"></i>
+          {{ editingFacultyId() ? 'Lưu thay đổi' : 'Thêm mới' }}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+}
+
+<!-- ==================== MODAL QUẢN LÝ PROGRAM MANAGER (1 PM = 1 KHOA) ==================== -->
+@if (isPmModalVisible()) {
+<div
+  id="pmManagementModal"
+  class="modal-backdrop fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-40"
+  role="dialog"
+  aria-modal="true"
+>
+  <div class="bg-white rounded-xl max-w-2xl w-full shadow-xl border border-slate-200 overflow-hidden">
+    <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+      <div>
+        <h3 class="text-lg font-bold text-slate-900 m-0">
+          Quản lý Program Manager — {{ selectedFaculty()?.code }} ({{ selectedFaculty()?.name }})
+        </h3>
+        <p class="text-xs text-slate-500 mt-0.5 mb-0">
+          Ràng buộc phân quyền: 1 Program Manager chỉ phụ trách tối đa 1 Khoa tại một thời điểm.
+        </p>
+      </div>
+      <button
+        type="button"
+        class="text-slate-400 hover:text-slate-600 bg-transparent border-0 cursor-pointer"
+        aria-label="Đóng"
+        (click)="closePmModal()"
+      >
+        <i class="fa-solid fa-xmark text-lg"></i>
+      </button>
+    </div>
+
+    <div class="p-6 max-h-[80vh] overflow-y-auto">
+      <!-- Cảnh báo xung đột 409 (PM_ALREADY_ASSIGNED) -->
+      @if (conflictError()) {
+      <div
+        id="pmConflictAlert"
+        role="alert"
+        class="p-3.5 mb-4 rounded-lg bg-rose-50 border border-rose-200 text-rose-800 text-sm flex items-start gap-2.5"
+      >
+        <i class="fa-solid fa-circle-exclamation text-rose-600 mt-0.5"></i>
+        <div class="flex-1">{{ conflictError() }}</div>
+      </div>
+      }
+
+      <!-- Danh sách PM hiện tại của Khoa -->
+      <div class="mb-5">
+        <h4 class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2.5">
+          Danh sách Program Manager phụ trách Khoa ({{ assignedPms().length }})
+        </h4>
+
+        @if (isPmsLoading()) {
+        <div class="py-6 text-center text-slate-500 text-sm">
+          <i class="fa-solid fa-spinner fa-spin mr-1.5 text-blue-600"></i>Đang tải danh sách Program Manager...
+        </div>
+        } @else if (assignedPms().length === 0) {
+        <div class="p-4 rounded-lg bg-slate-50 border border-slate-200/80 text-center text-sm text-slate-500">
+          Chưa có PM nào được gán cho Khoa này.
+        </div>
+        } @else {
+        <div class="border border-slate-200 rounded-lg overflow-hidden">
+          <table class="w-full text-sm border-collapse">
+            <thead>
+              <tr class="bg-slate-50 text-slate-700 border-b border-slate-200">
+                <th class="py-2.5 px-3 text-left font-semibold">Tài khoản</th>
+                <th class="py-2.5 px-3 text-left font-semibold">Họ và tên</th>
+                <th class="py-2.5 px-3 text-left font-semibold">Email</th>
+                <th class="py-2.5 px-3 text-right font-semibold">Thao tác</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (pm of assignedPms(); track pm.id) {
+              <tr class="border-b border-slate-100 last:border-b-0 pm-item">
+                <td class="py-2.5 px-3 font-semibold text-slate-900">{{ pm.username }}</td>
+                <td class="py-2.5 px-3 text-slate-800">{{ pm.fullName }}</td>
+                <td class="py-2.5 px-3 text-slate-500 font-mono text-xs">{{ pm.email }}</td>
+                <td class="py-2.5 px-3 text-right">
+                  <div class="inline-flex items-center gap-3">
+                    <button
+                      type="button"
+                      class="table-action-link btn-open-transfer"
+                      (click)="openTransferModal(pm)"
+                    >
+                      Điều chuyển
+                    </button>
+                    <button
+                      type="button"
+                      class="table-action-link text-rose-600 btn-remove-pm"
+                      (click)="confirmRemovePm(pm)"
+                    >
+                      Gỡ PM
+                    </button>
+                  </div>
+                </td>
+              </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        }
+      </div>
+
+      <!-- Khung điều chuyển PM sang Khoa khác -->
+      @if (transferringPm(); as pm) {
+      <div
+        id="transferPmSection"
+        class="p-4 mb-5 rounded-lg bg-amber-50/80 border border-amber-200"
+      >
+        <div class="flex items-center justify-between mb-3">
+          <h5 class="text-sm font-bold text-amber-900 m-0">
+            <i class="fa-solid fa-right-left mr-1.5"></i>Điều chuyển PM: {{ pm.fullName || pm.username }}
+          </h5>
+          <button
+            type="button"
+            class="text-xs text-slate-500 hover:text-slate-700 bg-transparent border-0 cursor-pointer"
+            (click)="cancelTransfer()"
+          >
+            Đóng
+          </button>
+        </div>
+
+        <div class="mb-3">
+          <label class="block text-xs font-semibold text-slate-700 mb-1" for="transferTargetFacultySelect">
+            Khoa tiếp nhận <span class="text-rose-500">*</span>
+          </label>
+          <select
+            id="transferTargetFacultySelect"
+            class="w-full h-9 px-3 rounded-lg border border-slate-300 bg-white text-sm text-slate-800"
+            [ngModel]="transferTargetFacultyId()"
+            (ngModelChange)="transferTargetFacultyId.set($event)"
+          >
+            <option value="">-- Chọn Khoa tiếp nhận --</option>
+            @for (f of availableTargetFaculties(); track f.id) {
+            <option [value]="f.id">{{ f.code }} - {{ f.name }}</option>
+            }
+          </select>
+        </div>
+
+        <div class="mb-3">
+          <label class="block text-xs font-semibold text-slate-700 mb-1" for="transferReasonInput">
+            Lý do điều chuyển (Bắt buộc) <span class="text-rose-500">*</span>
+          </label>
+          <textarea
+            id="transferReasonInput"
+            rows="2"
+            class="w-full p-2.5 rounded-lg border border-slate-300 bg-white text-sm text-slate-800"
+            placeholder="Nhập lý do điều chuyển Program Manager sang Khoa mới..."
+            [ngModel]="transferReason()"
+            (ngModelChange)="transferReason.set($event)"
+          ></textarea>
+        </div>
+
+        <div class="flex items-center justify-end gap-2">
+          <button
+            type="button"
+            nz-button
+            nzType="default"
+            nzSize="small"
+            (click)="cancelTransfer()"
+          >
+            Hủy
+          </button>
+          <button
+            id="btnConfirmTransfer"
+            type="button"
+            nz-button
+            nzType="primary"
+            nzSize="small"
+            class="modal-submit-btn"
+            [disabled]="!canConfirmTransfer() || isSubmittingTransfer()"
+            (click)="confirmTransfer()"
+          >
+            Xác nhận điều chuyển
+          </button>
+        </div>
+      </div>
+      }
+
+      <!-- Gán PM mới cho Khoa -->
+      <div class="pt-4 border-t border-slate-200">
+        <h4 class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2.5">
+          Gán Program Manager mới vào Khoa
+        </h4>
+        <div class="flex flex-col sm:flex-row gap-2.5">
+          <select
+            id="assignPmUserIdSelect"
+            class="flex-1 h-9 px-3 rounded-lg border border-slate-300 bg-white text-sm text-slate-800"
+            [ngModel]="selectedPmUserId()"
+            (ngModelChange)="selectedPmUserId.set($event)"
+          >
+            <option value="">-- Chọn tài khoản có vai trò Quản lý CTĐT (PROGRAM_MANAGER) --</option>
+            @for (candidate of pmCandidates(); track candidate.id) {
+            <option [value]="candidate.id">
+              {{ candidate.fullName }} ({{ candidate.username }}) {{ candidate.facultyCode ? '- Đang thuộc: ' + candidate.facultyCode : '' }}
+            </option>
+            }
+          </select>
+          <button
+            id="btnAssignPm"
+            type="button"
+            nz-button
+            nzType="primary"
+            class="modal-submit-btn"
+            [disabled]="!selectedPmUserId().trim() || isAssigningPm()"
+            (click)="assignPm()"
+          >
+            <i class="fa-solid fa-user-plus mr-1.5"></i>Gán PM
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="px-6 py-3.5 bg-slate-50 border-t border-slate-100 flex justify-end">
+      <button
+        id="btnClosePmModal"
+        type="button"
+        nz-button
+        nzType="default"
+        class="modal-cancel-btn"
+        (click)="closePmModal()"
+      >
+        Đóng
+      </button>
+    </div>
+  </div>
+</div>
+}
+
+<app-csv-import-modal
+  [isVisible]="isImportModalVisible()"
+  (isVisibleChange)="isImportModalVisible.set($event)"
+  nzTitle="Import Khoa từ CSV"
+  guideTitle="Quy cách tệp CSV danh mục Khoa"
+  guideText="Tệp CSV gồm các cột: code (mã Khoa), name (tên Khoa), description (mô tả), isActive (true/false)."
+  templateFileName="faculties-template.csv"
+  keyColumnLabel="Mã khoa"
+  entityLabel="khoa"
+  [downloadTemplateFn]="downloadFacultyTemplate"
+  [importFileFn]="importFacultyCsv"
+  (importSuccess)="onImportSuccess()"
+/>

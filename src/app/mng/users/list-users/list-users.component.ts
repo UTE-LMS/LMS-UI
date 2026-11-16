@@ -3,12 +3,14 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { createListManagerNoFilter } from '@builder/list-mng-no-filter.builder';
+import { SystemConstant } from '@constants/system.constant';
 import { UrlConstant } from '@constants/url.constant';
 import { IUser, UserStatus } from '@models/user/user.model';
 import { AuthService } from '@services/auth/auth.service';
 import { toApiError } from '@services/common/api-error.util';
 import { UserService } from '@services/user/user.service';
 import { BreadCrumb } from '@widget/breadcrumb/breadcrumb.model';
+import { CsvImportModalComponent } from '@widget/csv-import-modal/csv-import-modal.component';
 import { TablePaginateComponent } from '@widget/paginate/paginate.component';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzGridModule } from 'ng-zorro-antd/grid';
@@ -16,7 +18,7 @@ import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzModalModule, NzModalService } from 'ng-zorro-antd/modal';
 import { NzTableModule } from 'ng-zorro-antd/table';
 import { ToastrService } from 'ngx-toastr';
-import { describeScope, roleLabel, scopeIdsTooltip } from '../users.util';
+import { describeRoleScope, roleLabel } from '../users.util';
 
 @Component({
   selector: 'app-list-users',
@@ -29,6 +31,7 @@ import { describeScope, roleLabel, scopeIdsTooltip } from '../users.util';
     NzModalModule,
     NzTableModule,
     NzButtonModule,
+    CsvImportModalComponent,
     TablePaginateComponent,
   ],
   templateUrl: './list-users.component.html',
@@ -43,9 +46,13 @@ export class ListUsersComponent {
 
   protected readonly urlConst = UrlConstant;
   protected readonly roleLabel = roleLabel;
-  protected readonly describeScope = describeScope;
-  protected readonly scopeIdsTooltip = scopeIdsTooltip;
+  protected readonly describeRoleScope = describeRoleScope;
   protected readonly currentUserId = this.authSvc.getUserId();
+  readonly isAdmin = computed(() => (this.authSvc.getRoles?.() ?? []).includes(SystemConstant.ROLE.ADMIN));
+  readonly isImportModalVisible = signal(false);
+
+  readonly downloadUserTemplate = () => this.userSvc.downloadImportTemplate();
+  readonly importUserCsv = (file: File) => this.userSvc.importUsers(file);
 
   readonly breadcrumbObj: BreadCrumb = new BreadCrumb({
     heading: 'Người dùng và phân quyền',
@@ -83,6 +90,14 @@ export class ListUsersComponent {
 
   clearSearch(): void {
     this.searchKeyword.set('');
+  }
+
+  openImportModal(): void {
+    this.isImportModalVisible.set(true);
+  }
+
+  onImportSuccess(): void {
+    this.manager.triggerReload();
   }
 
   /** Bấm công tắc "Cho phép đăng nhập": hỏi xác nhận rồi đổi trạng thái ACTIVE ↔ LOCKED. */

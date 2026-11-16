@@ -175,63 +175,33 @@
           </td>
           <td>
             @if (roleForm.controls.role.value === adminRole) {
-            <span class="text-sm text-slate-500 italic">Quản trị viên có toàn quyền hệ thống, không cần phạm vi.</span>
-            } @else {
-            <div class="scope-grid">
-              <div>
-                <span class="scope-label">Chương trình đào tạo</span>
-                <nz-select
-                  class="w-full custom-select"
-                  nzMode="multiple"
-                  nzShowSearch
-                  formControlName="programIds"
-                  nzPlaceHolder="Chọn chương trình đào tạo..."
-                  [nzStatus]="roleForm.controls.programIds.invalid && roleForm.controls.programIds.touched ? 'error' : ''"
-                >
-                  @for (program of programs(); track program.id) {
-                  <nz-option [nzValue]="program.id" [nzLabel]="program.code + ' - ' + program.name" />
-                  }
-                  @for (id of getMissingProgramIds(roleForm.controls.programIds.value); track id) {
-                  <nz-option [nzValue]="id" [nzLabel]="id" />
-                  }
-                </nz-select>
-              </div>
-              <div>
-                <span class="scope-label">Học phần</span>
-                <nz-select
-                  class="w-full custom-select"
-                  nzMode="multiple"
-                  nzShowSearch
-                  formControlName="courseIds"
-                  nzPlaceHolder="Chọn học phần..."
-                  [nzStatus]="roleForm.controls.courseIds.invalid && roleForm.controls.courseIds.touched ? 'error' : ''"
-                >
-                  @for (course of courses(); track course.id) {
-                  <nz-option [nzValue]="course.id" [nzLabel]="course.code + ' - ' + course.name" />
-                  }
-                  @for (id of getMissingCourseIds(roleForm.controls.courseIds.value); track id) {
-                  <nz-option [nzValue]="id" [nzLabel]="id" />
-                  }
-                </nz-select>
-              </div>
-              <div>
-                <span class="scope-label">Lớp học phần</span>
-                <nz-select
-                  class="w-full custom-select"
-                  nzMode="tags"
-                  formControlName="sectionIds"
-                  nzPlaceHolder="Nhập mã rồi nhấn Enter"
-                  [nzTokenSeparators]="[',', ' ']"
-                  [nzStatus]="roleForm.controls.sectionIds.invalid && roleForm.controls.sectionIds.touched ? 'error' : ''"
-                />
-              </div>
+            <span class="text-sm text-slate-500 italic">Quản trị viên có toàn quyền hệ thống.</span>
+            } @else if (roleForm.controls.role.value === pmRole) {
+            <div class="pm-faculty-readonly text-sm">
+              @if (modalData().data?.facultyCode && modalData().data?.facultyName) {
+              <span class="font-medium text-slate-800">
+                Khoa phụ trách: {{ modalData().data?.facultyCode }} - {{ modalData().data?.facultyName }}
+              </span>
+              <span class="block text-xs text-slate-500 mt-0.5">
+                (Phân công hoặc điều chuyển Khoa được thực hiện tại màn hình Quản lý Khoa)
+              </span>
+              } @else if (modalData().data?.facultyName || modalData().data?.facultyCode) {
+              <span class="font-medium text-slate-800">
+                Khoa phụ trách: {{ modalData().data?.facultyName || modalData().data?.facultyCode }}
+              </span>
+              <span class="block text-xs text-slate-500 mt-0.5">
+                (Phân công hoặc điều chuyển Khoa được thực hiện tại màn hình Quản lý Khoa)
+              </span>
+              } @else {
+              <span class="text-slate-500 italic">
+                Chưa gán Khoa (phân công tại màn hình Quản lý Khoa)
+              </span>
+              }
             </div>
-            @if (roleForm.invalid && roleForm.touched) {
-            <app-field-error-display
-              [displayError]="true"
-              errorMsg="Mã phạm vi phải là chuỗi 24 ký tự hex."
-            />
-            }
+            } @else {
+            <span class="text-sm text-slate-600">
+              {{ describeRoleScope(roleForm.controls.role.value, modalData().data || {}) }}
+            </span>
             }
           </td>
           <td nzAlign="center">

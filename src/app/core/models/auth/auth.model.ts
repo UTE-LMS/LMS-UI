@@ -1,8 +1,8 @@
-import { IRoleAssignment, UserStatus } from '@models/user/user.model';
+import { Role, UserStatus } from '@models/user/user.model';
 
 /**
  * Dữ liệu phiên đăng nhập lưu ở trình duyệt (không chứa token).
- * `roles` giữ để tương thích code cũ (guard, menu); với F01 nó là tên enum của backend, ví dụ 'ADMIN'.
+ * `roles` là mảng tên enum của backend, ví dụ 'ADMIN', 'PROGRAM_MANAGER', 'LECTURER', 'QA'.
  * Quyền thật do backend kiểm tra mỗi request, dữ liệu này chỉ để ẩn/hiện giao diện.
  */
 export interface IAuthData {
@@ -13,7 +13,7 @@ export interface IAuthData {
   fullName: string;
   userId?: string;
   username?: string;
-  roleAssignments?: IRoleAssignment[];
+  facultyId?: string | null;
 }
 
 /** UserProfileResponse của GET /api/v1/auth/me (§5.2.3). */
@@ -23,7 +23,10 @@ export interface IUserProfile {
   email: string;
   fullName: string;
   status: UserStatus;
-  roleAssignments: IRoleAssignment[];
+  facultyId?: string | null;
+  facultyCode?: string;
+  facultyName?: string;
+  roles: Role[];
 }
 
 /** Body của POST /api/v1/auth/login (LoginRequest, §5.2.1). */

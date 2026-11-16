@@ -2,16 +2,11 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { SystemConstant } from '@constants/system.constant';
 import { ModalData } from '@models/common/modal-data.model';
-import { ICourse } from '@models/course/course.model';
 import { IUser } from '@models/user/user.model';
-import { CourseService } from '@services/course/course.service';
 import { UserService } from '@services/user/user.service';
 import { ToastrService } from 'ngx-toastr';
 import { Observable, of, Subject, throwError } from 'rxjs';
 import { FormUsersComponent } from './form-users.component';
-
-const COURSE_ID = '671dcba5f123456789abcd01';
-const SECTION_ID = '671dcba5f123456789abcd02';
 
 const apiError = (status: number, message: string, fieldErrors?: { field: string; message: string; }[]): HttpErrorResponse => new HttpErrorResponse({ status, error: { timestamp: 't', status, code: 'X', message, path: '/api/v1/users', fieldErrors } });
 
@@ -21,19 +16,10 @@ const existingUser: IUser = {
   email: 'gv.oop01@example.test',
   fullName: 'Giảng viên thử nghiệm',
   status: 'ACTIVE',
-  roleAssignments: [{ role: 'LECTURER', scope: { programIds: [], courseIds: [], sectionIds: [SECTION_ID] } }],
+  roles: ['LECTURER'],
   createdAt: '2026-10-27T05:00:00Z',
   updatedAt: '2026-10-27T05:00:00Z',
 };
-
-const mockCourses: ICourse[] = [
-  {
-    id: COURSE_ID,
-    code: 'OOPR230279',
-    name: 'Lập trình hướng đối tượng',
-    credits: 3,
-  },
-];
 
 describe('FormUsersComponent (F01 US-02)', () => {
   let fixture: ComponentFixture<FormUsersComponent>;
@@ -41,16 +27,6 @@ describe('FormUsersComponent (F01 US-02)', () => {
   const userSvc = {
     create: vi.fn((): Observable<unknown> => of({})),
     update: vi.fn((): Observable<unknown> => of({})),
-  };
-  const courseSvc = {
-    getCourses: vi.fn(() => of({
-      content: mockCourses,
-      page: 0,
-      size: 100,
-      totalElements: 1,
-      totalPages: 1,
-      last: true,
-    })),
   };
   const alert = { success: vi.fn(), error: vi.fn(), warning: vi.fn() };
   let closed: boolean[];
@@ -60,7 +36,6 @@ describe('FormUsersComponent (F01 US-02)', () => {
       imports: [FormUsersComponent],
       providers: [
         { provide: UserService, useValue: userSvc },
-        { provide: CourseService, useValue: courseSvc },
         { provide: ToastrService, useValue: alert },
       ],
     });
@@ -90,35 +65,15 @@ describe('FormUsersComponent (F01 US-02)', () => {
     vi.clearAllMocks();
     userSvc.create.mockImplementation(() => of({}));
     userSvc.update.mockImplementation(() => of({}));
-    courseSvc.getCourses.mockImplementation(() => of({
-      content: mockCourses,
-      page: 0,
-      size: 100,
-      totalElements: 1,
-      totalPages: 1,
-      last: true,
-    }));
   });
 
   describe('thêm người dùng', () => {
     beforeEach(() => setup('add'));
 
-    it('bắt đầu với đúng một dòng vai trò và tải danh sách học phần', () => {
+    it('bắt đầu với đúng một dòng vai trò mặc định và không có UI chọn scope cũ', () => {
       expect(component.roleForms()).toHaveLength(1);
       expect(component.isEdit).toBe(false);
-      expect(courseSvc.getCourses).toHaveBeenCalledWith(0, 100);
-      expect(component.courses()).toEqual(mockCourses);
-    });
-
-    it('cho phép chọn học phần từ danh mục và gửi courseIds hợp lệ', () => {
-      fillValidCreate();
-      component.roleForms()[0].patchValue({ role: 'LECTURER', courseIds: [COURSE_ID] });
-      component.onSubmit();
-      const payload = userSvc.create.mock.calls[0] as unknown as [{ roleAssignments: unknown[]; }];
-      expect(payload[0].roleAssignments).toEqual([
-        { role: 'LECTURER', scope: { programIds: [], courseIds: [COURSE_ID], sectionIds: [] } },
-      ]);
-      expect(component.getMissingCourseIds([COURSE_ID, SECTION_ID])).toEqual([SECTION_ID]);
+      expect((fixture.nativeElement as HTMLElement).querySelector('.scope-grid')).toBeNull();
     });
 
     it('form trống: không gọi API và đánh dấu lỗi', () => {
@@ -148,9 +103,9 @@ describe('FormUsersComponent (F01 US-02)', () => {
       expect(component.form.controls.email.hasError('invalidEmail')).toBe(true);
     });
 
-    it('US-02/AC-1: gửi username/email đã trim + lowercase và scope null cho ADMIN', () => {
+    it('US-02/AC-1: gửi username/email đã trim + lowercase và mảng roles phẳng', () => {
       fillValidCreate();
-      component.roleForms()[0].patchValue({ role: 'ADMIN', programIds: [SECTION_ID] });
+      component.roleForms()[0].patchValue({ role: 'ADMIN' });
       component.onSubmit();
 
       expect(userSvc.create).toHaveBeenCalledWith({
@@ -158,20 +113,21 @@ describe('FormUsersComponent (F01 US-02)', () => {
         email: 'tranthib@example.test',
         password: 'Password123!',
         fullName: 'Trần Thị B',
-        roleAssignments: [{ role: 'ADMIN', scope: null }],
+        roles: ['ADMIN'],
       });
       expect(closed).toEqual([true]);
       expect(alert.success).toHaveBeenCalledWith('Thêm mới thành công!');
     });
 
-    it('gửi phạm vi của giảng viên khi có nhập mã hợp lệ', () => {
+    it('loại bỏ vai trò trùng lặp khi gửi lên backend', () => {
       fillValidCreate();
-      component.roleForms()[0].patchValue({ role: 'LECTURER', sectionIds: [SECTION_ID] });
+      component.addRole();
+      component.roleForms()[0].patchValue({ role: 'LECTURER' });
+      component.roleForms()[1].patchValue({ role: 'LECTURER' });
       component.onSubmit();
-      const payload = userSvc.create.mock.calls[0] as unknown as [{ roleAssignments: unknown[]; }];
-      expect(payload[0].roleAssignments).toEqual([
-        { role: 'LECTURER', scope: { programIds: [], courseIds: [], sectionIds: [SECTION_ID] } },
-      ]);
+
+      const payload = userSvc.create.mock.calls[0] as unknown as [{ roles: string[]; }];
+      expect(payload[0].roles).toEqual(['LECTURER']);
     });
 
     it('US-02/AC-1: không có vai trò nào thì bị chặn kèm thông báo', () => {
@@ -180,14 +136,6 @@ describe('FormUsersComponent (F01 US-02)', () => {
       component.onSubmit();
       expect(userSvc.create).not.toHaveBeenCalled();
       expect(component.rolesErrorMsg()).toBe('Cần ít nhất một vai trò.');
-    });
-
-    it('mã phạm vi sai định dạng ObjectId bị chặn ở client', () => {
-      fillValidCreate();
-      component.roleForms()[0].patchValue({ role: 'LECTURER', courseIds: ['OOPR230279'] });
-      component.onSubmit();
-      expect(userSvc.create).not.toHaveBeenCalled();
-      expect(component.rolesErrorMsg()).toContain('24 ký tự hex');
     });
 
     it('có thể thêm và bỏ dòng vai trò', () => {
@@ -209,19 +157,10 @@ describe('FormUsersComponent (F01 US-02)', () => {
       expect(component.isSubmitting()).toBe(false);
     });
 
-    it('US-02/AC-3: 422 scope không tồn tại hiện thông điệp quy tắc nghiệp vụ', () => {
-      userSvc.create.mockImplementation(() => throwError(() => apiError(422, 'Mã lớp học phần không tồn tại')));
-      fillValidCreate();
-      component.roleForms()[0].patchValue({ role: 'LECTURER', sectionIds: [SECTION_ID] });
-      component.onSubmit();
-      expect(component.formErrorMsg()).toBe('Mã lớp học phần không tồn tại');
-      expect(closed).toEqual([]);
-    });
-
     it('400 có fieldErrors: gắn lỗi vào đúng ô và xóa khi người dùng sửa ô đó', () => {
       userSvc.create.mockImplementation(() => throwError(() => apiError(400, 'Dữ liệu yêu cầu không hợp lệ', [
         { field: 'email', message: 'Email đã được dùng ở nơi khác' },
-        { field: 'roleAssignments[0].role', message: 'Vai trò không hợp lệ' },
+        { field: 'roles[0]', message: 'Vai trò không hợp lệ' },
       ])));
       fillValidCreate();
       component.roleForms()[0].patchValue({ role: 'ADMIN' });
@@ -254,6 +193,24 @@ describe('FormUsersComponent (F01 US-02)', () => {
       expect(closed).toEqual([false]);
       expect(userSvc.create).not.toHaveBeenCalled();
     });
+
+    it('PROGRAM_MANAGER hiện ghi chú phân công Khoa và gửi roles phẳng', () => {
+      fillValidCreate();
+      component.roleForms()[0].patchValue({ role: 'PROGRAM_MANAGER' });
+      fixture.detectChanges();
+
+      const el = fixture.nativeElement as HTMLElement;
+      expect(el.textContent).toContain('Chưa gán Khoa (phân công tại màn hình Quản lý Khoa)');
+
+      component.onSubmit();
+      expect(userSvc.create).toHaveBeenCalledWith({
+        username: 'gv_tranthib',
+        email: 'tranthib@example.test',
+        password: 'Password123!',
+        fullName: 'Trần Thị B',
+        roles: ['PROGRAM_MANAGER'],
+      });
+    });
   });
 
   describe('sửa người dùng', () => {
@@ -265,7 +222,7 @@ describe('FormUsersComponent (F01 US-02)', () => {
       expect(component.form.controls.username.disabled).toBe(true);
       expect(component.form.controls.password.disabled).toBe(true);
       expect(component.roleForms()).toHaveLength(1);
-      expect(component.roleForms()[0].getRawValue().sectionIds).toEqual([SECTION_ID]);
+      expect(component.roleForms()[0].getRawValue().role).toBe('LECTURER');
     });
 
     it('mật khẩu bị khóa nên không đòi nhập khi sửa', () => {
@@ -273,14 +230,14 @@ describe('FormUsersComponent (F01 US-02)', () => {
       expect(userSvc.update).toHaveBeenCalledTimes(1);
     });
 
-    it('gửi PUT chỉ gồm email, fullName, roleAssignments (không có username/password)', () => {
+    it('gửi PUT chỉ gồm email, fullName, roles (không có username/password)', () => {
       component.form.patchValue({ email: 'Moi@Example.Test', fullName: 'Tên mới' });
       component.onSubmit();
 
       expect(userSvc.update).toHaveBeenCalledTimes(1);
       const [body, id] = userSvc.update.mock.calls[0] as unknown as [Record<string, unknown>, string];
       expect(id).toBe(existingUser.id);
-      expect(Object.keys(body).sort()).toEqual(['email', 'fullName', 'roleAssignments']);
+      expect(Object.keys(body).sort()).toEqual(['email', 'fullName', 'roles']);
       expect(body['email']).toBe('moi@example.test');
       expect(alert.success).toHaveBeenCalledWith('Cập nhật thành công!');
       expect(closed).toEqual([true]);

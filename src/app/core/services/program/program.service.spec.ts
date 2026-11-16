@@ -28,6 +28,30 @@ describe('ProgramService (F02 US-05, ADR 0005)', () => {
     expect(req.request.method).toBe('GET');
     expect(req.request.params.get('page')).toBe('0');
     expect(req.request.params.get('size')).toBe('20');
+    expect(req.request.params.has('facultyId')).toBe(false);
+    expect(req.request.params.has('level')).toBe(false);
+    expect(req.request.params.has('degree')).toBe(false);
+    expect(req.request.params.has('search')).toBe(false);
+    req.flush({ content: [], page: 0, size: 20, totalElements: 0, totalPages: 0, last: true });
+  });
+
+  it('getPrograms gửi đúng các bộ lọc facultyId, level, degree, search (đã trim)', () => {
+    service.getPrograms(1, 10, 'fac_fit', 'Đại học', 'Kỹ sư', '  Công nghệ  ').subscribe();
+    const req = http.expectOne(r => r.url === base);
+    expect(req.request.method).toBe('GET');
+    expect(req.request.params.get('page')).toBe('1');
+    expect(req.request.params.get('size')).toBe('10');
+    expect(req.request.params.get('facultyId')).toBe('fac_fit');
+    expect(req.request.params.get('level')).toBe('Đại học');
+    expect(req.request.params.get('degree')).toBe('Kỹ sư');
+    expect(req.request.params.get('search')).toBe('Công nghệ');
+    req.flush({ content: [], page: 1, size: 10, totalElements: 0, totalPages: 0, last: true });
+  });
+
+  it('getPrograms không gửi param search khi rỗng hoặc khoảng trắng', () => {
+    service.getPrograms(0, 20, undefined, undefined, undefined, '   ').subscribe();
+    const req = http.expectOne(r => r.url === base);
+    expect(req.request.params.has('search')).toBe(false);
     req.flush({ content: [], page: 0, size: 20, totalElements: 0, totalPages: 0, last: true });
   });
 

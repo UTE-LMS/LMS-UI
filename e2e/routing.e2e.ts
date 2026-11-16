@@ -6,13 +6,13 @@ test.describe('Định tuyến cơ bản', () => {
     await blockUnmockedApi(page);
     await page.goto('/duong-dan-khong-ton-tai');
     await expect(page).toHaveURL(/\/$/);
-    await expect(page.getByRole('heading', { name: 'Hello!' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /HỆ THỐNG QUẢN LÝ & ĐO LƯỜNG CHUẨN ĐẦU RA \(OBE\)/i })).toBeVisible();
   });
 
   test('trang chủ không có vi phạm tiếp cận mức serious/critical (axe)', async ({ page }) => {
     await blockUnmockedApi(page);
     await page.goto('/');
-    await expect(page.getByRole('heading', { name: 'Hello!' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /HỆ THỐNG QUẢN LÝ & ĐO LƯỜNG CHUẨN ĐẦU RA \(OBE\)/i })).toBeVisible();
     await expectNoBlockingA11yViolations(page);
   });
 });

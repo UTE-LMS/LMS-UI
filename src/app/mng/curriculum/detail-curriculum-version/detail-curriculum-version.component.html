@@ -26,14 +26,25 @@
         <span class="ml-2">
           @if (st === 'ACTIVE') {
           <app-status-chip label="Đang áp dụng" tone="success" icon="fa-circle-check" />
-          } @else if (st === 'DRAFT') {
-          <app-status-chip label="Nháp" tone="warning" icon="fa-file-lines" />
           } @else {
           <app-status-chip label="Đã lưu trữ" tone="neutral" icon="fa-box-archive" />
           }
         </span>
         }
       </div>
+    </div>
+
+    <div class="flex flex-wrap items-center gap-2">
+      @if (canManage() && version()?.status === 'ACTIVE') {
+      <button
+        nz-button
+        nzDanger
+        class="rounded-lg font-medium"
+        (click)="confirmLockVersion()"
+      >
+        <i class="fa-solid fa-lock mr-1.5"></i>Khóa phiên bản CTĐT
+      </button>
+      }
     </div>
   </div>
 
@@ -59,7 +70,7 @@
         {{ version()?.totalCredits ?? '—' }} tín chỉ · {{ version()?.durationYears ?? '—' }} năm
       </div>
       <div class="text-xs text-slate-500 mt-1">
-        Khóa áp dụng: <span class="font-medium text-slate-700">{{ formatCohorts(version()?.applicableCohorts) }}</span>
+        Khóa áp dụng: <span class="font-medium text-slate-700">{{ formatCohorts(version()?.applicableCohort) }}</span>
       </div>
     </div>
 
@@ -88,7 +99,7 @@
       [class.bg-transparent]="activeTab() !== 'PLO_PI'"
       (click)="switchTab('PLO_PI')"
     >
-      <i class="fa-solid fa-sitemap mr-1.5"></i>1. Khung PLO · PI & Ma trận I/R/M (F02)
+      <i class="fa-solid fa-sitemap mr-1.5"></i>1. Khung PLO · PI
     </button>
     <button
       type="button"
@@ -112,7 +123,7 @@
       [class.bg-transparent]="activeTab() !== 'CLO_PI_MATRIX'"
       (click)="switchTab('CLO_PI_MATRIX')"
     >
-      <i class="fa-solid fa-table-cells mr-1.5"></i>3. Ma trận Liên kết CLO × PI & Thẩm định QA
+      <i class="fa-solid fa-table-cells mr-1.5"></i>3. Ma trận Liên kết CLO × PI
     </button>
   </div>
 
@@ -143,7 +154,7 @@
         <tr>
           <th nzWidth="18%">Mã CĐR</th>
           <th nzWidth="42%">Nội dung mô tả</th>
-          <th nzWidth="18%" nzAlign="center">Mức năng lực</th>
+          <th nzWidth="18%" nzAlign="center">Trình độ năng lực</th>
           <th nzWidth="22%">Nguồn nội dung / Chỉ tiêu</th>
         </tr>
       </thead>
@@ -155,7 +166,7 @@
               <div class="flex flex-wrap items-center gap-1.5">
                 <span class="plo-code-badge">{{ row.code }}</span>
                 @if (row.categoryLabel) {
-                <span class="text-xs px-1.5 py-0.5 rounded bg-slate-200/70 text-slate-700 font-medium">
+                <span class="text-xs px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200 font-medium">
                   {{ row.categoryLabel }}
                 </span>
                 }
@@ -175,8 +186,8 @@
               }
             </td>
             <td nzAlign="center">
-              @if (row.capabilityLevel !== undefined) {
-              <span class="level-tag">Mức {{ row.capabilityLevel }}</span>
+              @if (row.capabilityLevel !== undefined && row.capabilityLevel !== null) {
+              <span class="level-tag">Bậc {{ row.capabilityLevel }}</span>
               } @else {
               <span class="text-slate-400">—</span>
               }
@@ -199,8 +210,8 @@
               {{ row.content || '—' }}
             </td>
             <td nzAlign="center">
-              @if (row.capabilityLevel !== undefined) {
-              <span class="text-xs text-slate-600 font-medium">Mức {{ row.capabilityLevel }}</span>
+              @if (row.capabilityLevel !== undefined && row.capabilityLevel !== null) {
+              <span class="level-tag">Bậc {{ row.capabilityLevel }}</span>
               } @else {
               <span class="text-slate-400">—</span>
               }
@@ -225,16 +236,14 @@
         }
       </tbody>
     </nz-table>
-
-    <div class="section-footer-note">
-      * Xếp theo thứ tự của Khoa. Mức năng lực lưu đúng như tài liệu, không tính lại từ PI. Dữ liệu chưa có hiển thị —.
-    </div>
   </div>
   } @else if (activeTab() === 'PROGRAM_COURSES') {
   <app-program-courses-table
     [versionId]="versionId()"
+    [versionStatus]="version()?.status"
     [programCourses]="courses()"
     [canManage]="false"
+    [canImportCourses]="canImportProgramCourses()"
     (changed)="loadData()"
     (openCloPiMatrix)="openCloPiMatrixForCourse($event)"
   />

@@ -7,8 +7,7 @@ import { describeLevel, RUBRIC_KIND } from './level-label.util';
 @Component({
   selector: 'app-rubric-level-label',
   imports: [StatusChipComponent],
-  template: `<app-status-chip [label]="display().label" [description]="display().description" [icon]="display().icon"
-    [tone]="display().tone" [lineStyle]="display().lineStyle" />`,
+  templateUrl: './rubric-level-label.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class RubricLevelLabelComponent {

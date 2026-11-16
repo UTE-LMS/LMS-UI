@@ -2,7 +2,7 @@ import { HttpClient, HttpContext, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { UrlConstant } from '@constants/url.constant';
 import { INLINE_ERRORS } from '@interceptors/http-context.token';
-import { IPagedResults } from '@models/common/response-data.model';
+import { ICsvImportResultResponse, IPagedResults } from '@models/common/response-data.model';
 import { IUser, IUserCreateDTO, IUserStatusDTO, IUserUpdateDTO, UserStatus } from '@models/user/user.model';
 import { Observable } from 'rxjs';
 
@@ -41,6 +41,21 @@ export class UserService {
   updateStatus(id: string, status: UserStatus): Observable<IUser> {
     const body: IUserStatusDTO = { status };
     return this.http.put<IUser>(`${this.apiUrl}/${id}/status`, body, { context: this.inlineErrors() });
+  }
+
+  downloadImportTemplate(): Observable<Blob> {
+    return this.http.get(UrlConstant.API.USER_IMPORT_TEMPLATE, {
+      responseType: 'blob',
+      context: this.inlineErrors(),
+    });
+  }
+
+  importUsers(file: File): Observable<ICsvImportResultResponse> {
+    const formData = new FormData();
+    formData.append('file', file);
+    return this.http.post<ICsvImportResultResponse>(UrlConstant.API.USER_IMPORT, formData, {
+      context: this.inlineErrors(),
+    });
   }
 
   private inlineErrors(): HttpContext {

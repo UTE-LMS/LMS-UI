@@ -11,7 +11,12 @@ import { FormValidatorService } from '@services/common/form-validator.service';
 import { trimmedMinLength } from '@validators/trimmed.validator';
 import { FieldErrorDisplayComponent } from '@widget/field-error-display/field-error-display.component';
 import { NzButtonModule } from 'ng-zorro-antd/button';
+import { NzCheckboxModule } from 'ng-zorro-antd/checkbox';
+import { NzDividerModule } from 'ng-zorro-antd/divider';
+import { NzFormModule } from 'ng-zorro-antd/form';
+import { NzGridModule } from 'ng-zorro-antd/grid';
 import { NzInputModule } from 'ng-zorro-antd/input';
+import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
 import { catchError, EMPTY, exhaustMap, filter, finalize, Subject, tap } from 'rxjs';
 
 /** Thông báo dùng chung khi lỗi 401 không có body chuẩn (sai tài khoản/mật khẩu hoặc tài khoản bị khóa). */
@@ -20,12 +25,17 @@ const GENERIC_LOGIN_FAILED = 'Tên đăng nhập hoặc mật khẩu không chí
 @Component({
   selector: 'app-login',
   templateUrl: './login.component.html',
-  styleUrl: './login.component.css',
+  styleUrls: ['../auth.component.css', './login.component.css'],
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     ReactiveFormsModule,
+    NzFormModule,
+    NzGridModule,
     NzInputModule,
     NzButtonModule,
+    NzDividerModule,
+    NzCheckboxModule,
+    NzTooltipModule,
     FieldErrorDisplayComponent,
   ],
 })
@@ -39,6 +49,7 @@ export class LoginComponent implements OnInit {
 
   form!: FormGroup<MakeForm<ILoginRequest>>;
   readonly isSubmitting = signal(false);
+  readonly showPassLogin = signal(false);
   /** Thông báo lỗi từ backend (401, 400 không gắn được vào ô nhập), hiển thị ngay trong thẻ đăng nhập. */
   readonly loginErrorMsg = signal('');
 
@@ -57,6 +68,10 @@ export class LoginComponent implements OnInit {
       username: ['', [Validators.required, trimmedMinLength(3)]],
       password: ['', [Validators.required]],
     });
+  }
+
+  toggleShowPassLogin(): void {
+    this.showPassLogin.update(prev => !prev);
   }
 
   onSubmit(): void {

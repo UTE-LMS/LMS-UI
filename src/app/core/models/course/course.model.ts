@@ -12,6 +12,12 @@ export interface ICourse {
   code: string;
   name: string;
   credits?: number;
+  facultyId?: string;
+  facultyCode?: string;
+  facultyName?: string;
+  isActive?: boolean;
+  /** Backend Jackson serializes Lombok `boolean isActive` getter `isActive()` as `active` in JSON */
+  active?: boolean;
   extra?: Record<string, unknown>;
 }
 
@@ -19,12 +25,16 @@ export interface ICourseRequest {
   code: string;
   name: string;
   credits?: number;
+  facultyId?: string;
+  isActive?: boolean;
   extra?: Record<string, unknown>;
 }
 
 export interface ICourseUpdateRequest {
   name: string;
   credits?: number;
+  facultyId?: string;
+  isActive?: boolean;
   extra?: Record<string, unknown>;
 }
 
@@ -76,5 +86,13 @@ export interface ICourseImportResultResponse {
   successCount: number;
   failureCount: number;
   errors: ICourseImportRowError[];
+}
+
+export interface IProgramCourseCsvImportResponse {
+  programVersionId: string;
+  importedCount: number;
+  updatedCount: number;
+  warnings: string[];
+  courses: IProgramCourse[];
 }
 

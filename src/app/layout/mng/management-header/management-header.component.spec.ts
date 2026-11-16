@@ -59,6 +59,7 @@ describe('ManagementHeaderComponent (Header Admin Layout)', () => {
 
     // ADMIN có đủ các mục được phân quyền
     expect(titles).toContain('Tổng quan');
+    expect(titles).toContain('Khoa');
     expect(titles).toContain('Người dùng');
     expect(titles).toContain('Danh mục CTĐT');
     expect(titles).toContain('Khung CTĐT & Chuẩn đầu ra');
@@ -70,11 +71,12 @@ describe('ManagementHeaderComponent (Header Admin Layout)', () => {
     expect(titles).not.toContain('Báo cáo');
   });
 
-  it('người dùng không phải ADMIN thì không thấy mục Người dùng và Danh mục CTĐT', () => {
+  it('người dùng không phải ADMIN thì không thấy mục Người dùng, Khoa và Danh mục CTĐT', () => {
     component.roles.set([SystemConstant.ROLE.LECTURER]);
     fixture.detectChanges();
 
     const titles = component.visibleNavItems().map(i => i.title);
+    expect(titles).not.toContain('Khoa');
     expect(titles).not.toContain('Người dùng');
     expect(titles).not.toContain('Danh mục CTĐT');
     expect(titles).toContain('Tổng quan');

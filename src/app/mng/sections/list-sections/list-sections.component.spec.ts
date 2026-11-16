@@ -37,7 +37,7 @@ describe('ListSectionsComponent (F05a US-19)', () => {
   const syllabusSvc = { getSyllabusById: vi.fn(() => of(syllabus)), getSyllabiByCourse: vi.fn(() => of([syllabus])) };
   const userSvc = {
     filter: vi.fn(() => of({
-      content: [{ id: 'u1', username: 'gv.test01', fullName: 'GV Thử', email: 'a@test.local', status: 'ACTIVE', createdAt: '', updatedAt: '', roleAssignments: [{ role: 'LECTURER', scope: null }] }],
+      content: [{ id: 'u1', username: 'gv.test01', fullName: 'GV Thử', email: 'a@test.local', status: 'ACTIVE', createdAt: '', updatedAt: '', roles: ['LECTURER'] }],
       page: 0, size: 100, totalElements: 1, totalPages: 1, last: true,
     })),
   };

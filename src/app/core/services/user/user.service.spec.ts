@@ -43,7 +43,7 @@ describe('UserService (API-CONTRACT.md §5.3)', () => {
       email: 'tranthib@hcmute.edu.vn',
       password: 'Password123!',
       fullName: 'Trần Thị B',
-      roleAssignments: [{ role: 'ADMIN', scope: null }],
+      roles: ['ADMIN'],
     };
     service.create(body).subscribe();
     const req = http.expectOne(base);
@@ -54,7 +54,7 @@ describe('UserService (API-CONTRACT.md §5.3)', () => {
   });
 
   it('update dùng PUT /users/{id}', () => {
-    service.update({ email: 'a@b.vn', fullName: 'A', roleAssignments: [{ role: 'QA', scope: null }] }, userId).subscribe();
+    service.update({ email: 'a@b.vn', fullName: 'A', roles: ['QA'] }, userId).subscribe();
     const req = http.expectOne(`${base}/${userId}`);
     expect(req.request.method).toBe('PUT');
     expect(req.request.context.get(INLINE_ERRORS)).toBe(true);
@@ -68,5 +68,22 @@ describe('UserService (API-CONTRACT.md §5.3)', () => {
     expect(req.request.body).toEqual({ status: 'LOCKED' });
     expect(req.request.context.get(INLINE_ERRORS)).toBe(true);
     req.flush({});
+  });
+
+  it('downloadImportTemplate và importUsers gọi đúng endpoint import CSV Người dùng', () => {
+    service.downloadImportTemplate().subscribe();
+    const tplReq = http.expectOne(UrlConstant.API.USER_IMPORT_TEMPLATE);
+    expect(tplReq.request.method).toBe('GET');
+    expect(tplReq.request.responseType).toBe('blob');
+    tplReq.flush(new Blob(['username,email,password,fullName,roles,facultyCode,status\n'], { type: 'text/csv' }));
+
+    const file = new File(['username,email\nuser1,u1@hcmute.edu.vn'], 'users.csv', { type: 'text/csv' });
+    service.importUsers(file).subscribe(res => {
+      expect(res.successCount).toBe(1);
+    });
+    const importReq = http.expectOne(UrlConstant.API.USER_IMPORT);
+    expect(importReq.request.method).toBe('POST');
+    expect((importReq.request.body as FormData).get('file')).toBe(file);
+    importReq.flush({ totalRows: 1, successCount: 1, failureCount: 0, errors: [] });
   });
 });

@@ -9,6 +9,7 @@ import { AuthService } from '@services/auth/auth.service';
 import { CourseService } from '@services/course/course.service';
 import { SyllabusService } from '@services/course/syllabus.service';
 import { TermService } from '@services/course/term.service';
+import { NzModalService } from 'ng-zorro-antd/modal';
 import { ToastrService } from 'ngx-toastr';
 import { of, throwError } from 'rxjs';
 import { ListSyllabiComponent } from './list-syllabi.component';
@@ -33,12 +34,14 @@ describe('ListSyllabiComponent (Server-side Course Search & ADR 0010)', () => {
       code: 'MATH1301',
       name: 'Toán cao cấp A1',
       credits: 3,
+      facultyId: 'fac-other',
     },
     {
       id: 'course-2',
       code: 'PHYS1302',
       name: 'Vật lý đại cương',
       credits: 3,
+      facultyId: 'fac-other',
     },
   ];
 
@@ -47,13 +50,14 @@ describe('ListSyllabiComponent (Server-side Course Search & ADR 0010)', () => {
     code: 'OOPR230279',
     name: 'Lập trình hướng đối tượng',
     credits: 3,
+    facultyId: 'fac-cntt',
   };
 
   const mockSyllabus: ISyllabus = {
     id: 'syl-1',
     courseId: 'course-1',
     version: '2026.1',
-    status: 'DRAFT',
+    status: 'CONFIRMED',
   };
 
   const pagedResponse = (content: ICourse[]): IPagedResults<ICourse> => ({
@@ -72,17 +76,24 @@ describe('ListSyllabiComponent (Server-side Course Search & ADR 0010)', () => {
   let syllabusSvcMock: {
     getSyllabiByCourse: ReturnType<typeof vi.fn>;
     createSyllabus: ReturnType<typeof vi.fn>;
+    previewImportSyllabusCsv: ReturnType<typeof vi.fn>;
+    importSyllabusCsv: ReturnType<typeof vi.fn>;
+    lockSyllabus: ReturnType<typeof vi.fn>;
   };
   let termSvcMock: {
     getTerms: ReturnType<typeof vi.fn>;
   };
   let authSvcMock: {
     getRoles: ReturnType<typeof vi.fn>;
-    getRoleAssignments: ReturnType<typeof vi.fn>;
+    getFacultyId: ReturnType<typeof vi.fn>;
   };
   let alertSvcMock: {
     success: ReturnType<typeof vi.fn>;
     error: ReturnType<typeof vi.fn>;
+    warning: ReturnType<typeof vi.fn>;
+  };
+  let modalSvcMock: {
+    confirm: ReturnType<typeof vi.fn>;
   };
   let queryParamMapStub: ReturnType<typeof convertToParamMap>;
 
@@ -96,6 +107,7 @@ describe('ListSyllabiComponent (Server-side Course Search & ADR 0010)', () => {
         { provide: TermService, useValue: termSvcMock },
         { provide: AuthService, useValue: authSvcMock },
         { provide: ToastrService, useValue: alertSvcMock },
+        { provide: NzModalService, useValue: modalSvcMock },
         {
           provide: ActivatedRoute,
           useValue: {
@@ -105,7 +117,13 @@ describe('ListSyllabiComponent (Server-side Course Search & ADR 0010)', () => {
           },
         },
       ],
-    }).compileComponents();
+    })
+      .overrideComponent(ListSyllabiComponent, {
+        set: {
+          providers: [{ provide: NzModalService, useValue: modalSvcMock }],
+        },
+      })
+      .compileComponents();
 
     fixture = TestBed.createComponent(ListSyllabiComponent);
     component = fixture.componentInstance;
@@ -122,17 +140,48 @@ describe('ListSyllabiComponent (Server-side Course Search & ADR 0010)', () => {
     syllabusSvcMock = {
       getSyllabiByCourse: vi.fn(() => of([mockSyllabus])),
       createSyllabus: vi.fn(() => of(mockSyllabus)),
+      previewImportSyllabusCsv: vi.fn(() => of({
+        syllabusId: 'syl-preview-1',
+        courseId: 'course-1',
+        version: '2026-v1',
+        status: 'CONFIRMED',
+        verificationStatus: 'VERIFIED',
+        cloCount: 2,
+        linkCount: 3,
+        warnings: [],
+        clos: [{ id: 'c1', code: 'CLO1', bloomLevel: 3, contentOriginal: 'Mô tả CLO1' }],
+        links: [],
+      })),
+      importSyllabusCsv: vi.fn(() => of({
+        syllabusId: 'syl-imported-1',
+        courseId: 'course-1',
+        version: '2026-v1',
+        status: 'CONFIRMED',
+        verificationStatus: 'VERIFIED',
+        cloCount: 2,
+        linkCount: 3,
+        warnings: [],
+        clos: [],
+        links: [],
+      })),
+      lockSyllabus: vi.fn(() => of({ ...mockSyllabus, status: 'ARCHIVED' as const })),
     };
     termSvcMock = {
       getTerms: vi.fn(() => of(mockTerms)),
     };
     authSvcMock = {
       getRoles: vi.fn(() => [SystemConstant.ROLE.ADMIN]),
-      getRoleAssignments: vi.fn(() => []),
+      getFacultyId: vi.fn(() => undefined),
     };
     alertSvcMock = {
       success: vi.fn(),
       error: vi.fn(),
+      warning: vi.fn(),
+    };
+    modalSvcMock = {
+      confirm: vi.fn((opts: { nzOnOk?: () => void; }) => {
+        opts.nzOnOk?.();
+      }),
     };
   });
 
@@ -158,32 +207,17 @@ describe('ListSyllabiComponent (Server-side Course Search & ADR 0010)', () => {
     expect(syllabusSvcMock.getSyllabiByCourse).toHaveBeenCalledWith('course-105');
   });
 
-  describe('Giảng viên / Trưởng bộ môn có Scope phụ trách và nút toggleShowAllCourses', () => {
+  describe('Program Manager có facultyId phụ trách và nút toggleShowAllCourses', () => {
     beforeEach(() => {
-      authSvcMock.getRoles.mockReturnValue([SystemConstant.ROLE.LECTURER]);
-      authSvcMock.getRoleAssignments.mockReturnValue([
-        {
-          role: SystemConstant.ROLE.LECTURER,
-          scope: {
-            programIds: [],
-            courseIds: ['course-105'],
-            sectionIds: [],
-          },
-        },
-      ]);
-      courseSvcMock.getCourseById.mockImplementation((id: string) => {
-        if (id === 'course-105') {
-          return of(mockCourseOOP);
-        }
-        return of(mockCourses[0]);
-      });
+      authSvcMock.getRoles.mockReturnValue([SystemConstant.ROLE.PROGRAM_MANAGER]);
+      authSvcMock.getFacultyId.mockReturnValue('fac-cntt');
+      courseSvcMock.getCourses.mockReturnValue(of(pagedResponse([...mockCourses, mockCourseOOP])));
     });
 
-    it('tải môn phụ trách qua getCourseById và tự động chọn môn phụ trách đầu tiên', async () => {
+    it('lọc môn theo facultyId của PM và tự động chọn môn đầu tiên thuộc Khoa', async () => {
       await createComponent();
       fixture.detectChanges();
 
-      expect(courseSvcMock.getCourseById).toHaveBeenCalledWith('course-105');
       expect(component.scopedCourses()).toEqual([mockCourseOOP]);
       expect(component.showAllCourses()).toBe(false);
       expect(component.filteredCourses()).toEqual([mockCourseOOP]);
@@ -191,11 +225,11 @@ describe('ListSyllabiComponent (Server-side Course Search & ADR 0010)', () => {
       expect(component.isCourseInScope()).toBe(true);
     });
 
-    it('bấm toggleShowAllCourses chuyển đổi giữa toàn trường và chỉ môn phụ trách, tự reset về môn phụ trách', async () => {
+    it('bấm toggleShowAllCourses chuyển đổi giữa toàn trường và chỉ môn thuộc Khoa, tự reset về môn của Khoa', async () => {
       await createComponent();
       fixture.detectChanges();
 
-      // Ban đầu: chỉ hiện môn phụ trách course-105
+      // Ban đầu: chỉ hiện môn thuộc Khoa fac-cntt (course-105)
       expect(component.filteredCourses()).toEqual([mockCourseOOP]);
       expect(component.selectedCourseId()).toBe('course-105');
 
@@ -204,12 +238,12 @@ describe('ListSyllabiComponent (Server-side Course Search & ADR 0010)', () => {
       expect(component.showAllCourses()).toBe(true);
       expect(component.filteredCourses().length).toBeGreaterThan(1);
 
-      // Chọn 1 môn ngoài scope
+      // Chọn 1 môn ngoài Khoa
       component.onCourseChange('course-1');
       expect(component.selectedCourseId()).toBe('course-1');
       expect(component.isCourseInScope()).toBe(false);
 
-      // Bấm quay lại chỉ hiện môn phụ trách -> tự động chuyển selectedCourseId về môn phụ trách course-105
+      // Bấm quay lại chỉ hiện môn thuộc Khoa -> tự động chuyển selectedCourseId về course-105
       component.toggleShowAllCourses();
       expect(component.showAllCourses()).toBe(false);
       expect(component.filteredCourses()).toEqual([mockCourseOOP]);
@@ -360,6 +394,75 @@ describe('ListSyllabiComponent (Server-side Course Search & ADR 0010)', () => {
 
       expect(component.isLoadingMoreCourses()).toBe(false);
       expect(component.allCourses()).toEqual([mockCourses[0]]);
+    });
+  });
+
+  describe('M4: Quy trình Import CSV 2 bước và Khóa Đề cương', () => {
+    beforeEach(() => {
+      authSvcMock.getRoles.mockReturnValue([SystemConstant.ROLE.PROGRAM_MANAGER]);
+      authSvcMock.getFacultyId.mockReturnValue('fac-other');
+    });
+
+    it('chỉ PROGRAM_MANAGER mới có quyền canImportSyllabus (QA và ADMIN bị chặn)', async () => {
+      await createComponent();
+      fixture.detectChanges();
+      expect(component.canImportSyllabus()).toBe(true);
+
+      component.userRoles.set([SystemConstant.ROLE.QA]);
+      expect(component.canImportSyllabus()).toBe(false);
+
+      component.userRoles.set([SystemConstant.ROLE.ADMIN]);
+      expect(component.canImportSyllabus()).toBe(false);
+    });
+
+    it('previewImportStep gọi previewImportSyllabusCsv và confirmImportStep gọi importSyllabusCsv', async () => {
+      await createComponent();
+      fixture.detectChanges();
+
+      component.onCourseChange('course-1');
+      component.openImportModal();
+      const csvFile = new File(['code,bloomLevel,content'], 'syllabus.csv', { type: 'text/csv' });
+      component.importProgramVersionId.set('pv-1');
+      component.importVersion.set('2026-v1');
+      component.selectedFile.set(csvFile);
+
+      component.previewImportStep();
+      expect(syllabusSvcMock.previewImportSyllabusCsv).toHaveBeenCalledWith(
+        'course-1',
+        '2026-v1',
+        'pv-1',
+        csvFile,
+        undefined,
+      );
+      expect(component.importStep()).toBe(2);
+      expect(component.importPreview()?.cloCount).toBe(2);
+
+      component.confirmImportStep();
+      expect(syllabusSvcMock.importSyllabusCsv).toHaveBeenCalledWith(
+        'course-1',
+        '2026-v1',
+        'pv-1',
+        csvFile,
+        null,
+      );
+      expect(component.isImportModalVisible()).toBe(false);
+      expect(alertSvcMock.success).toHaveBeenCalled();
+    });
+
+    it('confirmLockSyllabus mở modal xác nhận và gọi lockSyllabus', async () => {
+      await createComponent();
+      fixture.detectChanges();
+
+      const confirmedSyl: ISyllabus = {
+        ...mockSyllabus,
+        status: 'CONFIRMED',
+      };
+      expect(component.canLockSyllabus(confirmedSyl)).toBe(true);
+
+      component.confirmLockSyllabus(confirmedSyl);
+      expect(modalSvcMock.confirm).toHaveBeenCalled();
+      expect(syllabusSvcMock.lockSyllabus).toHaveBeenCalledWith('syl-1');
+      expect(alertSvcMock.success).toHaveBeenCalled();
     });
   });
 });

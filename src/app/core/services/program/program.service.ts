@@ -18,11 +18,31 @@ export class ProgramService {
   private readonly http = inject(HttpClient);
   private readonly apiUrl = UrlConstant.API.PROGRAMS;
 
-  /** Phân trang danh mục CTĐT: page (từ 0), size (1..100) */
-  getPrograms(page: number, size: number): Observable<IPagedResults<IProgram>> {
-    const params = new HttpParams()
+  /** Phân trang danh mục CTĐT: page (từ 0), size (1..100), hỗ trợ lọc theo Khoa, bậc, hệ và từ khóa */
+  getPrograms(
+    page: number,
+    size: number,
+    facultyId?: string,
+    level?: string,
+    degree?: string,
+    search?: string,
+  ): Observable<IPagedResults<IProgram>> {
+    let params = new HttpParams()
       .set('page', page.toString())
       .set('size', size.toString());
+    if (facultyId) {
+      params = params.set('facultyId', facultyId);
+    }
+    if (level) {
+      params = params.set('level', level);
+    }
+    if (degree) {
+      params = params.set('degree', degree);
+    }
+    const trimmed = search?.trim();
+    if (trimmed) {
+      params = params.set('search', trimmed);
+    }
     return this.http.get<IPagedResults<IProgram>>(this.apiUrl, { params });
   }
 

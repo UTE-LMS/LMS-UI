@@ -52,15 +52,30 @@ export class ListCoursesComponent implements OnInit {
   readonly activeTab = signal<'COURSES' | 'TERMS'>('COURSES');
   readonly userRoles = signal<string[]>([]);
 
-  /** Chỉ ADMIN được thêm/sửa/xóa kho học phần cấp trường (ADR 0010) */
+  /** Quản trị viên cấp trường */
   readonly isAdmin = computed(() => this.userRoles().includes(SystemConstant.ROLE.ADMIN));
+
+  /** Quản lý Chương trình đào tạo (thuộc Khoa phụ trách) */
+  readonly isProgramManager = computed(() => this.userRoles().includes(SystemConstant.ROLE.PROGRAM_MANAGER));
+
+  /** ADMIN hoặc PROGRAM_MANAGER được thêm/sửa học phần thuộc phạm vi quản lý */
+  readonly canManageCourses = computed(() => this.isAdmin() || this.isProgramManager());
 
   /** Chỉ ADMIN được quản lý học kỳ */
   readonly canManageTerms = computed(() => this.isAdmin());
 
-  /** Quản lý phân trang danh mục Học phần cấp trường */
+  /** Quản lý phân trang danh mục Học phần cấp trường / theo Khoa của PM */
   readonly manager = createListManagerNoFilter<ICourse>(
-    (page, size, search) => this.courseSvc.getCourses(page - 1, size, search),
+    (page, size, search) => {
+      const roles = this.userRoles().length > 0 ? this.userRoles() : this.authSvc.getRoles();
+      const isPmOnly =
+        roles.includes(SystemConstant.ROLE.PROGRAM_MANAGER)
+        && !roles.includes(SystemConstant.ROLE.ADMIN);
+      const facultyId = isPmOnly ? this.authSvc.getFacultyId?.() : undefined;
+      return facultyId
+        ? this.courseSvc.getCourses(page - 1, size, search, facultyId)
+        : this.courseSvc.getCourses(page - 1, size, search);
+    },
   );
 
   /** Trạng thái Modal Học phần */
