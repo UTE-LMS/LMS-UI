@@ -78,4 +78,22 @@ describe('SectionService (F05a US-19)', () => {
     expect(req.request.body).toEqual({ status: 'OPEN', reason: 'Sửa điểm nhập sai' });
     req.flush({});
   });
+
+  it('downloadImportTemplate tải file mẫu CSV qua GET /sections/import-template', () => {
+    service.downloadImportTemplate().subscribe();
+    const req = http.expectOne(UrlConstant.API.SECTION_IMPORT_TEMPLATE);
+    expect(req.request.method).toBe('GET');
+    expect(req.request.responseType).toBe('blob');
+    req.flush(new Blob(['code,courseCode\n'], { type: 'text/csv' }));
+  });
+
+  it('importSections gửi multipart CSV qua POST /sections/import', () => {
+    const file = new File(['code\nSEC1\n'], 'sections.csv', { type: 'text/csv' });
+    service.importSections(file).subscribe();
+    const req = http.expectOne(UrlConstant.API.SECTION_IMPORT);
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toBeInstanceOf(FormData);
+    expect((req.request.body as FormData).get('file')).toBeInstanceOf(File);
+    req.flush({ totalRows: 1, successCount: 1, failureCount: 0, errors: [] });
+  });
 });

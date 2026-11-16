@@ -51,11 +51,11 @@ function csvCell(value: string): string {
 /** Nội dung CSV "bản báo lỗi" (UTF-8 kèm BOM để Excel đọc đúng tiếng Việt) để người dùng sửa tệp rồi tải lại. */
 export function buildRosterErrorCsv(errors: readonly IRosterRowError[]): string {
   const rows = errors.map(e => [e.line === null ? '' : String(e.line), e.rejectedValue, e.message].map(csvCell).join(','));
-  return `${UTF8_BOM}dong,studentRef,loi\n${rows.join('\n')}\n`;
+  return `${UTF8_BOM}dong,studentCode,loi\n${rows.join('\n')}\n`;
 }
 
-/** Tệp mẫu: chỉ ba cột hệ thống đọc; mã sinh viên trong mẫu là mã giả. */
-export const ROSTER_TEMPLATE_CSV = UTF8_BOM + 'studentRef,cohort,majorCode\nSV-0001,2023,CNTT\nSV-0002,2023,CNTT\n';
+/** Tệp mẫu: chỉ hai cột hệ thống đọc; mã số sinh viên trong mẫu là mã giả. */
+export const ROSTER_TEMPLATE_CSV = UTF8_BOM + 'studentCode,cohort\nSV-0001,2023\nSV-0002,2023\n';
 
 /** Backend không cấu hình riêng giới hạn tệp nên áp mặc định 1 MB của Spring (5000 dòng CSV chỉ cỡ vài trăm KB). */
 export const MAX_ROSTER_FILE_BYTES = 1024 * 1024;

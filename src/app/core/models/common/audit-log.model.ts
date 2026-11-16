@@ -5,7 +5,12 @@ export type AuditAction =
   | 'ASSESSMENT_LOCK'
   | 'ASSESSMENT_UNLOCK'
   | 'RUN_CALCULATION'
-  | 'LOGIN';
+  | 'LOGIN'
+  | 'CREATE'
+  | 'UPDATE'
+  | 'DELETE'
+  | 'STATUS_CHANGE'
+  | 'IMPORT';
 
 /** Thực thể bị tác động: tên collection và ID bản ghi (AuditEntity). */
 export interface IAuditEntity {

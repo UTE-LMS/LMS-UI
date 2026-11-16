@@ -2,6 +2,7 @@ import { HttpClient, HttpContext, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { UrlConstant } from '@constants/url.constant';
 import { INLINE_ERRORS, REQUEST_TIMEOUT_MS } from '@interceptors/http-context.token';
+import { ICsvImportResultResponse } from '@models/common/response-data.model';
 import {
   EnrollmentStatus,
   IEnrollment,
@@ -49,6 +50,28 @@ export class EnrollmentService {
     const body: IEnrollmentStatusUpdateRequest = { status };
     return this.http.put<IEnrollment>(UrlConstant.API.ENROLLMENT_STATUS(id), body, {
       context: this.inlineErrors(),
+    });
+  }
+
+  downloadSectionImportTemplate(sectionId: string): Observable<Blob> {
+    return this.http.get(UrlConstant.API.SECTION_ENROLLMENT_IMPORT_TEMPLATE(sectionId), {
+      responseType: 'blob',
+      context: this.inlineErrors(),
+    });
+  }
+
+  downloadBulkImportTemplate(): Observable<Blob> {
+    return this.http.get(UrlConstant.API.ENROLLMENT_BULK_IMPORT_TEMPLATE, {
+      responseType: 'blob',
+      context: this.inlineErrors(),
+    });
+  }
+
+  importEnrollmentsBulk(file: File): Observable<ICsvImportResultResponse> {
+    const formData = new FormData();
+    formData.append('file', file);
+    return this.http.post<ICsvImportResultResponse>(UrlConstant.API.ENROLLMENT_BULK_IMPORT, formData, {
+      context: this.inlineErrors().set(REQUEST_TIMEOUT_MS, 0),
     });
   }
 

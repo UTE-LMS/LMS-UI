@@ -24,7 +24,7 @@ describe('DetailSectionComponent (F05a US-19, US-20)', () => {
     lecturerIds: ['u1'], enrolledCount: 3, status: 'OPEN',
   };
   const enrollment = (id: string, ref: string, status: IEnrollment['status']): IEnrollment => ({
-    id, sectionId: 'sec1', studentId: `st-${id}`, studentRef: ref, status, enrolledAt: '2026-09-07T00:00:00Z',
+    id, sectionId: 'sec1', studentId: `st-${id}`, studentCode: ref, status, enrolledAt: '2026-09-07T00:00:00Z',
   });
   // 3 đang học, 2 đã rút: số liệu tự đặt để kiểm tra hiển thị đúng giá trị API, không phải kết quả đo thật
   const roster: IEnrollmentList = {
@@ -103,7 +103,7 @@ describe('DetailSectionComponent (F05a US-19, US-20)', () => {
   it('lọc danh sách theo Đang học / Đã rút ở phía hiển thị', async () => {
     await setup([SystemConstant.ROLE.ADMIN]);
     component.rosterFilter.set('WITHDRAWN');
-    expect(component.visibleEnrollments().map(e => e.studentRef)).toEqual(['SV-0004', 'SV-0005']);
+    expect(component.visibleEnrollments().map(e => e.studentCode)).toEqual(['SV-0004', 'SV-0005']);
     component.rosterFilter.set('ENROLLED');
     expect(component.visibleEnrollments().length).toBe(3);
   });

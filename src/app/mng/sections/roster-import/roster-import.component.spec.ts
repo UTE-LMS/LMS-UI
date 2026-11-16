@@ -41,7 +41,7 @@ describe('RosterImportComponent (F05a US-20)', () => {
   }
 
   const el = (): HTMLElement => fixture.nativeElement as HTMLElement;
-  const csv = (name = 'lop.csv', body = 'studentRef\nSV-0001\n'): File => new File([body], name, { type: 'text/csv' });
+  const csv = (name = 'lop.csv', body = 'studentCode\nSV-0001\n'): File => new File([body], name, { type: 'text/csv' });
   function pick(file: File): void {
     const input = el().querySelector('input[type="file"]') as HTMLInputElement;
     Object.defineProperty(input, 'files', { value: [file], configurable: true });
@@ -95,8 +95,8 @@ describe('RosterImportComponent (F05a US-20)', () => {
       error: {
         status: 422, code: 'BUSINESS_RULE_VIOLATION', message: 'Tệp có dòng lỗi',
         fieldErrors: [
-          { field: 'line 12', message: 'Thiếu studentRef', rejectedValue: '' },
-          { field: 'line 30', message: 'studentRef trùng với dòng 17 trong tệp', rejectedValue: 'SV-0018' },
+          { field: 'line 12', message: 'Thiếu studentCode', rejectedValue: '' },
+          { field: 'line 30', message: 'studentCode trùng với dòng 17 trong tệp', rejectedValue: 'SV-0018' },
           { field: 'line 41', message: 'Sinh viên đã ghi danh lớp này', rejectedValue: 'SV-0022' },
         ],
       },
@@ -119,14 +119,14 @@ describe('RosterImportComponent (F05a US-20)', () => {
   it('400 tệp sai cột (không có fieldErrors) hiện thông điệp backend, không hiện bảng lỗi theo dòng', async () => {
     await setup();
     enrollmentSvc.importEnrollments.mockReturnValue(throwError(() => new HttpErrorResponse({
-      status: 400, error: { status: 400, code: 'VALIDATION_ERROR', message: 'Tệp thiếu cột studentRef' },
+      status: 400, error: { status: 400, code: 'VALIDATION_ERROR', message: 'Tệp thiếu cột studentCode' },
     })));
     pick(csv());
     component.submit();
     fixture.detectChanges();
     expect(component.rowErrors()).toEqual([]);
-    expect(component.submitError()).toContain('thiếu cột studentRef');
-    expect(el().querySelector('[role="alert"]')?.textContent).toContain('thiếu cột studentRef');
+    expect(component.submitError()).toContain('thiếu cột studentCode');
+    expect(el().querySelector('[role="alert"]')?.textContent).toContain('thiếu cột studentCode');
   });
 
   it('422 lớp đã đóng (không có fieldErrors) hiện thông điệp backend', async () => {

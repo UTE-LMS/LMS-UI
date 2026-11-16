@@ -111,7 +111,7 @@
   <nz-table class="mt-3" nzSize="middle" [nzData]="visibleEnrollments()" [nzPageSize]="50" [nzNoResult]="emptyRosterTpl">
     <thead>
       <tr>
-        <th>Mã SV (thay thế)</th>
+        <th>Mã số sinh viên (MSSV)</th>
         <th nzWidth="150px">Ngày ghi danh</th>
         <th nzWidth="190px">Trạng thái</th>
         @if (canEditRoster()) {
@@ -122,18 +122,18 @@
     <tbody>
       @for (row of visibleEnrollments(); track row.id) {
       <tr>
-        <td class="font-semibold">{{ row.studentRef }}</td>
+        <td class="font-semibold">{{ row.studentCode }}</td>
         <td>{{ row.enrolledAt ? (row.enrolledAt | date: 'dd/MM/yyyy') : '—' }}</td>
         <td><app-display-chip [display]="enrollmentStatusDisplay[row.status]" /></td>
         @if (canEditRoster()) {
         <td nzAlign="right">
           @if (row.status === 'ENROLLED') {
           <button nz-button nzSize="small" type="button" [disabled]="!!frozenReason() || busyEnrollmentId() === row.id"
-            [attr.title]="frozenReason()" [attr.aria-label]="'Rút ' + row.studentRef + ' khỏi lớp'"
+            [attr.title]="frozenReason()" [attr.aria-label]="'Rút ' + row.studentCode + ' khỏi lớp'"
             (click)="changeEnrollment(row, 'WITHDRAWN')">Rút</button>
           } @else {
           <button nz-button nzSize="small" type="button" [disabled]="!!frozenReason() || busyEnrollmentId() === row.id"
-            [attr.title]="frozenReason()" [attr.aria-label]="'Ghi danh lại ' + row.studentRef"
+            [attr.title]="frozenReason()" [attr.aria-label]="'Ghi danh lại ' + row.studentCode"
             (click)="changeEnrollment(row, 'ENROLLED')">Ghi danh lại</button>
           }
         </td>
@@ -143,7 +143,7 @@
     </tbody>
   </nz-table>
   <p class="mt-3 text-xs text-slate-700">
-    Chỉ hiện mã thay thế (SV-xxxx); họ tên và email chỉ lưu khi Khoa cho phép (Q09). Rút khỏi lớp làm mẫu số giảm nhưng
+    Hiển thị Mã số sinh viên (MSSV); họ tên và email chỉ lưu khi Khoa cho phép. Rút khỏi lớp làm mẫu số giảm nhưng
     không xóa bản ghi. Số đếm do hệ thống tính.
   </p>
   }

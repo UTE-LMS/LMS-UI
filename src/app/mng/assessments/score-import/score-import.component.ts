@@ -49,7 +49,7 @@ export class ScoreImportComponent implements OnInit {
   readonly errors = signal<IImportRowError[]>([]);
   readonly file = signal<File | null>(null);
   readonly csvHeaders = signal<string[]>([]);
-  readonly studentColumn = signal<string>('MSSV');
+  readonly studentColumn = signal<string>('studentCode');
   readonly reimportPolicy = signal<ReimportPolicy>('REJECT_ON_CONFLICT');
   readonly sourceSystem = signal<ImportSourceSystem>('CSV');
   readonly isTemplateFormat = signal<boolean>(false);
@@ -177,8 +177,8 @@ export class ScoreImportComponent implements OnInit {
   }
 
   private autoMapHeaders(headers: string[]): void {
-    // Tìm cột MSSV
-    const foundStudentCol = headers.find(h => /^(mssv|studentcode|ma_sv|masv|student_code|id)$/i.test(h));
+    // Tìm cột MSSV (mặc định studentCode)
+    const foundStudentCol = headers.find(h => /^(studentcode|student_code|mssv|ma_sv|masv|id)$/i.test(h));
     if (foundStudentCol) {
       this.studentColumn.set(foundStudentCol);
     } else if (headers.length > 0) {
@@ -187,7 +187,8 @@ export class ScoreImportComponent implements OnInit {
 
     const templateCols = headers.filter(h => / - .+ \(Max:\s*[\d.]+\)$/i.test(h));
     const looksLikeTemplate =
-      foundStudentCol?.toLowerCase() === 'masv' && templateCols.length >= this.itemMappings().length && templateCols.length > 0;
+      (foundStudentCol?.toLowerCase() === 'studentcode' || foundStudentCol?.toLowerCase() === 'masv')
+      && templateCols.length >= this.itemMappings().length && templateCols.length > 0;
     this.isTemplateFormat.set(looksLikeTemplate);
 
     // Tự động map các câu hỏi (theo cặp item + CLO nếu dùng tệp mẫu)

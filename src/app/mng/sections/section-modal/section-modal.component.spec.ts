@@ -22,7 +22,7 @@ describe('SectionModalComponent (F05a US-19)', () => {
   const syllabusSvc = {
     getSyllabiByCourse: vi.fn(() => of([
       { id: 's1', courseId: 'c1', version: '1', status: 'CONFIRMED' },
-      { id: 's2', courseId: 'c1', version: '2', status: 'DRAFT' },
+      { id: 's2', courseId: 'c1', version: '2', status: 'ARCHIVED' },
     ])),
   };
   const alertSvc = { success: vi.fn(), error: vi.fn() };

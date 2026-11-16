@@ -1,7 +1,8 @@
 import { HttpClient, HttpContext, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { UrlConstant } from '@constants/url.constant';
-import { INLINE_ERRORS } from '@interceptors/http-context.token';
+import { INLINE_ERRORS, REQUEST_TIMEOUT_MS } from '@interceptors/http-context.token';
+import { ICsvImportResultResponse } from '@models/common/response-data.model';
 import {
   ISection,
   ISectionRequest,
@@ -46,6 +47,21 @@ export class SectionService {
 
   updateStatus(id: string, model: ISectionStatusUpdateRequest): Observable<ISection> {
     return this.http.put<ISection>(UrlConstant.API.SECTION_STATUS(id), model, { context: this.inlineErrors() });
+  }
+
+  downloadImportTemplate(): Observable<Blob> {
+    return this.http.get(UrlConstant.API.SECTION_IMPORT_TEMPLATE, {
+      responseType: 'blob',
+      context: this.inlineErrors(),
+    });
+  }
+
+  importSections(file: File): Observable<ICsvImportResultResponse> {
+    const formData = new FormData();
+    formData.append('file', file);
+    return this.http.post<ICsvImportResultResponse>(UrlConstant.API.SECTION_IMPORT, formData, {
+      context: this.inlineErrors().set(REQUEST_TIMEOUT_MS, 0),
+    });
   }
 
   private inlineErrors(): HttpContext {

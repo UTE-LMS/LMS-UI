@@ -34,13 +34,13 @@ describe('sections.util (F05a)', () => {
   describe('toRosterRowErrors (US-20/AC-2)', () => {
     it('giữ thứ tự, chuẩn hóa giá trị trống và null thành chuỗi rỗng', () => {
       const rows = toRosterRowErrors([
-        { field: 'line 12', message: 'Thiếu studentRef', rejectedValue: '' },
-        { field: 'line 30', message: 'studentRef trùng với dòng 17 trong tệp', rejectedValue: 'SV-0018' },
+        { field: 'line 12', message: 'Thiếu studentCode', rejectedValue: '' },
+        { field: 'line 30', message: 'studentCode trùng với dòng 17 trong tệp', rejectedValue: 'SV-0018' },
         { field: 'line 41', message: 'Sinh viên đã ghi danh lớp này', rejectedValue: null },
       ]);
       expect(rows).toEqual([
-        { line: 12, rejectedValue: '', message: 'Thiếu studentRef' },
-        { line: 30, rejectedValue: 'SV-0018', message: 'studentRef trùng với dòng 17 trong tệp' },
+        { line: 12, rejectedValue: '', message: 'Thiếu studentCode' },
+        { line: 30, rejectedValue: 'SV-0018', message: 'studentCode trùng với dòng 17 trong tệp' },
         { line: 41, rejectedValue: '', message: 'Sinh viên đã ghi danh lớp này' },
       ]);
     });
@@ -53,11 +53,11 @@ describe('sections.util (F05a)', () => {
   describe('buildRosterErrorCsv', () => {
     it('có BOM, tiêu đề, và đặt ô có dấu phẩy/nháy kép trong nháy kép', () => {
       const csv = buildRosterErrorCsv([
-        { line: 12, rejectedValue: '', message: 'Thiếu studentRef' },
+        { line: 12, rejectedValue: '', message: 'Thiếu studentCode' },
         { line: 30, rejectedValue: 'SV,"1"', message: 'Lỗi' },
       ]);
-      expect(csv.startsWith('\uFEFFdong,studentRef,loi\n')).toBe(true);
-      expect(csv).toContain('12,,Thiếu studentRef');
+      expect(csv.startsWith('\uFEFFdong,studentCode,loi\n')).toBe(true);
+      expect(csv).toContain('12,,Thiếu studentCode');
       expect(csv).toContain('30,"SV,""1""",Lỗi');
     });
 

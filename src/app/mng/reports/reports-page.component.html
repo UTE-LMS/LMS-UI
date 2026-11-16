@@ -122,7 +122,7 @@
           <tbody>
             @for (entry of rep.summary.missingEntries ?? []; track entry.studentResultId) {
               <tr>
-                <td class="font-medium">{{ entry.studentRef }}</td>
+                <td class="font-medium">{{ entry.studentCode }}</td>
                 <td><nz-tag>{{ entry.level }}</nz-tag></td>
                 <td><nz-tag nzColor="orange">{{ entry.status }}</nz-tag></td>
                 <td>{{ entry.reason }}</td>

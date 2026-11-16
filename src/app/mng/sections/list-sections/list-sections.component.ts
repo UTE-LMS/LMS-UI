@@ -15,10 +15,12 @@ import { IUser } from '@models/user/user.model';
 import { AuthService } from '@services/auth/auth.service';
 import { toUserError } from '@services/common/api-error.util';
 import { CourseService } from '@services/course/course.service';
+import { EnrollmentService } from '@services/course/enrollment.service';
 import { SectionService } from '@services/course/section.service';
 import { SyllabusService } from '@services/course/syllabus.service';
 import { TermService } from '@services/course/term.service';
 import { UserService } from '@services/user/user.service';
+import { CsvImportModalComponent } from '@widget/csv-import-modal/csv-import-modal.component';
 import { DisplayChipComponent } from '@widget/display-chip/display-chip.component';
 import { ErrorStateComponent } from '@widget/error-state/error-state.component';
 import { TestDataFlagComponent } from '@widget/test-data-flag/test-data-flag.component';
@@ -39,11 +41,12 @@ import { displayEnrolledCount, lecturerLabel } from '../sections.util';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     FormsModule, RouterLink, NzTableModule, NzButtonModule, NzSelectModule,
-    DisplayChipComponent, ErrorStateComponent, TestDataFlagComponent, SectionModalComponent,
+    CsvImportModalComponent, DisplayChipComponent, ErrorStateComponent, TestDataFlagComponent, SectionModalComponent,
   ],
 })
 export class ListSectionsComponent implements OnInit {
   private readonly sectionSvc = inject(SectionService);
+  private readonly enrollmentSvc = inject(EnrollmentService);
   private readonly termSvc = inject(TermService);
   private readonly courseSvc = inject(CourseService);
   private readonly syllabusSvc = inject(SyllabusService);
@@ -70,12 +73,40 @@ export class ListSectionsComponent implements OnInit {
   readonly isLoading = signal(false);
   readonly loadError = signal<IUserError | null>(null);
   readonly isModalVisible = signal(false);
+  readonly isSectionImportVisible = signal(false);
+  readonly isBulkEnrollmentImportVisible = signal(false);
 
   /** Chỉ để ẩn nút: ADMIN hoặc PROGRAM_MANAGER mở lớp; backend kiểm tra lại đúng phạm vi CTĐT (D1). */
   readonly canCreate = computed(() => {
     const roles = this.roles();
     return roles.includes(SystemConstant.ROLE.ADMIN) || roles.includes(SystemConstant.ROLE.PROGRAM_MANAGER);
   });
+
+  readonly canBulkImportEnrollments = computed(() => {
+    const roles = this.roles();
+    return roles.includes(SystemConstant.ROLE.ADMIN)
+      || roles.includes(SystemConstant.ROLE.PROGRAM_MANAGER)
+      || roles.includes(SystemConstant.ROLE.LECTURER);
+  });
+
+  readonly isProgramManagerOnly = computed(() => {
+    const roles = this.roles();
+    return roles.includes(SystemConstant.ROLE.PROGRAM_MANAGER) && !roles.includes(SystemConstant.ROLE.ADMIN);
+  });
+
+  readonly sectionImportGuideText = computed(() => {
+    const base = 'Cột CSV: code, courseCode, syllabusVersion, termCode, lecturerUsernames (nhiều giảng viên ngăn cách bằng dấu ;).';
+    return this.isProgramManagerOnly()
+      ? `${base} Lưu ý: Trưởng chương trình đào tạo chỉ được import lớp cho các học phần thuộc khoa của mình.`
+      : base;
+  });
+
+  readonly bulkEnrollmentGuideText = 'Cột CSV: sectionCode, studentCode, cohort. Dùng để ghi danh hàng loạt nhiều lớp học phần.';
+
+  readonly downloadSectionTemplateFn = () => this.sectionSvc.downloadImportTemplate();
+  readonly importSectionsFn = (file: File) => this.sectionSvc.importSections(file);
+  readonly downloadBulkEnrollmentTemplateFn = () => this.enrollmentSvc.downloadBulkImportTemplate();
+  readonly importBulkEnrollmentsFn = (file: File) => this.enrollmentSvc.importEnrollmentsBulk(file);
 
   readonly lecturerNames = computed<ReadonlyMap<string, string>>(
     () => new Map(this.users().map(user => [user.id, user.username])),
