@@ -96,3 +96,74 @@ export interface IAssessmentUpdateRequest {
 export interface IAssessmentItemsRequest {
   items: IAssessmentItem[];
 }
+
+/** Chi tiết điểm của từng sinh viên theo câu hỏi và CLO (GET /api/v1/assessments/{id}/scores). */
+export interface IAssessmentScoreItem {
+  id: string;
+  sectionId: string;
+  assessmentId: string;
+  studentId: string;
+  studentCode: string;
+  studentName?: string | null;
+  itemId: string;
+  itemCode: string;
+  bloomLevel?: number | null;
+  cloId: string;
+  cloCode: string;
+  rawScore: number;
+  maxScore: number;
+  importBatchId?: string | null;
+  sourceRow?: number | null;
+  updatedAt?: string | null;
+}
+
+export type AlignmentWarning = 'NOT_ASSESSED' | 'WEIGHT_NOT_FULL' | 'BLOOM_BELOW_CLO' | 'BLOOM_UNDECLARED';
+
+export interface ICloAlignmentAssessment {
+  assessmentId: string;
+  assessmentCode: string;
+  type: string;
+  status: AssessmentStatus;
+  questionCount: number;
+  points: number;
+  weight: number;
+}
+
+export interface ICloAlignmentItemBloom {
+  bloomLevel: number | null;
+  questionCount: number;
+  points: number;
+}
+
+export interface ICloAlignmentLinkedPi {
+  piId: string;
+  piCode: string;
+  ploId: string | null;
+  ploCode: string | null;
+  weight: number | null;
+}
+
+export interface ICloAlignment {
+  cloId: string;
+  cloCode: string;
+  cloBloomLevel: number | null;
+  points: number;
+  percentage: number | null;
+  totalWeight: number;
+  maxItemBloomLevel: number | null;
+  assessments: ICloAlignmentAssessment[];
+  itemBloom: ICloAlignmentItemBloom[];
+  linkedPis: ICloAlignmentLinkedPi[];
+  warnings: AlignmentWarning[];
+}
+
+export interface IAssessmentAlignmentResponse {
+  sectionId: string;
+  sectionCode: string;
+  courseId: string;
+  syllabusId: string;
+  assessmentCount: number;
+  totalPoints: number;
+  cloWithWarningCount: number;
+  clos: ICloAlignment[];
+}

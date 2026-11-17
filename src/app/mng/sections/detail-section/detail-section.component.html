@@ -19,6 +19,7 @@
     <app-test-data-flag />
     <span class="flex-1"></span>
     <a nz-button [routerLink]="urlConst.ASSESSMENTS_OF_SECTION(sec.id)">Bài đánh giá</a>
+    <a nz-button [routerLink]="urlConst.SECTION_ASSESSMENT_ALIGNMENT(sec.id)">Kiểm tra đề thi – CĐR</a>
     @if (canManage()) {
     <button nz-button type="button" (click)="isLecturersModalVisible.set(true)">Đổi giảng viên</button>
     <button nz-button type="button" (click)="openStatusModal()">Đổi trạng thái lớp</button>

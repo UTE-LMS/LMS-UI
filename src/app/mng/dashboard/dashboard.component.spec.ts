@@ -38,11 +38,18 @@ describe('DashboardComponent (Tổng quan)', () => {
     fixture.detectChanges();
   }
 
+  const paged = <T>(content: T[]) => ({
+    content, page: 0, size: 20, totalElements: content.length, totalPages: 1, last: true,
+  });
+
   beforeEach(() => {
     calcSvc = {
-      getCalculationRuns: vi.fn(() => of([run('r1', 'SUCCESS', '2026-10-26T10:00:00Z'), run('r2', 'SUCCESS', '2026-10-27T10:00:00Z'),
-        run('r3', 'FAILED', '2026-10-28T10:00:00Z')])),
-      getAggregateResults: vi.fn(() => of([])),
+      getCalculationRuns: vi.fn(() => of(paged([
+        run('r1', 'SUCCESS', '2026-10-26T10:00:00Z'),
+        run('r2', 'SUCCESS', '2026-10-27T10:00:00Z'),
+        run('r3', 'FAILED', '2026-10-28T10:00:00Z'),
+      ]))),
+      getAggregateResults: vi.fn(() => of(paged([]))),
     };
     sectionSvc = { getSections: vi.fn(() => of([{ id: 's1' }])) };
   });
@@ -55,8 +62,8 @@ describe('DashboardComponent (Tổng quan)', () => {
   it('nạp kết quả PI và PLO của lần tính gần nhất', async () => {
     await setup(['LECTURER']);
     expect(component.latestRun()?.id).toBe('r2');
-    expect(calcSvc.getAggregateResults).toHaveBeenCalledWith('r2', 'PI');
-    expect(calcSvc.getAggregateResults).toHaveBeenCalledWith('r2', 'PLO');
+    expect(calcSvc.getAggregateResults).toHaveBeenCalledWith('r2', 'PI', undefined, 0, 100);
+    expect(calcSvc.getAggregateResults).toHaveBeenCalledWith('r2', 'PLO', undefined, 0, 100);
   });
 
   it('lối tắt lọc theo vai trò: giảng viên không thấy Nhật ký thao tác', async () => {
@@ -66,7 +73,7 @@ describe('DashboardComponent (Tổng quan)', () => {
   });
 
   it('chưa có lần tính: hiện hướng dẫn, không hiện số 0 cho kết quả', async () => {
-    calcSvc.getCalculationRuns.mockReturnValue(of([]));
+    calcSvc.getCalculationRuns.mockReturnValue(of(paged([])));
     await setup(['ADMIN']);
     expect((fixture.nativeElement as HTMLElement).textContent).toContain('Chưa có lần tính nào hoàn tất');
   });

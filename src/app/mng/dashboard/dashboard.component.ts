@@ -93,14 +93,14 @@ export class DashboardComponent implements OnInit {
     this.loadFailed.set(false);
     forkJoin({
       sections: this.sectionSvc.getSections().pipe(catchError(() => of(null))),
-      runs: this.calcSvc.getCalculationRuns().pipe(catchError(() => of(null))),
+      runs: this.calcSvc.getCalculationRuns(undefined, 0, 20).pipe(catchError(() => of(null))),
     }).pipe(
       finalize(() => this.loading.set(false)),
       takeUntilDestroyed(this.destroyRef),
     ).subscribe(({ sections, runs }) => {
       this.sections.set(sections);
       this.loadFailed.set(sections === null && runs === null);
-      this.runs.set(runs ?? []);
+      this.runs.set(runs?.content ?? []);
       this.loadAggregates();
     });
   }
@@ -113,11 +113,11 @@ export class DashboardComponent implements OnInit {
       return;
     }
     forkJoin({
-      pi: this.calcSvc.getAggregateResults(run.id, 'PI').pipe(catchError(() => of([]))),
-      plo: this.calcSvc.getAggregateResults(run.id, 'PLO').pipe(catchError(() => of([]))),
+      pi: this.calcSvc.getAggregateResults(run.id, 'PI', undefined, 0, 100).pipe(catchError(() => of(null))),
+      plo: this.calcSvc.getAggregateResults(run.id, 'PLO', undefined, 0, 100).pipe(catchError(() => of(null))),
     }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe(({ pi, plo }) => {
-      this.piResults.set(pi);
-      this.ploResults.set(plo);
+      this.piResults.set(pi?.content ?? []);
+      this.ploResults.set(plo?.content ?? []);
     });
   }
 

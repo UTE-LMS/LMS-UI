@@ -34,6 +34,12 @@ export const assessmentsRoutes: Routes = [
     title: `Lịch sử nhập điểm | ${SystemConstant.WEB_NAME}`,
   },
   {
+    path: ':id/scores',
+    loadComponent: () => import('./assessment-scores/assessment-scores.component')
+      .then(m => m.AssessmentScoresComponent),
+    title: `Bảng điểm sinh viên | ${SystemConstant.WEB_NAME}`,
+  },
+  {
     path: ':id',
     loadComponent: () => import('./detail-assessment/detail-assessment.component')
       .then(m => m.DetailAssessmentComponent),

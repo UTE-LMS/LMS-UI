@@ -31,6 +31,8 @@ export interface IAnalyticsQuery {
   runId?: string;
   lecturerIds?: string[];
   studentIds?: string[];
+  subjectIds?: string[];
+  passed?: boolean;
 }
 
 /** Tiêu đề một hàng hoặc một cột của ma trận (MatrixHeader). */
@@ -39,6 +41,7 @@ export interface IMatrixHeader {
   code?: string | null;
   name?: string | null;
   bloomLevel?: number | null;
+  passThreshold?: number | null;
   extra?: Record<string, unknown> | null;
 }
 

@@ -94,6 +94,7 @@ export const UrlConstant = {
     SECTION_IMPORT_TEMPLATE: environment.serverUrl + 'api/v1/sections/import-template',
     SECTION_IMPORT: environment.serverUrl + 'api/v1/sections/import',
     SECTION_DETAIL: (id: string) => `${environment.serverUrl}api/v1/sections/${id}`,
+    SECTION_ASSESSMENT_ALIGNMENT: (sectionId: string) => `${environment.serverUrl}api/v1/sections/${sectionId}/assessment-alignment`,
     SECTION_STATUS: (id: string) => `${environment.serverUrl}api/v1/sections/${id}/status`,
     SECTION_ENROLLMENTS: (sectionId: string) => `${environment.serverUrl}api/v1/sections/${sectionId}/enrollments`,
     SECTION_ENROLLMENT_IMPORT: (sectionId: string) => `${environment.serverUrl}api/v1/sections/${sectionId}/enrollments/import`,
@@ -111,6 +112,7 @@ export const UrlConstant = {
     ASSESSMENT_LOCK: (id: string) => `${environment.serverUrl}api/v1/assessments/${id}/lock`,
     ASSESSMENT_UNLOCK: (id: string) => `${environment.serverUrl}api/v1/assessments/${id}/unlock`,
     ASSESSMENT_SCORE_TEMPLATE_CSV: (id: string) => `${environment.serverUrl}api/v1/assessments/${id}/scores/template-csv`,
+    ASSESSMENT_SCORES: (id: string) => `${environment.serverUrl}api/v1/assessments/${id}/scores`,
 
     // F05b - Lô nhập điểm thi 3-bước (ADR 0014, Schema v0.7)
     IMPORT_BATCH_CREATE: (sectionId: string, assessmentId: string) => `${environment.serverUrl}api/v1/sections/${sectionId}/assessments/${assessmentId}/import-batches`,
@@ -175,6 +177,7 @@ export const UrlConstant = {
       SECTIONS: '/mng/sections',
       SECTION_DETAIL: (sectionId: string) => `/mng/sections/${sectionId}`,
       SECTION_ROSTER_IMPORT: (sectionId: string) => `/mng/sections/${sectionId}/roster-import`,
+      SECTION_ASSESSMENT_ALIGNMENT: (sectionId: string) => `/mng/sections/${sectionId}/assessment-alignment`,
 
       ASSESSMENTS_OF_SECTION: (sectionId: string) => `/mng/assessments/sections/${sectionId}`,
       ASSESSMENT_TEMPLATES: (syllabusId: string) => `/mng/assessments/syllabi/${syllabusId}`,
@@ -182,6 +185,7 @@ export const UrlConstant = {
       ASSESSMENT_REVIEW: (assessmentId: string) => `/mng/assessments/${assessmentId}/review`,
       ASSESSMENT_SCORE_IMPORT: (assessmentId: string) => `/mng/assessments/${assessmentId}/score-import`,
       ASSESSMENT_IMPORT_BATCHES: (assessmentId: string) => `/mng/assessments/${assessmentId}/import-batches`,
+      ASSESSMENT_SCORES: (assessmentId: string) => `/mng/assessments/${assessmentId}/scores`,
 
       CALCULATIONS: '/mng/calculations',
       REPORTS: '/mng/reports',

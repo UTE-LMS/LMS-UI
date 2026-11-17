@@ -24,7 +24,7 @@ export class AnalyticsService {
   /** Bỏ trường rỗng; mảng gửi bằng cách lặp lại khóa để Spring gắn vào List<String>. */
   private toParams(query: IAnalyticsQuery): HttpParams {
     let params = new HttpParams();
-    for (const [key, value] of Object.entries(query) as [string, string | number | string[] | undefined][]) {
+    for (const [key, value] of Object.entries(query) as [string, string | number | boolean | string[] | undefined][]) {
       if (Array.isArray(value)) {
         for (const item of value) {
           params = params.append(key, String(item));

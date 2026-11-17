@@ -68,9 +68,16 @@
             <td nzAlign="right">{{ row.items ? row.items.length : 0 }}</td>
             <td class="text-xs text-slate-600">{{ structureNote(row) }}</td>
             <td nzAlign="center">
-              <a [routerLink]="actionFor(row).link" class="text-sm font-medium text-blue-700 hover:underline">
-                {{ actionFor(row).label }}
-              </a>
+              <div class="flex flex-wrap items-center justify-center gap-2">
+                <a [routerLink]="actionFor(row).link" class="text-sm font-medium text-blue-700 hover:underline">
+                  {{ actionFor(row).label }}
+                </a>
+                @if (row.scope === 'SECTION' && row.status === 'SCORE_ENTERED') {
+                  <a [routerLink]="urlConst.ASSESSMENT_SCORES(row.id)" class="text-sm font-medium text-emerald-700 hover:underline">
+                    Xem điểm
+                  </a>
+                }
+              </div>
             </td>
           </tr>
         }

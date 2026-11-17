@@ -3,6 +3,7 @@ import { inject, Injectable } from '@angular/core';
 import { UrlConstant } from '@constants/url.constant';
 import { INLINE_ERRORS, REQUEST_TIMEOUT_MS } from '@interceptors/http-context.token';
 import { ICsvImportResultResponse } from '@models/common/response-data.model';
+import { IAssessmentAlignmentResponse } from '@models/assessment/assessment.model';
 import {
   ISection,
   ISectionRequest,
@@ -62,6 +63,13 @@ export class SectionService {
     return this.http.post<ICsvImportResultResponse>(UrlConstant.API.SECTION_IMPORT, formData, {
       context: this.inlineErrors().set(REQUEST_TIMEOUT_MS, 0),
     });
+  }
+
+  getAssessmentAlignment(sectionId: string): Observable<IAssessmentAlignmentResponse> {
+    return this.http.get<IAssessmentAlignmentResponse>(
+      UrlConstant.API.SECTION_ASSESSMENT_ALIGNMENT(sectionId),
+      { context: this.inlineErrors() },
+    );
   }
 
   private inlineErrors(): HttpContext {

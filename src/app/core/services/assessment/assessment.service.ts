@@ -6,6 +6,7 @@ import {
   IAssessment,
   IAssessmentItemsRequest,
   IAssessmentRequest,
+  IAssessmentScoreItem,
   IAssessmentUpdateRequest,
   ICoverage,
 } from '@models/assessment/assessment.model';
@@ -76,6 +77,12 @@ export class AssessmentService {
 
   deleteAssessment(id: string): Observable<void> {
     return this.http.delete<void>(UrlConstant.API.ASSESSMENT_DETAIL(id), { context: this.inlineErrors() });
+  }
+
+  getScores(id: string): Observable<IAssessmentScoreItem[]> {
+    return this.http.get<IAssessmentScoreItem[]>(UrlConstant.API.ASSESSMENT_SCORES(id), {
+      context: this.inlineErrors(),
+    });
   }
 
   private inlineErrors(): HttpContext {

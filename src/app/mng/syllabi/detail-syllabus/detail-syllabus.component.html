@@ -63,6 +63,13 @@
     </div>
   </div>
 
+  @if (syllabus()?.status === 'ARCHIVED') {
+  <div class="mb-4 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-xs text-amber-900" role="status">
+    <i class="fa-solid fa-lock mr-1.5" aria-hidden="true"></i>
+    Đề cương đã khóa lưu trữ (ARCHIVED — TD-27): mọi dữ liệu CLO và liên kết CLO–PI chỉ xem, không thể chỉnh sửa hoặc import đè.
+  </div>
+  }
+
   <!-- Bảng Danh sách Chuẩn đầu ra Học phần (CLO) -->
   <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-2xs">
     <div class="flex items-center justify-between mb-4">

@@ -1,6 +1,7 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { UrlConstant } from '@constants/url.constant';
+import { IPagedResults } from '@models/common/response-data.model';
 import {
   ReportCreateRequest,
   ReportResponse,
@@ -22,12 +23,16 @@ export class ReportService {
     type?: ReportType,
     programVersionId?: string,
     runId?: string,
-  ): Observable<ReportResponse[]> {
-    let params = new HttpParams();
+    page = 0,
+    size = 20,
+  ): Observable<IPagedResults<ReportResponse>> {
+    let params = new HttpParams()
+      .set('page', String(page))
+      .set('size', String(size));
     if (type) params = params.set('type', type);
     if (programVersionId) params = params.set('programVersionId', programVersionId);
     if (runId) params = params.set('runId', runId);
-    return this.http.get<ReportResponse[]>(UrlConstant.API.REPORTS, { params });
+    return this.http.get<IPagedResults<ReportResponse>>(UrlConstant.API.REPORTS, { params });
   }
 
   getReport(id: string): Observable<ReportResponse> {

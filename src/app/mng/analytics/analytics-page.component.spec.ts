@@ -56,7 +56,7 @@ describe('AnalyticsPageComponent (F07/US-36)', () => {
         { provide: CourseService, useValue: { getCourses: () => of(emptyPage) } },
         { provide: TermService, useValue: { getTerms: () => of([]) } },
         { provide: SectionService, useValue: { getSections: () => of([]) } },
-        { provide: CalculationService, useValue: { getCalculationRuns: () => of([]) } },
+        { provide: CalculationService, useValue: { getCalculationRuns: () => of({ content: [], page: 0, size: 100, totalElements: 0, totalPages: 0, last: true }) } },
         { provide: ToastrService, useValue: toastr },
       ],
     }).compileComponents();
@@ -123,5 +123,36 @@ describe('AnalyticsPageComponent (F07/US-36)', () => {
     expect(clickSpy).toHaveBeenCalled();
     expect(toastr.success).toHaveBeenCalled();
     clickSpy.mockRestore();
+  });
+
+  it('B2: gửi subjectIds, passed và ẩn subjectIds khi chọn CURRICULUM_CLASSIFICATION; hiện passThreshold cạnh tên chuẩn', () => {
+    component.subjectIdsText.set('PLO1, PI1.2');
+    component.passedFilter.set('false');
+    expect(component.buildQuery()).toMatchObject({ subjectIds: ['PLO1', 'PI1.2'], passed: false });
+
+    component.selectDimension('CURRICULUM_CLASSIFICATION');
+    expect(component.buildQuery().subjectIds).toBeUndefined();
+
+    component.selectDimension('COURSE_LECTURER');
+    component.lecturerIdsText.set('lec1');
+    expect(component.buildQuery().lecturerIds).toEqual(['lec1']);
+
+    analyticsSvc.getMatrix.mockReturnValue(of({
+      dimension: 'COURSE_SECTIONS',
+      level: 'PLO',
+      runId: 'r1',
+      isOfficial: true,
+      isStale: false,
+      columns: [{ id: 's1', code: 'L01' }],
+      rows: [
+        { id: 'p1', code: 'PLO1', passThreshold: 0.6 },
+        { id: 'p2', code: 'CLO1', passThreshold: null },
+      ],
+      matrix: [[{ enrolled: 10, evaluated: 10, passed: 6, failed: 4, insufficientData: 0, mean: 0.65, passRate: 0.6, passRateOfEnrolled: 0.6, isOfficial: true, isStale: false }], [{ enrolled: 10, evaluated: 0, passed: 0, failed: 0, insufficientData: 10, mean: null, passRate: null, passRateOfEnrolled: null, isOfficial: true, isStale: false }]],
+    }));
+    component.analyze();
+    fixture.detectChanges();
+    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    expect(text).toContain('ngưỡng 60%');
   });
 });

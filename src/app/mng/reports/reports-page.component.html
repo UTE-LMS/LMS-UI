@@ -63,31 +63,46 @@
   </nz-card>
 
   <nz-card nzTitle="Danh sách báo cáo đã lưu" class="rounded-xl shadow-sm">
-    <nz-table [nzData]="reports()" nzSize="small" [nzPageSize]="5">
-      <thead>
-        <tr>
-          <th>Loại</th>
-          <th>Tiêu đề</th>
-          <th>Giới hạn dữ liệu</th>
-          <th>Ngày tạo</th>
-          <th>Thao tác</th>
-        </tr>
-      </thead>
-      <tbody>
-        @for (rep of reports(); track rep.id) {
-          <tr [class.bg-blue-50]="activeReport()?.id === rep.id">
-            <td><nz-tag nzColor="geekblue">{{ rep.type }}</nz-tag></td>
-            <td class="font-medium">{{ rep.title }}</td>
-            <td class="text-xs text-amber-700">{{ rep.limitations || 'Đầy đủ' }}</td>
-            <td class="text-xs text-slate-500">{{ rep.createdAt | date: 'dd/MM/yyyy HH:mm' }}</td>
-            <td class="space-x-2">
-              <button nz-button nzType="link" nzSize="small" (click)="selectReport(rep)">Xem</button>
-              <button nz-button nzType="link" nzSize="small" (click)="exportCsv(rep)">Xuất CSV</button>
-            </td>
+    @if (reportsError(); as errMsg) {
+      <nz-alert nzType="error" nzShowIcon [nzMessage]="errMsg" class="mb-3" />
+      <button nz-button type="button" (click)="loadReports()">Thử lại</button>
+    } @else {
+      <nz-table [nzData]="reports()" [nzLoading]="loadingReports()" [nzShowPagination]="false" [nzFrontPagination]="false" [nzNoResult]="emptyReportsTpl" nzSize="small">
+        <thead>
+          <tr>
+            <th>Loại</th>
+            <th>Tiêu đề</th>
+            <th>Giới hạn dữ liệu</th>
+            <th>Ngày tạo</th>
+            <th>Thao tác</th>
           </tr>
-        }
-      </tbody>
-    </nz-table>
+        </thead>
+        <tbody>
+          @for (rep of reports(); track rep.id) {
+            <tr [class.bg-blue-50]="activeReport()?.id === rep.id">
+              <td><nz-tag nzColor="geekblue">{{ rep.type }}</nz-tag></td>
+              <td class="font-medium">{{ rep.title }}</td>
+              <td class="text-xs text-amber-700">{{ rep.limitations || 'Đầy đủ' }}</td>
+              <td class="text-xs text-slate-500">{{ rep.createdAt | date: 'dd/MM/yyyy HH:mm' }}</td>
+              <td class="space-x-2">
+                <button nz-button nzType="link" nzSize="small" (click)="selectReport(rep)">Xem</button>
+                <button nz-button nzType="link" nzSize="small" (click)="exportCsv(rep)">Xuất CSV</button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </nz-table>
+      <div class="mt-3">
+        <app-table-paginate
+          [pageConfig]="reportPageConfig()"
+          (pageChange)="onReportPageChange($event)"
+          (numOfItemChange)="onReportSizeChange($event)"
+        />
+      </div>
+    }
+    <ng-template #emptyReportsTpl>
+      <p class="py-6 text-center text-slate-500">Chưa có dữ liệu</p>
+    </ng-template>
   </nz-card>
 
   @if (activeReport(); as rep) {
@@ -109,7 +124,7 @@
           <nz-tag>Độ đầy đủ: {{ ((rep.summary.dataCompleteness ?? 0) * 100) | number: '1.1-1' }}%</nz-tag>
         </div>
 
-        <nz-table [nzData]="rep.summary.missingEntries ?? []" nzSize="small" [nzPageSize]="8">
+        <nz-table #missingTable [nzData]="rep.summary.missingEntries ?? []" nzSize="small" [nzPageSize]="8">
           <thead>
             <tr>
               <th>Sinh viên</th>
@@ -120,7 +135,7 @@
             </tr>
           </thead>
           <tbody>
-            @for (entry of rep.summary.missingEntries ?? []; track entry.studentResultId) {
+            @for (entry of missingTable.data; track entry.studentResultId) {
               <tr>
                 <td class="font-medium">{{ entry.studentCode }}</td>
                 <td><nz-tag>{{ entry.level }}</nz-tag></td>
@@ -136,7 +151,7 @@
           </tbody>
         </nz-table>
       } @else {
-        <nz-table [nzData]="rep.summary.items ?? []" nzSize="small" [nzPageSize]="10">
+        <nz-table #itemsTable [nzData]="rep.summary.items ?? []" nzSize="small" [nzPageSize]="10">
           <thead>
             <tr>
               <th>Cấp</th>
@@ -152,7 +167,7 @@
             </tr>
           </thead>
           <tbody>
-            @for (row of rep.summary.items ?? []; track row.subjectId + '-' + (row.assessmentId || '')) {
+            @for (row of itemsTable.data; track row.subjectId + '-' + (row.assessmentId || '')) {
               <tr>
                 <td><nz-tag nzColor="blue">{{ row.level }}</nz-tag></td>
                 <td class="font-semibold">{{ row.subjectCode }}</td>
