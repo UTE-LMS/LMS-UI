@@ -118,6 +118,13 @@
           </nz-select>
         </div>
       }
+      @case ('COURSE_LECTURER') {
+        <div>
+          <label class="font-medium text-sm" for="f-lecturer">Giảng viên (ID)</label>
+          <input id="f-lecturer" nz-input class="ant-input w-full" placeholder="Ví dụ: lec1, lec2"
+            [ngModel]="lecturerIdsText()" (ngModelChange)="lecturerIdsText.set($event)" />
+        </div>
+      }
       @case ('STUDENT') {
         <div>
           <label class="font-medium text-sm" for="f-student">Mã sinh viên</label>
@@ -126,6 +133,21 @@
         </div>
       }
     }
+    @if (dimension() !== 'CURRICULUM_CLASSIFICATION') {
+      <div>
+        <label class="font-medium text-sm" for="f-subject">Chuẩn (PLO / PI / CLO)</label>
+        <input id="f-subject" nz-input class="ant-input w-full" placeholder="Ví dụ: PLO1, PI1.2"
+          [ngModel]="subjectIdsText()" (ngModelChange)="subjectIdsText.set($event)" />
+      </div>
+    }
+    <div>
+      <label class="font-medium text-sm" for="f-passed">Trạng thái đạt</label>
+      <nz-select id="f-passed" class="w-full" [ngModel]="passedFilter()" (ngModelChange)="passedFilter.set($event)">
+        <nz-option nzValue="ALL" nzLabel="Tất cả" />
+        <nz-option nzValue="true" nzLabel="Có người Đạt" />
+        <nz-option nzValue="false" nzLabel="Có người Chưa đạt" />
+      </nz-select>
+    </div>
   </div>
   <div class="mt-3">
     <button nz-button nzType="primary" type="button" [nzLoading]="loading()" (click)="analyze()">
@@ -219,6 +241,9 @@
         @for (r of res.rows; track r.id; let i = $index) {
           <tr>
             <td nzLeft><b>{{ headerLabel(r) }}</b>
+              @if (r.passThreshold !== null && r.passThreshold !== undefined) {
+                <span class="ml-1.5 text-xs font-normal text-slate-600">ngưỡng {{ (r.passThreshold * 100) | number: '1.0-0' }}%</span>
+              }
               @if (r.code && r.name) { <div class="text-xs text-slate-600">{{ r.name }}</div> }
             </td>
             @for (c of res.columns; track c.id; let j = $index) {

@@ -110,4 +110,14 @@ describe('AssessmentService (F04 US-15, US-16, NEW-01, ADR 0014)', () => {
     expect(delReq.request.method).toBe('DELETE');
     delReq.flush(null);
   });
+
+  it('getScores gọi GET /assessments/{id}/scores', () => {
+    service.getScores(id).subscribe(res => {
+      expect(res.length).toBe(1);
+      expect(res[0].studentCode).toBe('SV001');
+    });
+    const req = http.expectOne(UrlConstant.API.ASSESSMENT_SCORES(id));
+    expect(req.request.method).toBe('GET');
+    req.flush([{ id: 'sc1', sectionId: 'sec1', assessmentId: id, studentId: 'st1', studentCode: 'SV001', itemId: 'i1', itemCode: 'Q1', cloId: 'c1', cloCode: 'CLO1', rawScore: 8, maxScore: 10 }]);
+  });
 });

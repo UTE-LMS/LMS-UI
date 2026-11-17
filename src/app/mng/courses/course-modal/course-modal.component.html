@@ -10,7 +10,7 @@
     @if (editingCourse()) {
       <div class="mb-4 p-3 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-900 leading-relaxed">
         <i class="fa-solid fa-triangle-exclamation text-amber-600 mr-1.5"></i>
-        Lưu ý: Nếu học phần đã thuộc về phiên bản CTĐT đang áp dụng (<strong>ACTIVE</strong>) hoặc lưu trữ (<strong>ARCHIVED</strong>), hệ thống sẽ khóa và từ chối chỉnh sửa tên hoặc số tín chỉ (422 Locked).
+        Lưu ý: Nếu học phần đã thuộc về phiên bản CTĐT đang áp dụng hoặc lưu trữ, hệ thống sẽ khóa và từ chối chỉnh sửa tên hoặc số tín chỉ.
       </div>
     }
     <form [formGroup]="courseForm" nz-form nzLayout="vertical">

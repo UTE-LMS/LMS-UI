@@ -28,6 +28,22 @@ describe('ReportService', () => {
     req.flush({ id: 'rep1', type: 'PROGRAM_PLO' });
   });
 
+  it('should list paginated reports', () => {
+    service.listReports('PROGRAM_PLO', 'pv1', 'run1', 1, 10).subscribe(res => {
+      expect(res.totalElements).toBe(1);
+    });
+    const req = httpMock.expectOne(
+      r => r.url === UrlConstant.API.REPORTS
+        && r.params.get('type') === 'PROGRAM_PLO'
+        && r.params.get('programVersionId') === 'pv1'
+        && r.params.get('runId') === 'run1'
+        && r.params.get('page') === '1'
+        && r.params.get('size') === '10',
+    );
+    expect(req.request.method).toBe('GET');
+    req.flush({ content: [{ id: 'rep1' }], page: 1, size: 10, totalElements: 1, totalPages: 1, last: true });
+  });
+
   it('should trace student result and score', () => {
     service.traceStudentResult('sr1').subscribe();
     const req1 = httpMock.expectOne(UrlConstant.API.TRACE_STUDENT_RESULT('sr1'));

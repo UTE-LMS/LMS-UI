@@ -15,6 +15,12 @@ export const sectionsRoutes: Routes = [
     title: `Nhập danh sách lớp | ${SystemConstant.WEB_NAME}`,
   },
   {
+    path: ':sectionId/assessment-alignment',
+    loadComponent: () => import('./assessment-alignment/assessment-alignment.component')
+      .then(m => m.AssessmentAlignmentComponent),
+    title: `Kiểm tra đề thi – CĐR | ${SystemConstant.WEB_NAME}`,
+  },
+  {
     path: ':sectionId',
     loadComponent: () => import('./detail-section/detail-section.component')
       .then(m => m.DetailSectionComponent),

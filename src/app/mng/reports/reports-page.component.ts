@@ -1,7 +1,8 @@
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { ActivatedRoute, Router } from '@angular/router';
 import { ISection } from '@models/course/section.model';
 import {
   CalculationRunResponse,
@@ -10,9 +11,12 @@ import {
   ReportType,
 } from '@models/measurement/measurement.model';
 import { TraceModalComponent } from '@mng/reports/trace-modal/trace-modal.component';
+import { toApiError } from '@services/common/api-error.util';
 import { SectionService } from '@services/course/section.service';
 import { CalculationService } from '@services/measurement/calculation.service';
 import { ReportService } from '@services/measurement/report.service';
+import { TablePaginateComponent } from '@widget/paginate/paginate.component';
+import { Paginate } from '@widget/paginate/paginate.model';
 import { NzAlertModule } from 'ng-zorro-antd/alert';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzCardModule } from 'ng-zorro-antd/card';
@@ -35,18 +39,36 @@ import { ToastrService } from 'ngx-toastr';
     NzTableModule,
     NzTagModule,
     NzAlertModule,
+    TablePaginateComponent,
     TraceModalComponent,
   ],
   templateUrl: './reports-page.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ReportsPageComponent implements OnInit {
-  private reportSvc = inject(ReportService);
-  private calcSvc = inject(CalculationService);
-  private sectionSvc = inject(SectionService);
-  private toastr = inject(ToastrService);
+  private readonly reportSvc = inject(ReportService);
+  private readonly calcSvc = inject(CalculationService);
+  private readonly sectionSvc = inject(SectionService);
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
+  private readonly toastr = inject(ToastrService);
 
   readonly reports = signal<ReportResponse[]>([]);
+  readonly loadingReports = signal<boolean>(false);
+  readonly reportsError = signal<string | null>(null);
+  readonly page = signal<number>(0);
+  readonly size = signal<number>(20);
+  readonly totalElements = signal<number>(0);
+  readonly totalPages = signal<number>(1);
+
+  readonly reportPageConfig = computed(() => new Paginate<ReportResponse>(
+    this.page() + 1,
+    this.totalPages() || 1,
+    this.totalElements(),
+    this.size(),
+    this.reports(),
+  ));
+
   readonly successRuns = signal<CalculationRunResponse[]>([]);
   readonly sections = signal<ISection[]>([]);
 
@@ -61,28 +83,72 @@ export class ReportsPageComponent implements OnInit {
   readonly traceStudentResultId = signal<string | null>(null);
 
   ngOnInit(): void {
+    const qp = this.route.snapshot.queryParamMap;
+    const p = Number(qp.get('page'));
+    const s = Number(qp.get('size'));
+    if (Number.isInteger(p) && p >= 0) {
+      this.page.set(p);
+    }
+    if (Number.isInteger(s) && s >= 1 && s <= 100) {
+      this.size.set(s);
+    }
     this.loadData();
   }
 
   loadData(): void {
-    this.reportSvc.listReports().subscribe({
-      next: list => {
-        this.reports.set(list);
-        if (list.length > 0 && !this.activeReport()) {
-          this.activeReport.set(list[0]);
-        }
-      },
-      error: () => this.toastr.error('Không thể tải danh sách báo cáo'),
-    });
+    this.loadReports();
 
-    this.calcSvc.getCalculationRuns().subscribe({
-      next: runs => this.successRuns.set(runs.filter(r => r.status === 'SUCCESS')),
+    this.calcSvc.getCalculationRuns(undefined, 0, 100).subscribe({
+      next: res => this.successRuns.set((res.content ?? []).filter(r => r.status === 'SUCCESS')),
       error: () => undefined,
     });
 
     this.sectionSvc.getSections().subscribe({
       next: list => this.sections.set(list),
       error: () => undefined,
+    });
+  }
+
+  loadReports(): void {
+    this.loadingReports.set(true);
+    this.reportsError.set(null);
+    this.reportSvc.listReports(undefined, undefined, undefined, this.page(), this.size()).subscribe({
+      next: res => {
+        const list = res.content ?? [];
+        this.reports.set(list);
+        this.totalElements.set(res.totalElements ?? list.length);
+        this.totalPages.set(res.totalPages || 1);
+        this.loadingReports.set(false);
+        if (list.length > 0 && !this.activeReport()) {
+          this.activeReport.set(list[0]);
+        }
+      },
+      error: err => {
+        this.loadingReports.set(false);
+        const msg = toApiError(err)?.message ?? 'Không thể tải danh sách báo cáo';
+        this.reportsError.set(msg);
+      },
+    });
+  }
+
+  onReportPageChange(cfg: Paginate<ReportResponse>): void {
+    this.page.set(Math.max(0, cfg.currentPage - 1));
+    this.syncQueryParams();
+    this.loadReports();
+  }
+
+  onReportSizeChange(cfg: Paginate<ReportResponse>): void {
+    this.size.set(cfg.limit);
+    this.page.set(0);
+    this.syncQueryParams();
+    this.loadReports();
+  }
+
+  private syncQueryParams(): void {
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { page: this.page(), size: this.size() },
+      queryParamsHandling: 'merge',
     });
   }
 

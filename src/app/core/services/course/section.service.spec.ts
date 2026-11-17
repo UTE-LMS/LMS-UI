@@ -96,4 +96,13 @@ describe('SectionService (F05a US-19)', () => {
     expect((req.request.body as FormData).get('file')).toBeInstanceOf(File);
     req.flush({ totalRows: 1, successCount: 1, failureCount: 0, errors: [] });
   });
+
+  it('getAssessmentAlignment gọi GET /sections/{sectionId}/assessment-alignment', () => {
+    service.getAssessmentAlignment(sectionId).subscribe(res => {
+      expect(res.sectionId).toBe(sectionId);
+    });
+    const req = http.expectOne(UrlConstant.API.SECTION_ASSESSMENT_ALIGNMENT(sectionId));
+    expect(req.request.method).toBe('GET');
+    req.flush({ sectionId, sectionCode: 'TEST101-01', courseId: 'c1', syllabusId: 's1', assessmentCount: 0, totalPoints: 0, cloWithWarningCount: 0, clos: [] });
+  });
 });

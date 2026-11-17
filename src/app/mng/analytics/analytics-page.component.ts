@@ -125,7 +125,10 @@ export class AnalyticsPageComponent implements OnInit {
   readonly cohortsText = signal('');
   readonly assessmentTypes = signal<AssessmentType[]>([]);
   readonly classificationType = signal<CurriculumClassificationType>('PLO_CATEGORY');
+  readonly lecturerIdsText = signal('');
   readonly studentIdsText = signal('');
+  readonly subjectIdsText = signal('');
+  readonly passedFilter = signal<'ALL' | 'true' | 'false'>('ALL');
 
   // Kết quả
   readonly metric = signal<AnalyticsMetric>('mean');
@@ -184,8 +187,8 @@ export class AnalyticsPageComponent implements OnInit {
       .subscribe(list => this.terms.set(list));
     this.sectionSvc.getSections().pipe(catchError(() => of([])), takeUntilDestroyed(this.destroyRef))
       .subscribe(list => this.sections.set(list));
-    this.calcSvc.getCalculationRuns().pipe(
-      map(list => list.filter(r => r.status === 'SUCCESS')),
+    this.calcSvc.getCalculationRuns(undefined, 0, 100).pipe(
+      map(res => res.content.filter(r => r.status === 'SUCCESS')),
       catchError(() => of([])),
       takeUntilDestroyed(this.destroyRef),
     ).subscribe(list => this.runs.set(list));
@@ -217,9 +220,21 @@ export class AnalyticsPageComponent implements OnInit {
     }
     if (dimension === 'CURRICULUM_CLASSIFICATION') {
       query.classificationType = this.classificationType();
+    } else {
+      const subjectIds = splitList(this.subjectIdsText());
+      if (subjectIds.length > 0) {
+        query.subjectIds = subjectIds;
+      }
+    }
+    if (dimension === 'COURSE_LECTURER') {
+      query.lecturerIds = splitList(this.lecturerIdsText());
     }
     if (dimension === 'STUDENT') {
       query.studentIds = splitList(this.studentIdsText());
+    }
+    const passedVal = this.passedFilter();
+    if (passedVal === 'true' || passedVal === 'false') {
+      query.passed = passedVal === 'true';
     }
     return query;
   }

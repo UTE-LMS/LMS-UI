@@ -199,3 +199,15 @@ export interface ScoreTraceResponse {
   importedBy?: string;
   importedAt?: string;
 }
+
+/** Tham số lọc & phân trang cho GET /api/v1/calculation-runs/{id}/student-results. */
+export interface IStudentResultQuery {
+  level?: ResultLevel;
+  sectionId?: string;
+  assessmentId?: string;
+  studentId?: string;
+  subjectId?: string;
+  passed?: boolean;
+  page?: number;
+  size?: number;
+}

@@ -10,6 +10,9 @@
   </div>
   <span class="flex-1"></span>
   @if (assessment(); as a) {
+    <a nz-button nzType="default" [routerLink]="urlConst.ASSESSMENT_SCORES(a.id)">
+      <i class="fa-solid fa-table-list mr-1.25" aria-hidden="true"></i>Xem bảng điểm
+    </a>
     <a nz-button nzType="primary" [routerLink]="urlConst.ASSESSMENT_SCORE_IMPORT(a.id)">
       <i class="fa-solid fa-file-import mr-1.25" aria-hidden="true"></i>Nhập điểm mới
     </a>

@@ -1,7 +1,8 @@
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { ActivatedRoute, Router } from '@angular/router';
 import { ISection } from '@models/course/section.model';
 import { ITerm } from '@models/course/term.model';
 import {
@@ -14,10 +15,13 @@ import {
 } from '@models/measurement/measurement.model';
 import { IProgramVersion } from '@models/program/program-version.model';
 import { TraceModalComponent } from '@mng/reports/trace-modal/trace-modal.component';
+import { toApiError } from '@services/common/api-error.util';
 import { SectionService } from '@services/course/section.service';
 import { TermService } from '@services/course/term.service';
 import { CalculationService } from '@services/measurement/calculation.service';
 import { ProgramVersionService } from '@services/program/program-version.service';
+import { TablePaginateComponent } from '@widget/paginate/paginate.component';
+import { Paginate } from '@widget/paginate/paginate.model';
 import { NzAlertModule } from 'ng-zorro-antd/alert';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzCardModule } from 'ng-zorro-antd/card';
@@ -28,6 +32,8 @@ import { NzTableModule } from 'ng-zorro-antd/table';
 import { NzTabsModule } from 'ng-zorro-antd/tabs';
 import { NzTagModule } from 'ng-zorro-antd/tag';
 import { ToastrService } from 'ngx-toastr';
+
+export type PassedFilterValue = 'ALL' | 'true' | 'false';
 
 @Component({
   selector: 'app-calculations-page',
@@ -44,19 +50,36 @@ import { ToastrService } from 'ngx-toastr';
     NzTagModule,
     NzTabsModule,
     NzAlertModule,
+    TablePaginateComponent,
     TraceModalComponent,
   ],
   templateUrl: './calculations-page.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CalculationsPageComponent implements OnInit {
-  private calcSvc = inject(CalculationService);
-  private pvSvc = inject(ProgramVersionService);
-  private sectionSvc = inject(SectionService);
-  private termSvc = inject(TermService);
-  private toastr = inject(ToastrService);
+  private readonly calcSvc = inject(CalculationService);
+  private readonly pvSvc = inject(ProgramVersionService);
+  private readonly sectionSvc = inject(SectionService);
+  private readonly termSvc = inject(TermService);
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
+  private readonly toastr = inject(ToastrService);
 
   readonly runs = signal<CalculationRunResponse[]>([]);
+  readonly loadingRuns = signal<boolean>(false);
+  readonly runsError = signal<string | null>(null);
+  readonly runsPage = signal<number>(0);
+  readonly runsSize = signal<number>(20);
+  readonly runsTotalElements = signal<number>(0);
+  readonly runsTotalPages = signal<number>(1);
+  readonly runsPageConfig = computed(() => new Paginate<CalculationRunResponse>(
+    this.runsPage() + 1,
+    this.runsTotalPages() || 1,
+    this.runsTotalElements(),
+    this.runsSize(),
+    this.runs(),
+  ));
+
   readonly programVersions = signal<IProgramVersion[]>([]);
   readonly sections = signal<ISection[]>([]);
   readonly terms = signal<ITerm[]>([]);
@@ -71,27 +94,63 @@ export class CalculationsPageComponent implements OnInit {
 
   readonly selectedRun = signal<CalculationRunResponse | null>(null);
   readonly selectedLevel = signal<ResultLevel | ''>('');
+
+  // Bộ lọc chi tiết Student Results (B1)
+  readonly selectedSubjectId = signal<string | null>(null);
+  readonly passedFilter = signal<PassedFilterValue>('ALL');
+  readonly studentIdFilter = signal<string>('');
+  readonly subjectOptions = signal<{ id: string; label: string; }[]>([]);
+
+  // Aggregate results pagination
   readonly aggregateResults = signal<AggregateResultResponse[]>([]);
+  readonly loadingAggregates = signal<boolean>(false);
+  readonly aggregatesError = signal<string | null>(null);
+  readonly aggPage = signal<number>(0);
+  readonly aggSize = signal<number>(20);
+  readonly aggTotalElements = signal<number>(0);
+  readonly aggTotalPages = signal<number>(1);
+  readonly aggPageConfig = computed(() => new Paginate<AggregateResultResponse>(
+    this.aggPage() + 1,
+    this.aggTotalPages() || 1,
+    this.aggTotalElements(),
+    this.aggSize(),
+    this.aggregateResults(),
+  ));
+
+  // Student results pagination
   readonly studentResults = signal<StudentResultResponse[]>([]);
-  readonly loadingDetails = signal<boolean>(false);
+  readonly loadingStudents = signal<boolean>(false);
+  readonly studentsError = signal<string | null>(null);
+  readonly stuPage = signal<number>(0);
+  readonly stuSize = signal<number>(20);
+  readonly stuTotalElements = signal<number>(0);
+  readonly stuTotalPages = signal<number>(1);
+  readonly stuPageConfig = computed(() => new Paginate<StudentResultResponse>(
+    this.stuPage() + 1,
+    this.stuTotalPages() || 1,
+    this.stuTotalElements(),
+    this.stuSize(),
+    this.studentResults(),
+  ));
 
   readonly traceVisible = signal<boolean>(false);
   readonly traceStudentResultId = signal<string | null>(null);
 
   ngOnInit(): void {
+    const qp = this.route.snapshot.queryParamMap;
+    const p = Number(qp.get('page'));
+    const s = Number(qp.get('size'));
+    if (Number.isInteger(p) && p >= 0) {
+      this.runsPage.set(p);
+    }
+    if (Number.isInteger(s) && s >= 1 && s <= 100) {
+      this.runsSize.set(s);
+    }
     this.loadInitialData();
   }
 
   loadInitialData(): void {
-    this.calcSvc.getCalculationRuns().subscribe({
-      next: list => {
-        this.runs.set(list);
-        if (list.length > 0 && !this.selectedRun()) {
-          this.selectRun(list[0]);
-        }
-      },
-      error: () => this.toastr.error('Không thể tải danh sách lượt tính toán'),
-    });
+    this.loadRuns();
 
     this.pvSvc.getProgramVersions(0, 100).subscribe({
       next: res => this.programVersions.set(res.content ?? []),
@@ -106,6 +165,48 @@ export class CalculationsPageComponent implements OnInit {
     this.termSvc.getTerms().subscribe({
       next: list => this.terms.set(list),
       error: () => undefined,
+    });
+  }
+
+  loadRuns(): void {
+    this.loadingRuns.set(true);
+    this.runsError.set(null);
+    this.calcSvc.getCalculationRuns(undefined, this.runsPage(), this.runsSize()).subscribe({
+      next: res => {
+        const list = res.content ?? [];
+        this.runs.set(list);
+        this.runsTotalElements.set(res.totalElements ?? list.length);
+        this.runsTotalPages.set(res.totalPages || 1);
+        this.loadingRuns.set(false);
+        if (list.length > 0 && !this.selectedRun()) {
+          this.selectRun(list[0]);
+        }
+      },
+      error: err => {
+        this.loadingRuns.set(false);
+        this.runsError.set(toApiError(err)?.message ?? 'Không thể tải danh sách lượt tính toán');
+      },
+    });
+  }
+
+  onRunsPageChange(cfg: Paginate<CalculationRunResponse>): void {
+    this.runsPage.set(Math.max(0, cfg.currentPage - 1));
+    this.syncRunsQueryParams();
+    this.loadRuns();
+  }
+
+  onRunsSizeChange(cfg: Paginate<CalculationRunResponse>): void {
+    this.runsSize.set(cfg.limit);
+    this.runsPage.set(0);
+    this.syncRunsQueryParams();
+    this.loadRuns();
+  }
+
+  private syncRunsQueryParams(): void {
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { page: this.runsPage(), size: this.runsSize() },
+      queryParamsHandling: 'merge',
     });
   }
 
@@ -148,34 +249,127 @@ export class CalculationsPageComponent implements OnInit {
 
   selectRun(run: CalculationRunResponse): void {
     this.selectedRun.set(run);
+    this.aggPage.set(0);
+    this.stuPage.set(0);
+    this.selectedSubjectId.set(null);
+    this.loadSubjectOptions(run.id);
     this.loadRunDetails();
   }
 
   onLevelFilterChange(level: ResultLevel | ''): void {
     this.selectedLevel.set(level);
+    this.aggPage.set(0);
+    this.stuPage.set(0);
     this.loadRunDetails();
   }
 
+  onStudentFilterChange(): void {
+    this.stuPage.set(0);
+    this.loadStudentResults();
+  }
+
   loadRunDetails(): void {
+    this.loadAggregateResults();
+    this.loadStudentResults();
+  }
+
+  loadAggregateResults(): void {
     const run = this.selectedRun();
     if (!run) return;
     const level = this.selectedLevel() || undefined;
-    this.loadingDetails.set(true);
+    this.loadingAggregates.set(true);
+    this.aggregatesError.set(null);
 
-    this.calcSvc.getAggregateResults(run.id, level).subscribe({
-      next: res => this.aggregateResults.set(res),
-      error: () => this.aggregateResults.set([]),
-    });
-
-    this.calcSvc.getStudentResults(run.id, level).subscribe({
+    this.calcSvc.getAggregateResults(run.id, level, undefined, this.aggPage(), this.aggSize()).subscribe({
       next: res => {
-        this.studentResults.set(res);
-        this.loadingDetails.set(false);
+        const list = res.content ?? [];
+        this.aggregateResults.set(list);
+        this.aggTotalElements.set(res.totalElements ?? list.length);
+        this.aggTotalPages.set(res.totalPages || 1);
+        this.loadingAggregates.set(false);
       },
-      error: () => {
+      error: err => {
+        this.aggregateResults.set([]);
+        this.loadingAggregates.set(false);
+        this.aggregatesError.set(toApiError(err)?.message ?? 'Không thể tải kết quả tổng hợp');
+      },
+    });
+  }
+
+  loadStudentResults(): void {
+    const run = this.selectedRun();
+    if (!run) return;
+    const level = this.selectedLevel() || undefined;
+    const passedVal = this.passedFilter();
+    const passed = passedVal === 'ALL' ? undefined : passedVal === 'true';
+    const studentId = this.studentIdFilter().trim() || undefined;
+    const subjectId = this.selectedSubjectId() ?? undefined;
+
+    this.loadingStudents.set(true);
+    this.studentsError.set(null);
+
+    this.calcSvc.getStudentResults(run.id, {
+      level,
+      subjectId,
+      studentId,
+      passed,
+      page: this.stuPage(),
+      size: this.stuSize(),
+    }).subscribe({
+      next: res => {
+        const list = res.content ?? [];
+        this.studentResults.set(list);
+        this.stuTotalElements.set(res.totalElements ?? list.length);
+        this.stuTotalPages.set(res.totalPages || 1);
+        this.loadingStudents.set(false);
+      },
+      error: err => {
         this.studentResults.set([]);
-        this.loadingDetails.set(false);
+        this.loadingStudents.set(false);
+        this.studentsError.set(toApiError(err)?.message ?? 'Không thể tải kết quả sinh viên');
       },
+    });
+  }
+
+  onAggPageChange(cfg: Paginate<AggregateResultResponse>): void {
+    this.aggPage.set(Math.max(0, cfg.currentPage - 1));
+    this.loadAggregateResults();
+  }
+
+  onAggSizeChange(cfg: Paginate<AggregateResultResponse>): void {
+    this.aggSize.set(cfg.limit);
+    this.aggPage.set(0);
+    this.loadAggregateResults();
+  }
+
+  onStuPageChange(cfg: Paginate<StudentResultResponse>): void {
+    this.stuPage.set(Math.max(0, cfg.currentPage - 1));
+    this.loadStudentResults();
+  }
+
+  onStuSizeChange(cfg: Paginate<StudentResultResponse>): void {
+    this.stuSize.set(cfg.limit);
+    this.stuPage.set(0);
+    this.loadStudentResults();
+  }
+
+  private loadSubjectOptions(runId: string): void {
+    this.calcSvc.getAggregateResults(runId, undefined, undefined, 0, 100).subscribe({
+      next: res => {
+        const seen = new Set<string>();
+        const opts: { id: string; label: string; }[] = [];
+        for (const item of res.content ?? []) {
+          if (!seen.has(item.subjectId)) {
+            seen.add(item.subjectId);
+            opts.push({
+              id: item.subjectId,
+              label: `${item.level}: ${item.subjectCode ?? item.subjectId}`,
+            });
+          }
+        }
+        this.subjectOptions.set(opts);
+      },
+      error: () => this.subjectOptions.set([]),
     });
   }
 
