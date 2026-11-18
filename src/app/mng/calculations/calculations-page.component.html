@@ -86,7 +86,7 @@
       <nz-alert nzType="error" nzShowIcon [nzMessage]="errMsg" class="mb-3" />
       <button nz-button type="button" (click)="loadRuns()">Thử lại</button>
     } @else {
-      <nz-table [nzData]="runs()" [nzLoading]="loadingRuns()" [nzShowPagination]="false" [nzFrontPagination]="false" [nzNoResult]="emptyRunsTpl" nzSize="small">
+      <nz-table [nzData]="runs()" [nzLoading]="loadingRuns()" [nzShowPagination]="false" [nzFrontPagination]="false" [nzNoResult]="emptyRunsTpl" [nzScroll]="{ x: '720px' }" nzSize="small">
         <thead>
           <tr>
             <th>Phạm vi</th>
@@ -153,7 +153,7 @@
             <nz-alert nzType="error" nzShowIcon [nzMessage]="errMsg" class="mb-3" />
             <button nz-button type="button" (click)="loadAggregateResults()">Thử lại</button>
           } @else {
-            <nz-table [nzData]="aggregateResults()" [nzLoading]="loadingAggregates()" [nzShowPagination]="false" [nzFrontPagination]="false" [nzNoResult]="emptyAggTpl" nzSize="small">
+            <nz-table [nzData]="aggregateResults()" [nzLoading]="loadingAggregates()" [nzShowPagination]="false" [nzFrontPagination]="false" [nzNoResult]="emptyAggTpl" [nzScroll]="{ x: '720px' }" nzSize="small">
               <thead>
                 <tr>
                   <th>Cấp độ</th>
@@ -243,7 +243,7 @@
             <nz-alert nzType="error" nzShowIcon [nzMessage]="errMsg" class="mb-3" />
             <button nz-button type="button" (click)="loadStudentResults()">Thử lại</button>
           } @else {
-            <nz-table [nzData]="studentResults()" [nzLoading]="loadingStudents()" [nzShowPagination]="false" [nzFrontPagination]="false" [nzNoResult]="emptyStuTpl" nzSize="small">
+            <nz-table [nzData]="studentResults()" [nzLoading]="loadingStudents()" [nzShowPagination]="false" [nzFrontPagination]="false" [nzNoResult]="emptyStuTpl" [nzScroll]="{ x: '720px' }" nzSize="small">
               <thead>
                 <tr>
                   <th>Cấp độ</th>

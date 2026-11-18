@@ -465,4 +465,18 @@ describe('ListSyllabiComponent (Server-side Course Search & ADR 0010)', () => {
       expect(alertSvcMock.success).toHaveBeenCalled();
     });
   });
+
+  describe('courseLabel (nhãn học phần trong ô chọn)', () => {
+    it('có số tín chỉ thì ghi "(n TC)", kể cả 0 tín chỉ', async () => {
+      await createComponent();
+      expect(component.courseLabel({ id: 'c1', code: 'CS101', name: 'Nhập môn', credits: 3 })).toBe('CS101 — Nhập môn (3 TC)');
+      expect(component.courseLabel({ id: 'c2', code: 'CS102', name: 'Thực hành', credits: 0 })).toBe('CS102 — Thực hành (0 TC)');
+    });
+
+    it('API trả credits = null hoặc thiếu thì không in "null TC"', async () => {
+      await createComponent();
+      expect(component.courseLabel({ id: 'c3', code: 'CS103', name: 'Chưa khai', credits: null })).toBe('CS103 — Chưa khai');
+      expect(component.courseLabel({ id: 'c4', code: 'CS104', name: 'Thiếu trường' })).toBe('CS104 — Thiếu trường');
+    });
+  });
 });

@@ -59,7 +59,7 @@
       @for (c of filteredCourses(); track c.id) {
       <nz-option
         [nzValue]="c.id"
-        [nzLabel]="c.code + ' — ' + c.name + (c.credits !== undefined ? ' (' + c.credits + ' TC)' : '')"
+        [nzLabel]="courseLabel(c)"
       />
       }
       @if (isLoadingMoreCourses()) {
