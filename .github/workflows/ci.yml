@@ -135,9 +135,17 @@ jobs:
       - name: Pin npm to the packageManager version
         run: npm install --global npm@11.12.1
 
-      # Chỉ đọc package-lock.json, không cần cài phụ thuộc
-      - name: Dependency audit (high and above)
-        run: npm audit --audit-level=high
+      # Chỉ đọc package-lock.json, không cần cài phụ thuộc.
+      # Hai bước thay cho một bước "toàn bộ, từ high" (xem GHSA-fc5q-39xc-vjpf):
+      # picomatch <=4.0.7 (ReDoS) kéo theo ~20 cảnh báo high ở công cụ dev (@angular/build, vite, vitest, eslint)
+      # nhưng bản mới nhất trên npm vẫn là 4.0.7, chưa có bản vá. npm audit fix --force chỉ gợi ý hạ Angular CLI
+      # và angular-eslint xuống bản cũ nên không dùng. Cần xem lại khi picomatch ra bản >4.0.7: khi đó gộp
+      # hai bước lại thành một bước "npm audit --audit-level=high" cho toàn bộ phụ thuộc.
+      - name: Dependency audit - production dependencies (high and above)
+        run: npm audit --omit=dev --audit-level=high
+
+      - name: Dependency audit - all dependencies incl. dev tools (critical only, see comment above)
+        run: npm audit --audit-level=critical
 
       # Không dùng gitleaks-action vì tổ chức cần giấy phép; tải binary đã ghim phiên bản và kiểm mã băm.
       - name: Install gitleaks (pinned, checksum verified)
