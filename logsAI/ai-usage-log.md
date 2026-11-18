@@ -577,3 +577,31 @@ Phần này chuẩn bị sẵn nội dung trả lời cho 4 câu hỏi trọng t
 ### 5. Kiểm chứng
 - Lint + test các màn đã sửa: ESLint sạch; `analytics-page` và `list-audit-logs` spec 12/12 passed. Toàn bộ `ng test --no-watch`: 89/89 file, 811/811 test passed.
 - Đã xem lại toàn bộ 23 ảnh.
+
+
+## Phiên #20: CI job `security` đỏ do advisory picomatch chưa có bản vá (UI)
+
+### 1. Thông tin phiên làm việc
+- **Thời gian:** 2026-11-18
+- **Người thực hiện (`git config user.name`):** `TinMH`
+- **Sinh viên yêu cầu:** "CI bên UI sao đỏ toàn bộ vậy?", rồi "ok làm đi, tách nhánh từ main"; cách xử lý do sinh viên chọn (tách 2 bước audit).
+- **Công cụ / mô hình:** Claude Code, Claude Sonnet 5.5. Không đổi `package.json`/`package-lock.json`.
+- **Nhánh:** `chore/fix-npm-audit` (từ `main`).
+
+### 2. Chẩn đoán
+- Cả 3 PR UI chỉ đỏ job `security` (`npm audit --audit-level=high`: 43 lỗ hổng, 20 high); `docker`/`deploy-staging` "bỏ qua" vì `needs: security`. `main` xanh ở lần chạy cuối (2026-11-17) nên advisory mới công bố sau đó.
+- Gốc là `picomatch` <=4.0.7 (GHSA-fc5q-39xc-vjpf, ReDoS). Bản mới nhất trên npm cũng là 4.0.7 nên **chưa có bản vá**; các cảnh báo high còn lại (`vite`, `vitest`, `@angular/build`, `@parcel/watcher`, `fdir`, `tinyglobby`...) chỉ kéo theo từ nó. `npm audit fix` (không `--force`) không sửa được gì; `--force` chỉ gợi ý hạ `@angular/cli` về 16 và `angular-eslint` về 18, đã loại.
+- Phụ thuộc chạy thật (`--omit=dev`): 0 lỗ hổng. Mọi gói bị ảnh hưởng là công cụ dev/build.
+
+### 3. Thay đổi
+`.github/workflows/ci.yml`: bước audit cũ tách thành (a) `npm audit --omit=dev --audit-level=high` và (b) `npm audit --audit-level=critical` cho toàn bộ phụ thuộc, kèm chú thích lý do và điều kiện gộp lại khi picomatch có bản vá.
+**Đây là nới một cổng kiểm soát (rule 5)** có chủ đích và có sự đồng ý của sinh viên: công cụ dev không còn bị chặn ở mức high cho tới khi có bản vá; mã chạy thật vẫn bị chặn từ high.
+
+### 4. Kiểm chứng đã làm
+Chạy cục bộ: `npm audit --omit=dev --audit-level=high` exit 0; `npm audit --audit-level=critical` exit 0; `npm audit --audit-level=high` (cổng cũ) exit 1 như dự kiến. Chưa xem được lần chạy CI thật trên GitHub trước khi mở PR.
+
+### 5. Việc phải theo dõi
+Khi picomatch ra bản >4.0.7: chạy `npm update picomatch` (hoặc `npm audit fix`), rồi gộp lại hai bước audit thành `npm audit --audit-level=high`.
+
+- **Sinh viên đã sửa/rà soát:** _chờ sinh viên rà soát_
+- **Commit / PR:** một commit `ci: split dependency audit` trên nhánh `chore/fix-npm-audit` (xem `git log`).
