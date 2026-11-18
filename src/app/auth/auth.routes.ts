@@ -15,6 +15,12 @@ export const authRoutes: Routes = [
         loadComponent: () => import('./login/login.component').then(m => m.LoginComponent),
       },
       {
+        // Không dùng canActiveGuard: guard đó đẩy tài khoản còn cờ đổi mật khẩu về chính trang này (vòng lặp).
+        // Component tự kiểm tra phiên.
+        path: 'change-password',
+        loadComponent: () => import('./change-password/change-password.component').then(m => m.ChangePasswordComponent),
+      },
+      {
         path: 'register',
         loadComponent: () => import('./register/register.component').then(m => m.RegisterComponent),
       },

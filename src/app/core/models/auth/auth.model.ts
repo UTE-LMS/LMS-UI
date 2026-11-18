@@ -14,6 +14,8 @@ export interface IAuthData {
   userId?: string;
   username?: string;
   facultyId?: string | null;
+  /** Tài khoản do Admin tạo, phải đổi mật khẩu trước khi dùng hệ thống. Chỉ để điều hướng; backend tự chặn API. */
+  mustChangePassword?: boolean;
 }
 
 /** UserProfileResponse của GET /api/v1/auth/me (§5.2.3). */
@@ -26,7 +28,14 @@ export interface IUserProfile {
   facultyId?: string | null;
   facultyCode?: string;
   facultyName?: string;
+  mustChangePassword?: boolean;
   roles: Role[];
+}
+
+/** Body của POST /api/v1/auth/change-password (ChangePasswordRequest). Phản hồi cùng dạng LoginResponse. */
+export interface IChangePasswordRequest {
+  currentPassword: string;
+  newPassword: string;
 }
 
 /** Body của POST /api/v1/auth/login (LoginRequest, §5.2.1). */

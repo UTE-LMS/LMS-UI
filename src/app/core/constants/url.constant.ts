@@ -25,6 +25,7 @@ export const UrlConstant = {
     AUTH_LOGIN: environment.serverUrl + 'api/v1/auth/login',
     AUTH_LOGOUT: environment.serverUrl + 'api/v1/auth/logout',
     AUTH_ME: environment.serverUrl + 'api/v1/auth/me',
+    AUTH_CHANGE_PASSWORD: environment.serverUrl + 'api/v1/auth/change-password',
     USERS: environment.serverUrl + 'api/v1/users',
     USER_IMPORT_TEMPLATE: environment.serverUrl + 'api/v1/users/import-template',
     USER_IMPORT: environment.serverUrl + 'api/v1/users/import',
@@ -149,6 +150,7 @@ export const UrlConstant = {
   ROUTE: {
     AUTH: {
       LOGIN: '/auth/login',
+      CHANGE_PASSWORD: '/auth/change-password',
       REGISTER: '/auth/register',
     },
     MAIN: {

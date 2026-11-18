@@ -87,6 +87,54 @@ describe('AuthService (F01 US-01 & M01 Faculty Scope)', () => {
     expect(service.getToken()).toBe('');
   });
 
+  it('F01/đổi mật khẩu lần đầu: đăng nhập lưu cờ mustChangePassword từ backend', () => {
+    expect(service.mustChangePassword()).toBe(false);
+    service.login({ username: 'gv_moi', password: 'Password123!' }).subscribe();
+    const res = loginResponse();
+    res.user.mustChangePassword = true;
+    http.expectOne(UrlConstant.API.AUTH_LOGIN).flush(res);
+    expect(service.mustChangePassword()).toBe(true);
+  });
+
+  it('F01/đổi mật khẩu lần đầu: backend không gửi cờ (tài khoản cũ) thì coi là false', () => {
+    service.login({ username: 'admin', password: 'Password123!' }).subscribe();
+    http.expectOne(UrlConstant.API.AUTH_LOGIN).flush(loginResponse());
+    expect(service.mustChangePassword()).toBe(false);
+  });
+
+  it('F01/đổi mật khẩu lần đầu: đổi thành công thay token mới và tắt cờ', () => {
+    service.login({ username: 'gv_moi', password: 'Password123!' }).subscribe();
+    const first = loginResponse();
+    first.user.mustChangePassword = true;
+    http.expectOne(UrlConstant.API.AUTH_LOGIN).flush(first);
+
+    service.changePassword({ currentPassword: 'Password123!', newPassword: 'MatKhauMoi456!' }).subscribe();
+    const req = http.expectOne(UrlConstant.API.AUTH_CHANGE_PASSWORD);
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({ currentPassword: 'Password123!', newPassword: 'MatKhauMoi456!' });
+    expect(req.request.context.get(INLINE_ERRORS)).toBe(true);
+    req.flush({ ...loginResponse(), accessToken: 'token-moi' });
+
+    expect(service.getToken()).toBe('token-moi');
+    expect(service.mustChangePassword()).toBe(false);
+  });
+
+  it('F01/đổi mật khẩu lần đầu: lỗi 422 (sai mật khẩu hiện tại) giữ nguyên phiên và cờ', () => {
+    service.login({ username: 'gv_moi', password: 'Password123!' }).subscribe();
+    const first = loginResponse();
+    first.user.mustChangePassword = true;
+    http.expectOne(UrlConstant.API.AUTH_LOGIN).flush(first);
+
+    let failed = false;
+    service.changePassword({ currentPassword: 'sai', newPassword: 'MatKhauMoi456!' }).subscribe({ error: () => (failed = true) });
+    http.expectOne(UrlConstant.API.AUTH_CHANGE_PASSWORD)
+      .flush({ status: 422, message: 'Mật khẩu hiện tại không chính xác' }, { status: 422, statusText: 'Unprocessable Entity' });
+
+    expect(failed).toBe(true);
+    expect(service.getToken()).toBe('token-gia-lap');
+    expect(service.mustChangePassword()).toBe(true);
+  });
+
   it('phiên quá hạn ghi nhận lúc đăng nhập thì không còn xác thực', () => {
     service.login({ username: 'admin', password: 'Password123!' }).subscribe();
     http.expectOne(UrlConstant.API.AUTH_LOGIN).flush(loginResponse(-1));

@@ -23,6 +23,11 @@ export const canActiveGuard: CanActivateFn = (route: ActivatedRouteSnapshot, sta
     return router.createUrlTree([UrlConstant.ROUTE.AUTH.LOGIN], { queryParams: { returnUrl: state.url } });
   }
 
+  // Tài khoản do Admin tạo phải đổi mật khẩu trước. Backend cũng chặn API (403), đây chỉ là điều hướng.
+  if (authSvc.mustChangePassword()) {
+    return router.parseUrl(UrlConstant.ROUTE.AUTH.CHANGE_PASSWORD);
+  }
+
   const allowedRoles: string[] = [(route.data?.listRoles ?? []) as string | string[]].flat();
   const relation: 'AND' | 'OR' = route.data?.rolesRelation ?? 'OR';
   const isAllowed = allowedRoles.length === 0

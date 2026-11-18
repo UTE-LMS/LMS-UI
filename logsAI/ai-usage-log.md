@@ -579,11 +579,26 @@ Phần này chuẩn bị sẵn nội dung trả lời cho 4 câu hỏi trọng t
 - Đã xem lại toàn bộ 23 ảnh.
 
 
+## Phiên #17: Bắt buộc đổi mật khẩu lần đầu (UI)
 ## Phiên #19: Nhập tệp Excel `.xlsx` ở mọi màn nhập và tải tệp mẫu Excel (UI)
 
 ### 1. Thông tin phiên làm việc
 - **Thời gian:** 2026-11-18
 - **Người thực hiện (`git config user.name`):** `TinMH`
+- **Sinh viên yêu cầu:** "ok làm theo hướng đó đi" (thứ tự: đổi mật khẩu lần đầu → trang profile → xlsx → OAuth2).
+- **Công cụ / mô hình:** Claude Code, Claude Sonnet 5.5. Không thêm thư viện.
+- **Nhánh:** `feat/force-password-change`.
+
+### 2. Các hạng mục đã thực hiện
+1. `core/models/auth/auth.model.ts`: thêm `mustChangePassword` vào `IAuthData`, `IUserProfile` và `IChangePasswordRequest`.
+2. `core/services/auth/auth.service.ts`: `changePassword()` (POST, `INLINE_ERRORS`, lưu token mới), `mustChangePassword()`, lưu cờ trong `startSession`. `url.constant.ts`: `AUTH_CHANGE_PASSWORD`, `ROUTE.AUTH.CHANGE_PASSWORD`.
+3. `core/guards/can-active.guard.ts`: đã đăng nhập mà còn cờ thì chuyển về `/auth/change-password`.
+4. Trang mới `auth/change-password/` và route `change-password` trong `auth.routes.ts`. Form (3 ô, `mustMatch`, lỗi 422 hiển thị tại chỗ) nằm ở component dùng chung `shared/component-shared/change-password-form` để trang Tài khoản của tôi dùng lại ở bước sau (Phiên #18). Route này cố ý không dùng `canActiveGuard` để tránh vòng lặp chuyển hướng.
+5. `doc/API-CONTRACT.md`: thêm §5.2.4.
+6. Test: sửa stub của `can-active.guard.spec.ts` (thêm `mustChangePassword`), thêm ca mới ở guard và `auth.service.spec.ts`, spec mới `change-password.component.spec.ts` (5 ca) và `change-password-form.component.spec.ts` (6 ca).
+
+### 3. Kiểm chứng đã làm
+`ng test --no-watch` (chạy lại đúng trạng thái commit): 101 file, 1040 test đạt. `eslint` trên `src/app/auth` và `src/app/core`: 0 lỗi (sau khi sửa 1 lỗi `prefer-nullish-coalescing` do AI viết `||`). `ng build` thành công, giữ nguyên 2 cảnh báo ngân sách có sẵn (bundle initial 2.05 MB; `list-faculties.component.css`). **Chưa chạy thử trên trình duyệt với backend thật** (chưa có MongoDB).
 - **Sinh viên yêu cầu:** "tách nhánh rồi commit, sau đó làm xlsx"; phạm vi và cách xử lý UI do sinh viên chọn qua câu hỏi (mọi chỗ nhập; API trả danh sách cột cho màn điểm; thêm bản mẫu `.xlsx`).
 - **Công cụ / mô hình:** Claude Code, Claude Sonnet 5.5. **Không thêm package npm** (đọc `.xlsx` do API làm, xem ADR 0015 ở repo LMS-API).
 - **Nhánh:** `feat/xlsx-import` (tách từ `main`).
@@ -601,6 +616,10 @@ Phần này chuẩn bị sẵn nội dung trả lời cho 4 câu hỏi trọng t
 ### 4. Lỗi/ảo giác AI đã phát hiện
 | Mô tả | Cách phát hiện | Nguyên nhân | Commit sửa |
 |---|---|---|---|
+| `a.join(' ') \|\| b` bị ESLint chặn | `eslint` | Quen kiểu `\|\|`, quên rule nullish của dự án | chưa commit |
+
+- **Sinh viên đã sửa/rà soát:** _chờ sinh viên rà soát_
+- **Commit / PR:** một commit `feat(auth): require password change on first login` trên nhánh `feat/force-password-change` (xem `git log`; chưa mở PR).
 | Spy `setAttribute` của spec widget bị chồng qua mỗi `beforeEach`, mảng kết quả có hơn 1900 phần tử | `ng test` | Quên `vi.restoreAllMocks()` giữa các test; đổi sang đọc thuộc tính trong spy `click` | sửa trước khi commit `feat(import)` |
 | Mock kiểu khai báo thiếu `previewFile` khiến toàn bộ lần build test lỗi TS2353 | `ng test` | Thêm hàm vào đối tượng mock mà quên cập nhật kiểu | sửa trước khi commit `feat(import)` |
 
