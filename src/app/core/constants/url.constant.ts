@@ -116,6 +116,7 @@ export const UrlConstant = {
 
     // F05b - Lô nhập điểm thi 3-bước (ADR 0014, Schema v0.7)
     IMPORT_BATCH_CREATE: (sectionId: string, assessmentId: string) => `${environment.serverUrl}api/v1/sections/${sectionId}/assessments/${assessmentId}/import-batches`,
+    IMPORT_BATCH_PREVIEW: (sectionId: string, assessmentId: string) => `${environment.serverUrl}api/v1/sections/${sectionId}/assessments/${assessmentId}/import-batches/preview`,
     IMPORT_BATCH_LIST: (sectionId: string, assessmentId: string) => `${environment.serverUrl}api/v1/sections/${sectionId}/assessments/${assessmentId}/import-batches`,
     IMPORT_BATCH_DETAIL: (id: string) => `${environment.serverUrl}api/v1/import-batches/${id}`,
     IMPORT_BATCH_ERRORS: (id: string) => `${environment.serverUrl}api/v1/import-batches/${id}/errors`,

@@ -234,20 +234,25 @@
       <div class="p-3 rounded-lg bg-slate-50 border border-slate-200 space-y-2">
         <div class="flex items-center justify-between gap-2">
           <span class="text-xs font-medium text-slate-700">Tải tệp CSV mẫu đúng định dạng PLO, PI, Học phần:</span>
-          <button nz-button nzType="default" nzSize="small" type="button" (click)="downloadImportTemplate()">
-            <i class="fa-solid fa-download mr-1.5"></i> Tải file mẫu CSV
-          </button>
+          <span class="flex gap-2">
+            <button nz-button nzType="default" nzSize="small" type="button" (click)="downloadImportTemplate('csv')">
+              <i class="fa-solid fa-download mr-1.5"></i> Mẫu CSV
+            </button>
+            <button nz-button nzType="default" nzSize="small" type="button" (click)="downloadImportTemplate('xlsx')">
+              <i class="fa-solid fa-file-excel mr-1.5"></i> Mẫu Excel
+            </button>
+          </span>
         </div>
       </div>
 
       <div>
         <label for="programCsvFile" class="block text-sm font-medium text-slate-700 mb-1">
-          Chọn tệp CSV <span class="text-rose-500">*</span>
+          Chọn tệp (.csv hoặc .xlsx) <span class="text-rose-500">*</span>
         </label>
         <input
           id="programCsvFile"
           type="file"
-          accept=".csv,text/csv"
+          accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
           class="block w-full text-sm text-slate-600 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
           (change)="onFileSelected($event)"
         />
@@ -348,9 +353,14 @@
       <div class="p-3 rounded-lg bg-slate-50 border border-slate-200 space-y-2">
         <div class="flex items-center justify-between gap-2">
           <span class="text-xs font-medium text-slate-700">Tải tệp CSV mẫu Khung học phần theo học kỳ:</span>
-          <button nz-button nzType="default" nzSize="small" type="button" (click)="downloadCoursesImportTemplate()">
-            <i class="fa-solid fa-download mr-1.5"></i> Tải file mẫu CSV
-          </button>
+          <span class="flex gap-2">
+            <button nz-button nzType="default" nzSize="small" type="button" (click)="downloadCoursesImportTemplate('csv')">
+              <i class="fa-solid fa-download mr-1.5"></i> Mẫu CSV
+            </button>
+            <button nz-button nzType="default" nzSize="small" type="button" (click)="downloadCoursesImportTemplate('xlsx')">
+              <i class="fa-solid fa-file-excel mr-1.5"></i> Mẫu Excel
+            </button>
+          </span>
         </div>
         <div class="text-xs text-slate-600 leading-relaxed">
           Các cột hỗ trợ: <code>courseCode</code>, <code>semester</code>, <code>credits</code>, <code>type</code> (<code>REQUIRED</code> | <code>ELECTIVE</code>), <code>category</code>, <code>previousCourseCodes</code>, <code>prerequisiteCourseCodes</code>.
@@ -359,12 +369,12 @@
 
       <div>
         <label for="programCoursesCsvFile" class="block text-sm font-medium text-slate-700 mb-1">
-          Chọn tệp CSV Khung học phần
+          Chọn tệp Khung học phần (.csv hoặc .xlsx)
         </label>
         <input
           id="programCoursesCsvFile"
           type="file"
-          accept=".csv,text/csv"
+          accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
           class="block w-full text-sm text-slate-600 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
           (change)="onCoursesFileSelected($event)"
         />

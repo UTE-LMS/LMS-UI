@@ -117,4 +117,25 @@ describe('ScoreImportService', () => {
     expect(req.request.responseType).toBe('blob');
     req.flush(mockBlob);
   });
+
+  it('ADR 0015: previewFile gửi tệp lên endpoint preview và trả tên cột', () => {
+    const file = new File(['PK'], 'diem.xlsx');
+    let result: { headers: string[]; rowCount: number; } | undefined;
+
+    service.previewFile('sec1', 'ass1', file).subscribe(r => (result = r));
+
+    const req = httpMock.expectOne(UrlConstant.API.IMPORT_BATCH_PREVIEW('sec1', 'ass1'));
+    expect(req.request.method).toBe('POST');
+    expect((req.request.body as FormData).get('file')).toBe(file);
+    req.flush({ headers: ['studentCode', 'Q1'], rowCount: 3 });
+    expect(result).toEqual({ headers: ['studentCode', 'Q1'], rowCount: 3 });
+  });
+
+  it('ADR 0015: tải mẫu điểm dạng Excel gửi ?format=xlsx', () => {
+    service.downloadTemplateCsv('ass1', 'xlsx').subscribe();
+
+    const req = httpMock.expectOne(r => r.url === UrlConstant.API.ASSESSMENT_SCORE_TEMPLATE_CSV('ass1'));
+    expect(req.request.params.get('format')).toBe('xlsx');
+    req.flush(new Blob(['x']));
+  });
 });

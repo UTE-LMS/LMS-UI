@@ -11,6 +11,7 @@ import {
   ISectionUpdateRequest,
 } from '@models/course/section.model';
 import { Observable } from 'rxjs';
+import { ImportTemplateFormat, templateRequestParams } from '@services/common/import-file.util';
 
 /**
  * Lớp học phần (F05a US-19). Backend: GET /sections không phân trang và chỉ trả lớp người gọi đọc/quản lý
@@ -50,9 +51,10 @@ export class SectionService {
     return this.http.put<ISection>(UrlConstant.API.SECTION_STATUS(id), model, { context: this.inlineErrors() });
   }
 
-  downloadImportTemplate(): Observable<Blob> {
+  downloadImportTemplate(format: ImportTemplateFormat = 'csv'): Observable<Blob> {
     return this.http.get(UrlConstant.API.SECTION_IMPORT_TEMPLATE, {
       responseType: 'blob',
+      params: templateRequestParams(format),
       context: this.inlineErrors(),
     });
   }

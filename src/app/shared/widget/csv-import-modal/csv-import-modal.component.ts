@@ -10,6 +10,9 @@ import {
 } from '@angular/core';
 import { ICsvImportResultResponse } from '@models/common/response-data.model';
 import { toApiError } from '@services/common/api-error.util';
+import {
+  IMPORT_FILE_ACCEPT, ImportTemplateFormat, importFileNameError, saveBlobAs, templateFileNameFor,
+} from '@services/common/import-file.util';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzModalModule } from 'ng-zorro-antd/modal';
 import { NzTableModule } from 'ng-zorro-antd/table';
@@ -29,16 +32,19 @@ export class CsvImportModalComponent {
 
   readonly isVisible = input<boolean>(false);
   readonly nzTitle = input.required<string>();
-  readonly guideTitle = input<string>('Quy cách tệp CSV');
+  readonly guideTitle = input<string>('Quy cách tệp nhập (.csv hoặc .xlsx)');
   readonly guideText = input<string>('');
   readonly templateFileName = input.required<string>();
   readonly keyColumnLabel = input<string>('Mã');
   readonly entityLabel = input<string>('bản ghi');
-  readonly downloadTemplateFn = input.required<() => Observable<Blob>>();
+  /** Tải tệp mẫu theo định dạng: caller phải truyền `format` xuống service (mặc định của service là CSV). */
+  readonly downloadTemplateFn = input.required<(format: ImportTemplateFormat) => Observable<Blob>>();
   readonly importFileFn = input.required<(file: File) => Observable<ICsvImportResultResponse>>();
 
   readonly isVisibleChange = output<boolean>();
   readonly importSuccess = output<ICsvImportResultResponse>();
+
+  protected readonly acceptTypes = IMPORT_FILE_ACCEPT;
 
   readonly selectedFile = signal<File | null>(null);
   readonly isLoading = signal<boolean>(false);
@@ -103,21 +109,12 @@ export class CsvImportModalComponent {
     }
   }
 
-  downloadTemplate(): void {
-    this.downloadTemplateFn()().subscribe({
-      next: (blob) => {
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.setAttribute('download', this.templateFileName());
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-      },
+  downloadTemplate(format: ImportTemplateFormat = 'csv'): void {
+    this.downloadTemplateFn()(format).subscribe({
+      next: (blob) => saveBlobAs(blob, templateFileNameFor(this.templateFileName(), format)),
       error: (err) => {
         const apiErr = toApiError(err);
-        this.alert.error(apiErr?.message ?? 'Không thể tải tệp mẫu CSV');
+        this.alert.error(apiErr?.message ?? 'Không thể tải tệp mẫu');
       },
     });
   }
@@ -125,7 +122,7 @@ export class CsvImportModalComponent {
   submitImport(): void {
     const file = this.selectedFile();
     if (!file) {
-      this.errorMessage.set('Vui lòng chọn tệp CSV trước khi import.');
+      this.errorMessage.set('Vui lòng chọn tệp (.csv hoặc .xlsx) trước khi import.');
       return;
     }
 
@@ -146,7 +143,7 @@ export class CsvImportModalComponent {
       error: (err) => {
         this.isLoading.set(false);
         const apiErr = toApiError(err);
-        this.errorMessage.set(apiErr?.message ?? 'Đã xảy ra lỗi trong quá trình import tệp CSV.');
+        this.errorMessage.set(apiErr?.message ?? 'Đã xảy ra lỗi trong quá trình import tệp.');
         this.alert.error(this.errorMessage()!);
       },
     });
@@ -163,13 +160,14 @@ export class CsvImportModalComponent {
   private validateAndSetFile(file: File): void {
     this.importResult.set(null);
     this.errorMessage.set(null);
-    if (!file.name.toLowerCase().endsWith('.csv')) {
-      this.errorMessage.set('Định dạng tệp không hợp lệ! Vui lòng chỉ chọn tệp CSV (.csv).');
+    const nameError = importFileNameError(file.name);
+    if (nameError) {
+      this.errorMessage.set(nameError);
       this.selectedFile.set(null);
       return;
     }
     if (file.size === 0) {
-      this.errorMessage.set('Tệp CSV đã chọn rỗng, không có dữ liệu.');
+      this.errorMessage.set('Tệp đã chọn rỗng, không có dữ liệu.');
       this.selectedFile.set(null);
       return;
     }

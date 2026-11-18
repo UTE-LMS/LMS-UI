@@ -9,6 +9,7 @@ import {
   SyllabusStatus,
 } from '@models/course/syllabus.model';
 import { Observable } from 'rxjs';
+import { ImportTemplateFormat, templateRequestParams } from '@services/common/import-file.util';
 
 /**
  * Quản lý Phiên bản Đề cương Học phần (F03 US-10, ADR 0014).
@@ -70,9 +71,10 @@ export class SyllabusService {
     });
   }
 
-  downloadImportTemplate(courseId: string): Observable<Blob> {
+  downloadImportTemplate(courseId: string, format: ImportTemplateFormat = 'csv'): Observable<Blob> {
     return this.http.get(UrlConstant.API.COURSE_SYLLABI_IMPORT_TEMPLATE(courseId), {
       responseType: 'blob',
+      params: templateRequestParams(format),
       context: this.inlineErrors(),
     });
   }

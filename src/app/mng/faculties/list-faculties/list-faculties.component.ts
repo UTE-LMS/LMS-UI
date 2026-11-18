@@ -16,6 +16,7 @@ import { toApiError } from '@services/common/api-error.util';
 import { FacultyService } from '@services/faculty/faculty.service';
 import { UserService } from '@services/user/user.service';
 import { notBlankValidator } from '@validators/trimmed.validator';
+import { ImportTemplateFormat } from '@services/common/import-file.util';
 import { CsvImportModalComponent } from '@widget/csv-import-modal/csv-import-modal.component';
 import { TablePaginateComponent } from '@widget/paginate/paginate.component';
 import { NzButtonModule } from 'ng-zorro-antd/button';
@@ -61,7 +62,7 @@ export class ListFacultiesComponent implements OnInit {
   readonly isImportModalVisible = signal(false);
   readonly searchKeyword = signal('');
 
-  readonly downloadFacultyTemplate = () => this.facultySvc.downloadImportTemplate();
+  readonly downloadFacultyTemplate = (format: ImportTemplateFormat) => this.facultySvc.downloadImportTemplate(format);
   readonly importFacultyCsv = (file: File) => this.facultySvc.importFaculties(file);
   readonly selectedSwitcherId = signal('');
 

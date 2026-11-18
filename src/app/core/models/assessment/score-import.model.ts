@@ -7,6 +7,12 @@ export type ImportBatchStatus =
 
 export type ImportSourceSystem = 'CSV' | 'MOODLE_EXPORT' | 'EXCEL';
 
+/** Kết quả POST .../import-batches/preview: tên cột và số dòng dữ liệu của tệp .csv/.xlsx (ADR 0015). */
+export interface IImportFilePreview {
+  headers: string[];
+  rowCount: number;
+}
+
 export type ReimportPolicy = 'REJECT_ON_CONFLICT' | 'OVERWRITE' | 'UPDATE_BLANK_ONLY';
 
 export interface IImportColumnMappingItem {

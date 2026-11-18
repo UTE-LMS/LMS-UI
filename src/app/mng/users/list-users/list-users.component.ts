@@ -10,6 +10,7 @@ import { AuthService } from '@services/auth/auth.service';
 import { toApiError } from '@services/common/api-error.util';
 import { UserService } from '@services/user/user.service';
 import { BreadCrumb } from '@widget/breadcrumb/breadcrumb.model';
+import { ImportTemplateFormat } from '@services/common/import-file.util';
 import { CsvImportModalComponent } from '@widget/csv-import-modal/csv-import-modal.component';
 import { TablePaginateComponent } from '@widget/paginate/paginate.component';
 import { NzButtonModule } from 'ng-zorro-antd/button';
@@ -51,7 +52,7 @@ export class ListUsersComponent {
   readonly isAdmin = computed(() => (this.authSvc.getRoles?.() ?? []).includes(SystemConstant.ROLE.ADMIN));
   readonly isImportModalVisible = signal(false);
 
-  readonly downloadUserTemplate = () => this.userSvc.downloadImportTemplate();
+  readonly downloadUserTemplate = (format: ImportTemplateFormat) => this.userSvc.downloadImportTemplate(format);
   readonly importUserCsv = (file: File) => this.userSvc.importUsers(file);
 
   readonly breadcrumbObj: BreadCrumb = new BreadCrumb({

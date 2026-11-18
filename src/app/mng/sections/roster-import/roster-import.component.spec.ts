@@ -56,12 +56,23 @@ describe('RosterImportComponent (F05a US-20)', () => {
     expect(el().querySelector('app-action-dock')?.textContent).toContain('Chọn tệp CSV danh sách lớp');
   });
 
-  it('US-20/AC-3: tệp không phải CSV bị từ chối ngay ở bước chọn tệp với thông báo rõ', async () => {
+  it('US-20/AC-3: tệp không phải CSV/Excel bị từ chối ngay ở bước chọn tệp với thông báo rõ', async () => {
+    await setup();
+    pick(csv('lop.pdf'));
+    expect(component.file()).toBeNull();
+    expect(el().querySelector('[role="alert"]')?.textContent).toContain('.csv hoặc .xlsx');
+    expect(submitButton().disabled).toBe(true);
+  });
+
+  it('ADR 0015: tệp Excel .xlsx được nhận ở bước chọn tệp, .xls (Excel cũ) bị từ chối kèm hướng dẫn', async () => {
     await setup();
     pick(csv('lop.xlsx'));
+    expect(component.file()?.name).toBe('lop.xlsx');
+    expect(component.fileError()).toBeNull();
+
+    pick(csv('lop.xls'));
     expect(component.file()).toBeNull();
-    expect(el().querySelector('[role="alert"]')?.textContent).toContain('Chỉ nhận tệp CSV');
-    expect(submitButton().disabled).toBe(true);
+    expect(component.fileError()).toContain('.xls');
   });
 
   it('US-20/AC-3: tệp rỗng bị từ chối', async () => {

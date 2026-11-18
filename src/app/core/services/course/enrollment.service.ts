@@ -11,6 +11,7 @@ import {
   IEnrollmentStatusUpdateRequest,
 } from '@models/course/section.model';
 import { Observable } from 'rxjs';
+import { ImportTemplateFormat, templateRequestParams } from '@services/common/import-file.util';
 
 /**
  * Ghi danh sinh viên vào lớp (F05a US-20). Số ghi danh là mẫu số của tỷ lệ đạt nên danh sách chỉ đổi được khi
@@ -53,16 +54,18 @@ export class EnrollmentService {
     });
   }
 
-  downloadSectionImportTemplate(sectionId: string): Observable<Blob> {
+  downloadSectionImportTemplate(sectionId: string, format: ImportTemplateFormat = 'csv'): Observable<Blob> {
     return this.http.get(UrlConstant.API.SECTION_ENROLLMENT_IMPORT_TEMPLATE(sectionId), {
       responseType: 'blob',
+      params: templateRequestParams(format),
       context: this.inlineErrors(),
     });
   }
 
-  downloadBulkImportTemplate(): Observable<Blob> {
+  downloadBulkImportTemplate(format: ImportTemplateFormat = 'csv'): Observable<Blob> {
     return this.http.get(UrlConstant.API.ENROLLMENT_BULK_IMPORT_TEMPLATE, {
       responseType: 'blob',
+      params: templateRequestParams(format),
       context: this.inlineErrors(),
     });
   }

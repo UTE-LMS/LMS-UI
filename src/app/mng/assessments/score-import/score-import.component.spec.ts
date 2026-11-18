@@ -1,3 +1,4 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { IAssessment } from '@models/assessment/assessment.model';
@@ -22,6 +23,7 @@ describe('ScoreImportComponent', () => {
     rollbackBatch: ReturnType<typeof vi.fn>;
     getErrors: ReturnType<typeof vi.fn>;
     downloadTemplateCsv: ReturnType<typeof vi.fn>;
+    previewFile: ReturnType<typeof vi.fn>;
   };
   let router: Router;
   let toastr: {
@@ -74,6 +76,7 @@ describe('ScoreImportComponent', () => {
       rollbackBatch: vi.fn(() => of({ ...mockBatch, status: 'ROLLED_BACK' })),
       getErrors: vi.fn(() => of({ content: [], page: 0, size: 50, totalElements: 0, totalPages: 0, last: true })),
       downloadTemplateCsv: vi.fn(() => of(new Blob(['MaSV,HoTen\r\n'], { type: 'text/csv' }))),
+      previewFile: vi.fn(() => of({ headers: ['MSSV', 'Q1', 'Q2'], rowCount: 1 })),
     };
     toastr = {
       success: vi.fn(),
@@ -106,16 +109,74 @@ describe('ScoreImportComponent', () => {
     expect(component.itemMappings()[0].itemCode).toBe('Q1');
   });
 
-  it('báo lỗi nếu chọn tệp không phải .csv', () => {
+  it('báo lỗi nếu chọn tệp không phải .csv hoặc .xlsx', () => {
     const event = {
       target: {
-        files: [new File(['foo'], 'test.xlsx', { type: 'application/vnd.ms-excel' })],
+        files: [new File(['foo'], 'test.pdf', { type: 'application/pdf' })],
       },
     } as unknown as Event;
 
     component.onFileChange(event);
-    expect(component.errorMessage()).toContain('.csv');
+    expect(component.errorMessage()).toContain('.csv hoặc .xlsx');
     expect(component.file()).toBeNull();
+  });
+
+  it('ADR 0015: tệp .xlsx được API đọc tiêu đề để ánh xạ cột, nguồn là EXCEL', () => {
+    const xlsx = new File(['PK'], 'diem.xlsx', { type: 'application/octet-stream' });
+
+    component.onFileChange({ target: { files: [xlsx] } } as unknown as Event);
+
+    expect(scoreImportSvc.previewFile).toHaveBeenCalledWith('sec_1', 'ass_1', xlsx);
+    expect(component.file()).toBe(xlsx);
+    expect(component.csvHeaders()).toEqual(['MSSV', 'Q1', 'Q2']);
+    expect(component.sourceSystem()).toBe('EXCEL');
+    expect(component.itemMappings().map(m => m.column)).toEqual(['Q1', 'Q2']);
+    expect(component.isReadingHeaders()).toBe(false);
+  });
+
+  it('ADR 0015: API không đọc được tệp .xlsx thì báo lỗi và bỏ tệp đã chọn', () => {
+    scoreImportSvc.previewFile.mockReturnValue(throwError(() => new HttpErrorResponse({
+      status: 400,
+      error: { timestamp: 't', status: 400, code: 'VALIDATION_ERROR', message: 'Không đọc được tệp .xlsx', path: '/x' },
+    })));
+
+    component.onFileChange({ target: { files: [new File(['PK'], 'hong.xlsx')] } } as unknown as Event);
+
+    expect(component.file()).toBeNull();
+    expect(component.csvHeaders()).toEqual([]);
+    expect(component.errorMessage()).toContain('Không đọc được tệp .xlsx');
+    expect(component.isReadingHeaders()).toBe(false);
+  });
+
+  it('ADR 0015: chọn lại tệp .csv sau .xlsx thì nguồn trở về CSV', () => {
+    component.onFileChange({ target: { files: [new File(['PK'], 'diem.xlsx')] } } as unknown as Event);
+    expect(component.sourceSystem()).toBe('EXCEL');
+
+    component.onFileChange({ target: { files: [new File(['MSSV,Q1,Q2\n1,4,4'], 'diem.csv', { type: 'text/csv' })] } } as unknown as Event);
+
+    expect(component.sourceSystem()).toBe('CSV');
+  });
+
+  it('ADR 0015: tải tệp Excel mẫu gọi API với format xlsx và lưu tên .xlsx', () => {
+    const created = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:mock');
+    const revoked = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined);
+    const names: string[] = [];
+    const realSet = HTMLAnchorElement.prototype.setAttribute;
+    vi.spyOn(HTMLAnchorElement.prototype, 'setAttribute').mockImplementation(function (this: HTMLAnchorElement, name: string, value: string) {
+      if (name === 'download') {
+        names.push(value);
+      }
+      realSet.call(this, name, value);
+    });
+
+    component.downloadTemplateCsv('xlsx');
+
+    expect(scoreImportSvc.downloadTemplateCsv).toHaveBeenCalledWith('ass_1', 'xlsx');
+    expect(names[0]).toMatch(/-scores-template\.xlsx$/);
+    click.mockRestore();
+    created.mockRestore();
+    revoked.mockRestore();
   });
 
   it('uploadAndValidate kiểm tra hợp lệ các cột ánh xạ trước khi gửi API', () => {
@@ -191,7 +252,7 @@ describe('ScoreImportComponent', () => {
     const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined);
 
     component.downloadTemplateCsv();
-    expect(scoreImportSvc.downloadTemplateCsv).toHaveBeenCalledWith('ass_1');
+    expect(scoreImportSvc.downloadTemplateCsv).toHaveBeenCalledWith('ass_1', 'csv');
 
     clickSpy.mockRestore();
     createObjectUrlSpy.mockRestore();
