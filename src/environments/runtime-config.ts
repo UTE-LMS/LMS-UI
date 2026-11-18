@@ -11,7 +11,15 @@ export interface RuntimeConfig {
   serverUrl: string;
   /** Địa chỉ gốc của dịch vụ tệp, cùng quy ước với serverUrl. */
   serverFileUrl: string;
+  /**
+   * OAuth client ID (loại Web) của Google để đăng nhập bằng Google (ADR 0016 ở repo API). Giá trị công khai, không phải
+   * secret. Rỗng nghĩa là tắt đăng nhập Google và ẩn nút.
+   */
+  googleClientId: string;
 }
+
+/** Dạng client ID của Google: <số>-<chuỗi>.apps.googleusercontent.com. Giá trị lạ bị bỏ. */
+const GOOGLE_CLIENT_ID = /^[0-9]+-[A-Za-z0-9_-]+\.apps\.googleusercontent\.com$/;
 
 const ABSOLUTE_OR_ROOT_URL = /^(https?:\/\/\S+|\/)$/;
 
@@ -27,11 +35,20 @@ function normalizeBaseUrl(value: unknown): string {
 }
 
 /** Chỉ chấp nhận chuỗi http(s) tuyệt đối hoặc "/"; giá trị lạ bị bỏ để không dựng URL từ dữ liệu không tin cậy. */
+function normalizeGoogleClientId(value: unknown): string {
+  if (typeof value !== 'string') {
+    return '';
+  }
+  const trimmed = value.trim();
+  return GOOGLE_CLIENT_ID.test(trimmed) ? trimmed : '';
+}
+
 export function readRuntimeConfig(source: unknown): RuntimeConfig {
   const raw = typeof source === 'object' && source !== null ? source as Record<string, unknown> : {};
   return {
     serverUrl: normalizeBaseUrl(raw['serverUrl']),
     serverFileUrl: normalizeBaseUrl(raw['serverFileUrl']),
+    googleClientId: normalizeGoogleClientId(raw['googleClientId']),
   };
 }
 

@@ -361,6 +361,29 @@ Tài khoản do Admin tạo (`POST /api/v1/users` hoặc import CSV) có `mustCh
 
 ---
 
+#### 5.2.6. Đăng nhập bằng Google (`POST /api/v1/auth/google`)
+Đổi ID token do Google Identity Services cấp cho giao diện lấy phiên của hệ thống (ADR 0016 ở repo API). Endpoint công khai (không cần Bearer token).
+
+- **Endpoint:** `POST /api/v1/auth/google`
+- **Request Body:**
+```json
+{
+  "idToken": "eyJhbGciOiJSUzI1NiIs..."
+}
+```
+| Trường | Kiểu | Bắt buộc | Ràng buộc |
+|---|---|---|---|
+| `idToken` | String | Có | JWT do Google cấp, tối đa 8192 ký tự. |
+
+- **Cơ chế hoạt động:** backend kiểm tra chữ ký (khóa công khai của Google), thời hạn, `iss` là Google, `aud` đúng client ID của hệ thống và `email_verified = true`. Email (chuẩn hóa chữ thường) phải trùng email của một tài khoản `ACTIVE` do Admin tạo; **không tự tạo tài khoản**. Ghi `audit_logs` (`LOGIN`).
+- **Phản hồi thành công (HTTP 200 OK):** cùng cấu trúc `LoginResponse` (§5.2.1). Cờ `user.mustChangePassword` giữ nguyên: tài khoản còn cờ vẫn phải đổi mật khẩu (§5.2.4) trước khi gọi API khác.
+- **Phản hồi lỗi thường gặp:**
+  - **HTTP 400 (`VALIDATION_ERROR`):** thiếu hoặc quá dài `idToken`.
+  - **HTTP 401 (`UNAUTHORIZED`):** token sai/hết hạn/không dành cho ứng dụng này, email chưa xác minh, email chưa có tài khoản (*"Email Google này chưa được cấp tài khoản..."*), hoặc tài khoản bị khóa. UI hiển thị thông báo tại form đăng nhập, không tự đăng xuất.
+  - **HTTP 422 (`BUSINESS_RULE_VIOLATION`):** backend chưa cấu hình `GOOGLE_CLIENT_ID`.
+
+---
+
 ### 5.3. Nhóm API Quản Trị Người Dùng (US-02: User Management)
 
 > **Phân quyền truy cập:** Toàn bộ các API quản lý người dùng (`/api/v1/users/**`) chỉ dành riêng cho tài khoản có vai trò `ADMIN`. Người dùng có vai trò khác gọi vào sẽ nhận HTTP `403 Forbidden`.

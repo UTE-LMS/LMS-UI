@@ -99,21 +99,16 @@
         </div>
       </div>
 
+      @if (googleEnabled) {
       <div nz-row nzJustify="center">
         <nz-divider nzDashed [nzText]="textOr">
           <ng-template #textOr><span>Hoặc</span></ng-template>
         </nz-divider>
-        <div nz-col nzSpan="24" class="text-center">
-          <a
-            id="btn-login-google"
-            href="javascript:void(0);"
-            class="ant-btn ant-btn-lg nz-btn-red mt-2.5 inline-flex items-center justify-center no-underline!"
-          >
-            <i class="fab fa-google mr-2.5" aria-hidden="true"></i>
-            <span>Đăng nhập bằng Google</span>
-          </a>
+        <div id="google-signin" nz-col nzSpan="24" class="flex justify-center mt-2.5">
+          <asl-google-signin-button type="standard" size="large" text="signin_with" shape="rectangular" [width]="320" locale="vi" />
         </div>
       </div>
+      }
     </form>
   </div>
   }

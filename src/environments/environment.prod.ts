@@ -5,6 +5,7 @@ export const environment = {
   // Nạp lúc chạy từ /config.js (xem runtime-config.ts), không bake vào bundle
   serverUrl: runtimeConfig.serverUrl,
   serverFileUrl: runtimeConfig.serverFileUrl,
+  googleClientId: runtimeConfig.googleClientId,
 
   keyGoogle: '15443613184-c32g9kb3gf2no3krpr7mukc6n1k5oq9v.apps.googleusercontent.com',
 

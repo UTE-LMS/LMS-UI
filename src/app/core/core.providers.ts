@@ -10,6 +10,14 @@ import { en_US, NZ_DATE_LOCALE, NZ_I18N, vi_VN } from 'ng-zorro-antd/i18n';
 import { provideSpinnerConfig } from 'ngx-spinner';
 import { provideToastr } from 'ngx-toastr';
 
+// Chỉ bật nhà cung cấp Google khi đã cấu hình client ID (ADR 0016); rỗng thì không nạp script của Google.
+const socialProviders = environment.googleClientId
+  ? [{
+    id: GoogleLoginProvider.PROVIDER_ID,
+    provider: new GoogleLoginProvider(environment.googleClientId, { oneTapEnabled: false, scopes: 'openid profile email' }),
+  }]
+  : [];
+
 export const coreProviders: (Provider | EnvironmentProviders)[] = [
   {
     provide: NZ_I18N,
@@ -44,18 +52,7 @@ export const coreProviders: (Provider | EnvironmentProviders)[] = [
     provide: SOCIAL_AUTH_CONFIG,
     useValue: {
       autoLogin: false,
-      providers: [
-        {
-          id: GoogleLoginProvider.PROVIDER_ID,
-          provider: new GoogleLoginProvider(
-            environment.keyGoogle,
-            {
-              oneTapEnabled: false,
-              scopes: 'openid profile email',
-            },
-          ),
-        },
-      ],
+      providers: socialProviders,
       onError: (err) => {
         console.error(err);
       },

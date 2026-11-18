@@ -1,3 +1,4 @@
+import { SocialAuthService } from '@abacritt/angularx-social-login';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, convertToParamMap, Router } from '@angular/router';
@@ -18,15 +19,26 @@ describe('LoginComponent (F01 US-01)', () => {
   const authStub = {
     isAuthenticated: vi.fn(() => false),
     login: vi.fn((): Observable<unknown> => of({})),
+    loginWithGoogle: vi.fn((): Observable<unknown> => of({})),
     checkRole: vi.fn(() => false),
     hasAnyRole: vi.fn(() => true),
   };
 
+  // Giả lập authState của nút Google: phát ID token (hoặc null khi đăng xuất)
+  let googleUser$: Subject<{ idToken?: string; } | null>;
+  const socialStub = {
+    authState: undefined as unknown as Observable<{ idToken?: string; } | null>,
+    signOut: vi.fn(() => Promise.resolve()),
+  };
+
   const setup = async (returnUrl?: string): Promise<void> => {
+    googleUser$ = new Subject();
+    socialStub.authState = googleUser$.asObservable();
     await TestBed.configureTestingModule({
       imports: [LoginComponent],
       providers: [
         { provide: AuthService, useValue: authStub },
+        { provide: SocialAuthService, useValue: socialStub },
         {
           provide: ActivatedRoute,
           useValue: { snapshot: { queryParamMap: convertToParamMap(returnUrl ? { returnUrl } : {}) } },
@@ -47,6 +59,8 @@ describe('LoginComponent (F01 US-01)', () => {
     vi.clearAllMocks();
     authStub.isAuthenticated.mockReturnValue(false);
     authStub.login.mockImplementation(() => of({}));
+    authStub.loginWithGoogle.mockImplementation(() => of({}));
+    socialStub.signOut.mockImplementation(() => Promise.resolve());
   });
 
   it('form trống: không gọi API và đánh dấu các ô đã chạm để hiện lỗi', async () => {
@@ -144,15 +158,71 @@ describe('LoginComponent (F01 US-01)', () => {
 
   it('đã đăng nhập sẵn thì chuyển ngay khỏi trang đăng nhập', async () => {
     authStub.isAuthenticated.mockReturnValue(true);
+    socialStub.authState = new Subject<{ idToken?: string; } | null>().asObservable();
     await TestBed.configureTestingModule({
       imports: [LoginComponent],
       providers: [
         { provide: AuthService, useValue: authStub },
+        { provide: SocialAuthService, useValue: socialStub },
         { provide: ActivatedRoute, useValue: { snapshot: { queryParamMap: convertToParamMap({}) } } },
       ],
     }).compileComponents();
     const spy = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
     TestBed.createComponent(LoginComponent).detectChanges();
     expect(spy).toHaveBeenCalledWith(UrlConstant.ROUTE.MANAGEMENT.DASHBOARD);
+  });
+
+  describe('đăng nhập bằng Google (ADR 0016)', () => {
+    it('chưa cấu hình client ID: ẩn nút Google và dải phân cách "Hoặc"', async () => {
+      await setup();
+      const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+      expect((fixture.nativeElement as HTMLElement).querySelector('asl-google-signin-button')).toBeNull();
+      expect(text).not.toContain('Hoặc');
+    });
+
+    it('nhận ID token từ nút Google: đổi lấy phiên rồi vào trang quản lý và xóa người dùng Google đã lưu', async () => {
+      await setup();
+      googleUser$.next({ idToken: 'id-token-gia' });
+      expect(authStub.loginWithGoogle).toHaveBeenCalledWith('id-token-gia');
+      expect(navigate).toHaveBeenCalledWith('/mng/dashboard');
+      expect(socialStub.signOut).toHaveBeenCalled();
+      expect(component.isSubmitting()).toBe(false);
+    });
+
+    it('giữ returnUrl nội bộ sau khi đăng nhập Google', async () => {
+      await setup('/mng/users');
+      googleUser$.next({ idToken: 'id-token-gia' });
+      expect(navigate).toHaveBeenCalledWith('/mng/users');
+    });
+
+    it('lỗi 401 từ backend (email chưa có tài khoản): hiện thông báo ngay trong thẻ đăng nhập, không chuyển trang', async () => {
+      authStub.loginWithGoogle.mockImplementation(() => throwError(() => new HttpErrorResponse({
+        status: 401,
+        error: { timestamp: 't', status: 401, code: 'UNAUTHORIZED', message: 'Email Google này chưa được cấp tài khoản. Hãy liên hệ quản trị viên', path: '/api/v1/auth/google' },
+      })));
+      await setup();
+      googleUser$.next({ idToken: 'id-token-gia' });
+      expect(component.loginErrorMsg()).toContain('chưa được cấp tài khoản');
+      expect(navigate).not.toHaveBeenCalled();
+      expect(component.isSubmitting()).toBe(false);
+      expect(socialStub.signOut).toHaveBeenCalled();
+    });
+
+    it('bỏ qua phát lại rỗng: null (đã đăng xuất) hoặc người dùng không có idToken không gọi API', async () => {
+      await setup();
+      googleUser$.next(null);
+      googleUser$.next({});
+      googleUser$.next({ idToken: '' });
+      expect(authStub.loginWithGoogle).not.toHaveBeenCalled();
+      expect(navigate).not.toHaveBeenCalled();
+    });
+
+    it('signOut của thư viện báo lỗi (chưa có người dùng) không làm hỏng luồng đăng nhập', async () => {
+      socialStub.signOut.mockImplementation(() => Promise.reject(new Error('Not logged in')));
+      await setup();
+      googleUser$.next({ idToken: 'id-token-gia' });
+      await Promise.resolve();
+      expect(navigate).toHaveBeenCalledWith('/mng/dashboard');
+    });
   });
 });

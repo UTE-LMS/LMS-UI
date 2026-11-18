@@ -7,7 +7,7 @@ import { INLINE_ERRORS } from '@interceptors/http-context.token';
 import langDataEn from '@languages/en.json';
 import langDataVi from '@languages/vi.json';
 import {
-  IAuthData, IChangePasswordRequest, ILoginDTO, ILoginRequest, ILoginResponse,
+  IAuthData, IChangePasswordRequest, IGoogleLoginRequest, ILoginDTO, ILoginRequest, ILoginResponse,
   IRegisterDTO, IResetPasswordDTO, IResetPasswordRequsetDTO, IUserProfile,
 } from '@models/auth/auth.model';
 import { sha256 } from 'js-sha256';
@@ -93,6 +93,20 @@ export class AuthService {
   login(model: ILoginRequest): Observable<ILoginResponse> {
     return this.http
       .post<ILoginResponse>(UrlConstant.API.AUTH_LOGIN, model, {
+        context: new HttpContext().set(INLINE_ERRORS, true),
+      })
+      .pipe(tap(res => this.startSession(res)));
+  }
+
+  /**
+   * POST /api/v1/auth/google: đổi ID token của Google lấy phiên của hệ thống (ADR 0016 ở repo API). Backend chỉ nhận
+   * email trùng tài khoản có sẵn; lỗi 401 (email chưa có tài khoản, tài khoản bị khóa, token sai) do form đăng nhập tự
+   * hiển thị. Kết quả giống `login()`, kể cả cờ mustChangePassword.
+   */
+  loginWithGoogle(idToken: string): Observable<ILoginResponse> {
+    const body: IGoogleLoginRequest = { idToken };
+    return this.http
+      .post<ILoginResponse>(UrlConstant.API.AUTH_GOOGLE, body, {
         context: new HttpContext().set(INLINE_ERRORS, true),
       })
       .pipe(tap(res => this.startSession(res)));

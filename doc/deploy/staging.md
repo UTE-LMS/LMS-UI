@@ -44,6 +44,7 @@ Không biến nào là secret: giá trị được gửi xuống trình duyệt 
 |---|---|---|
 | `API_BASE_URL` | có ở môi trường thật | địa chỉ gốc backend, `http(s)://host[:cổng]`; tự thêm `/` cuối. Rỗng = cùng nguồn gốc. Giá trị lạ (không phải `http(s)://` hay `/`) làm container dừng ngay |
 | `FILE_BASE_URL` | không | địa chỉ gốc dịch vụ tệp; mặc định bằng `API_BASE_URL` |
+| `GOOGLE_CLIENT_ID` | không | OAuth client ID loại Web (`<số>-<chuỗi>.apps.googleusercontent.com`) cho nút "Đăng nhập bằng Google"; rỗng = ẩn nút. Giá trị công khai, phải trùng `GOOGLE_CLIENT_ID` của API; khai `STAGING_URL` vào "Authorized JavaScript origins" trên Google Cloud Console |
 
 Biến và secret GitHub dùng cho job `deploy-staging` (đặt trong **Environment `staging`**; người có quyền quản trị tạo):
 
