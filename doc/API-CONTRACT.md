@@ -335,6 +335,32 @@ Lấy thông tin tài khoản và danh sách quyền hạn gắn với phạm vi
 
 ---
 
+#### 5.2.4. Đổi mật khẩu (`POST /api/v1/auth/change-password`) và cờ `mustChangePassword`
+Tài khoản do Admin tạo (`POST /api/v1/users` hoặc import CSV) có `mustChangePassword = true`. Cờ này được trả trong `user` của `LoginResponse` (§5.2.1) và trong `UserProfileResponse` (§5.2.3), kiểu boolean (`false` với tài khoản cũ chưa có trường này). Khi cờ còn bật, **backend chặn mọi API khác** bằng HTTP 403 (`FORBIDDEN`, thông điệp *"Bạn cần đổi mật khẩu trước khi tiếp tục sử dụng hệ thống"*); chỉ `POST /auth/change-password`, `GET /auth/me`, `POST /auth/logout` được gọi. UI dựa vào cờ để đưa người dùng tới trang đổi mật khẩu (`/auth/change-password`).
+
+- **Endpoint:** `POST /api/v1/auth/change-password`
+- **Xác thực:** Bắt buộc (`Authorization: Bearer <token>`).
+- **Request Body:**
+```json
+{
+  "currentPassword": "Password123!",
+  "newPassword": "MatKhauMoi456!"
+}
+```
+| Trường | Kiểu | Bắt buộc | Ràng buộc |
+|---|---|---|---|
+| `currentPassword` | String | Có | Phải đúng mật khẩu hiện tại. |
+| `newPassword` | String | Có | 8 đến 72 bytes UTF-8; phải khác mật khẩu hiện tại. |
+
+- **Cơ chế hoạt động:** lưu hash mới, đặt `mustChangePassword = false`, tăng `tokenVersion` (mọi token cũ, kể cả ở thiết bị khác, mất hiệu lực) và ghi `audit_logs` (`UPDATE`, collection `users`). Trả về token mới nên UI không bắt đăng nhập lại.
+- **Phản hồi thành công (HTTP 200 OK):** cùng cấu trúc `LoginResponse` (§5.2.1) với `user.mustChangePassword = false`.
+- **Phản hồi lỗi thường gặp:**
+  - **HTTP 400 (`VALIDATION_ERROR`):** thiếu trường hoặc `newPassword` ngoài 8-72 bytes.
+  - **HTTP 422 (`BUSINESS_RULE_VIOLATION`):** sai mật khẩu hiện tại, hoặc mật khẩu mới trùng mật khẩu cũ. Không dùng 401 để UI không tự đăng xuất người dùng.
+  - **HTTP 401 (`UNAUTHORIZED`):** token không hợp lệ.
+
+---
+
 ### 5.3. Nhóm API Quản Trị Người Dùng (US-02: User Management)
 
 > **Phân quyền truy cập:** Toàn bộ các API quản lý người dùng (`/api/v1/users/**`) chỉ dành riêng cho tài khoản có vai trò `ADMIN`. Người dùng có vai trò khác gọi vào sẽ nhận HTTP `403 Forbidden`.

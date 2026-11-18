@@ -7,7 +7,7 @@ import { INLINE_ERRORS } from '@interceptors/http-context.token';
 import langDataEn from '@languages/en.json';
 import langDataVi from '@languages/vi.json';
 import {
-  IAuthData, ILoginDTO, ILoginRequest, ILoginResponse,
+  IAuthData, IChangePasswordRequest, ILoginDTO, ILoginRequest, ILoginResponse,
   IRegisterDTO, IResetPasswordDTO, IResetPasswordRequsetDTO, IUserProfile,
 } from '@models/auth/auth.model';
 import { sha256 } from 'js-sha256';
@@ -121,6 +121,24 @@ export class AuthService {
     });
   }
 
+  /**
+   * POST /api/v1/auth/change-password. Backend thu hồi token cũ và trả token mới (cùng dạng LoginResponse),
+   * nên lưu lại phiên mới để người dùng không phải đăng nhập lại. Lỗi 422 (sai mật khẩu hiện tại, mật khẩu
+   * mới trùng cũ) do form tự hiển thị.
+   */
+  changePassword(model: IChangePasswordRequest): Observable<ILoginResponse> {
+    return this.http
+      .post<ILoginResponse>(UrlConstant.API.AUTH_CHANGE_PASSWORD, model, {
+        context: new HttpContext().set(INLINE_ERRORS, true),
+      })
+      .pipe(tap(res => this.startSession(res)));
+  }
+
+  /** Tài khoản còn bị bắt buộc đổi mật khẩu lần đầu (cờ lưu lúc đăng nhập). */
+  mustChangePassword(): boolean {
+    return this.getAuthData()?.mustChangePassword === true;
+  }
+
   private startSession(res: ILoginResponse): void {
     const user = res.user;
     this.setToken(res.accessToken);
@@ -132,6 +150,7 @@ export class AuthService {
       userId: user.id,
       username: user.username,
       facultyId: user.facultyId ?? undefined,
+      mustChangePassword: user.mustChangePassword === true,
     });
   }
 

@@ -8,10 +8,12 @@ describe('canActiveGuard', () => {
   let router: Router;
   let authenticated = false;
   let roles: string[] = [];
+  let mustChangePassword = false;
 
   const authStub = {
     isAuthenticated: () => authenticated,
     checkRole: (role: string) => roles.includes(role),
+    mustChangePassword: () => mustChangePassword,
   };
 
   const run = (data: Record<string, unknown>, url = '/mng/users') => TestBed.runInInjectionContext(() => canActiveGuard({ data } as unknown as ActivatedRouteSnapshot, { url } as RouterStateSnapshot));
@@ -19,6 +21,7 @@ describe('canActiveGuard', () => {
   beforeEach(() => {
     authenticated = false;
     roles = [];
+    mustChangePassword = false;
     TestBed.configureTestingModule({
       providers: [provideRouter([]), { provide: AuthService, useValue: authStub }],
     });
@@ -37,6 +40,21 @@ describe('canActiveGuard', () => {
     const result = run({ listRoles: ['ADMIN'] });
     expect(result).toBeInstanceOf(UrlTree);
     expect(router.serializeUrl(result as UrlTree)).toBe(UrlConstant.ROUTE.MANAGEMENT.FORBIDDEN);
+  });
+
+  it('F01/đổi mật khẩu lần đầu: còn cờ mustChangePassword thì về trang đổi mật khẩu dù đủ vai trò', () => {
+    authenticated = true;
+    mustChangePassword = true;
+    roles = ['ADMIN'];
+    const result = run({ listRoles: ['ADMIN'] });
+    expect(result).toBeInstanceOf(UrlTree);
+    expect(router.serializeUrl(result as UrlTree)).toBe(UrlConstant.ROUTE.AUTH.CHANGE_PASSWORD);
+  });
+
+  it('F01/đổi mật khẩu lần đầu: chưa đăng nhập vẫn về đăng nhập, không về trang đổi mật khẩu', () => {
+    mustChangePassword = true;
+    const result = run({});
+    expect(router.serializeUrl(result as UrlTree)).toContain(UrlConstant.ROUTE.AUTH.LOGIN);
   });
 
   it('đúng vai trò: cho vào', () => {
