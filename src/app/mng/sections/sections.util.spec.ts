@@ -73,8 +73,14 @@ describe('sections.util (F05a)', () => {
       expect(validateRosterFile({ name: 'LOP.CSV', size: 1 })).toBeNull();
     });
 
-    it('từ chối tệp không phải CSV, ví dụ Excel', () => {
-      expect(validateRosterFile({ name: 'lop.xlsx', size: 120 })).toContain('CSV');
+    it('ADR 0015: chấp nhận cả tệp Excel .xlsx', () => {
+      expect(validateRosterFile({ name: 'lop.xlsx', size: 120 })).toBeNull();
+      expect(validateRosterFile({ name: 'LOP.XLSX', size: 120 })).toBeNull();
+    });
+
+    it('từ chối tệp không phải CSV/Excel: .xls cũ có hướng dẫn riêng, đuôi khác báo định dạng không hợp lệ', () => {
+      expect(validateRosterFile({ name: 'lop.xls', size: 120 })).toContain('.xls');
+      expect(validateRosterFile({ name: 'lop.pdf', size: 120 })).toContain('.csv hoặc .xlsx');
     });
 
     it('từ chối tệp rỗng', () => {

@@ -12,6 +12,7 @@ import {
   IProgramCourseCsvImportResponse,
 } from '@models/course/course.model';
 import { map, Observable } from 'rxjs';
+import { ImportTemplateFormat, templateRequestParams } from '@services/common/import-file.util';
 
 /**
  * Quản trị Kho Học phần cấp trường, Kế hoạch Học phần trong CTĐT và Phân công Giảng viên (F03 US-09, ADR 0010).
@@ -83,9 +84,10 @@ export class CourseService {
     });
   }
 
-  downloadCoursesImportTemplate(): Observable<Blob> {
+  downloadCoursesImportTemplate(format: ImportTemplateFormat = 'csv'): Observable<Blob> {
     return this.http.get(UrlConstant.API.COURSE_IMPORT_TEMPLATE, {
       responseType: 'blob',
+      params: templateRequestParams(format),
       context: this.inlineErrors(),
     });
   }
@@ -134,9 +136,10 @@ export class CourseService {
     );
   }
 
-  downloadProgramCoursesImportTemplate(programVersionId: string): Observable<Blob> {
+  downloadProgramCoursesImportTemplate(programVersionId: string, format: ImportTemplateFormat = 'csv'): Observable<Blob> {
     return this.http.get(UrlConstant.API.PROGRAM_COURSE_IMPORT_TEMPLATE(programVersionId), {
       responseType: 'blob',
+      params: templateRequestParams(format),
       context: this.inlineErrors(),
     });
   }

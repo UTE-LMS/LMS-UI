@@ -27,6 +27,7 @@ import { NzTableModule } from 'ng-zorro-antd/table';
 import { ToastrService } from 'ngx-toastr';
 import { forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
+import { ImportTemplateFormat, saveBlobAs, templateFileNameFor } from '@services/common/import-file.util';
 
 @Component({
   selector: 'app-list-curriculum-versions',
@@ -297,18 +298,11 @@ export class ListCurriculumVersionsComponent implements OnInit {
     this.isImportModalVisible.set(false);
   }
 
-  downloadImportTemplate(): void {
-    this.versionSvc.downloadImportTemplate().subscribe({
-      next: blob => {
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'program-version-template.csv';
-        a.click();
-        window.URL.revokeObjectURL(url);
-      },
+  downloadImportTemplate(format: ImportTemplateFormat = 'csv'): void {
+    this.versionSvc.downloadImportTemplate(format).subscribe({
+      next: blob => saveBlobAs(blob, templateFileNameFor('program-version-template.csv', format)),
       error: () => {
-        this.alert.error('Không thể tải tệp CSV mẫu');
+        this.alert.error('Không thể tải tệp mẫu');
       },
     });
   }
@@ -413,20 +407,13 @@ export class ListCurriculumVersionsComponent implements OnInit {
     this.confirmImport();
   }
 
-  downloadCoursesImportTemplate(): void {
+  downloadCoursesImportTemplate(format: ImportTemplateFormat = 'csv'): void {
     const pvId = this.createdProgramVersionId();
     if (!pvId) {
       return;
     }
-    this.courseSvc.downloadProgramCoursesImportTemplate(pvId).subscribe({
-      next: blob => {
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = 'program-courses-template.csv';
-        link.click();
-        URL.revokeObjectURL(url);
-      },
+    this.courseSvc.downloadProgramCoursesImportTemplate(pvId, format).subscribe({
+      next: blob => saveBlobAs(blob, templateFileNameFor('program-courses-template.csv', format)),
       error: err => {
         const apiErr = toApiError(err);
         this.alert.error(apiErr?.message ?? 'Tải file mẫu khung học phần thất bại');

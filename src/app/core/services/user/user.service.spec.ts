@@ -86,4 +86,17 @@ describe('UserService (API-CONTRACT.md §5.3)', () => {
     expect((importReq.request.body as FormData).get('file')).toBe(file);
     importReq.flush({ totalRows: 1, successCount: 1, failureCount: 0, errors: [] });
   });
+
+  it('ADR 0015: tải mẫu Excel gửi ?format=xlsx, tải mẫu CSV không gửi tham số', () => {
+    service.downloadImportTemplate().subscribe();
+    const csvReq = http.expectOne(UrlConstant.API.USER_IMPORT_TEMPLATE);
+    expect(csvReq.request.params.keys()).toEqual([]);
+    csvReq.flush(new Blob(['x']));
+
+    service.downloadImportTemplate('xlsx').subscribe();
+    const xlsxReq = http.expectOne(r => r.url === UrlConstant.API.USER_IMPORT_TEMPLATE);
+    expect(xlsxReq.request.params.get('format')).toBe('xlsx');
+    expect(xlsxReq.request.responseType).toBe('blob');
+    xlsxReq.flush(new Blob(['x']));
+  });
 });

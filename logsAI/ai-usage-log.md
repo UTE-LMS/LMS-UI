@@ -579,6 +579,35 @@ Phần này chuẩn bị sẵn nội dung trả lời cho 4 câu hỏi trọng t
 - Đã xem lại toàn bộ 23 ảnh.
 
 
+## Phiên #19: Nhập tệp Excel `.xlsx` ở mọi màn nhập và tải tệp mẫu Excel (UI)
+
+### 1. Thông tin phiên làm việc
+- **Thời gian:** 2026-11-18
+- **Người thực hiện (`git config user.name`):** `TinMH`
+- **Sinh viên yêu cầu:** "tách nhánh rồi commit, sau đó làm xlsx"; phạm vi và cách xử lý UI do sinh viên chọn qua câu hỏi (mọi chỗ nhập; API trả danh sách cột cho màn điểm; thêm bản mẫu `.xlsx`).
+- **Công cụ / mô hình:** Claude Code, Claude Sonnet 5.5. **Không thêm package npm** (đọc `.xlsx` do API làm, xem ADR 0015 ở repo LMS-API).
+- **Nhánh:** `feat/xlsx-import` (tách từ `main`).
+
+### 2. Các hạng mục đã thực hiện
+1. `core/services/common/import-file.util.ts` (mới): `IMPORT_FILE_ACCEPT`, `importFileNameError` (nhận `.csv`/`.xlsx`, `.xls` có hướng dẫn riêng), `templateFileNameFor`, `templateRequestParams` (CSV không gửi tham số nên URL cũ giữ nguyên), `saveBlobAs`.
+2. 10 phương thức tải mẫu ở 8 service nhận `format: 'csv' | 'xlsx' = 'csv'`; thêm `ScoreImportService.previewFile` và URL `IMPORT_BATCH_PREVIEW`.
+3. Widget dùng chung `csv-import-modal` (người dùng, khoa, lớp, ghi danh hàng loạt): nhận `.xlsx`, hai nút mẫu CSV/Excel; `downloadTemplateFn` nay nhận `format` nên các nơi gọi phải truyền xuống service (đã sửa 3 nơi).
+4. Các màn nhập riêng: học phần (`course-import-modal`), khung học phần (`program-courses-table`, `list-curriculum-versions` ×2), đề cương (`list-syllabi`), danh sách lớp (`roster-import`, `sections.util`), điểm (`score-import`: với `.xlsx` gọi API lấy tên cột rồi tự ánh xạ, `sourceSystem` đặt `EXCEL`).
+5. `doc/API-CONTRACT.md` §6.4–6.5: định dạng nhập, `?format=`, endpoint `preview`.
+
+### 3. Kiểm chứng đã làm
+`ng test --no-watch`: 101 file, 1049 test đạt (có 1 spec mới cho widget, 1 cho `import-file.util`). `eslint src/app`: 0 lỗi (sau khi sửa 3 lỗi do AI viết trong spec). `ng build` thành công, giữ nguyên 2 cảnh báo ngân sách có sẵn. Sửa có chủ đích các test cũ vốn khẳng định "`.xlsx` bị từ chối" (`roster-import`, `sections.util`, `course-import-modal`, `score-import`): nay `.xlsx` được nhận, test được đổi sang `.pdf` và thêm ca `.xlsx`/`.xls`. **Chưa chạy thử trên trình duyệt với backend thật**, nên chưa thấy tệp `.xlsx` thật đi hết luồng.
+
+### 4. Lỗi/ảo giác AI đã phát hiện
+| Mô tả | Cách phát hiện | Nguyên nhân | Commit sửa |
+|---|---|---|---|
+| Spy `setAttribute` của spec widget bị chồng qua mỗi `beforeEach`, mảng kết quả có hơn 1900 phần tử | `ng test` | Quên `vi.restoreAllMocks()` giữa các test; đổi sang đọc thuộc tính trong spy `click` | sửa trước khi commit `feat(import)` |
+| Mock kiểu khai báo thiếu `previewFile` khiến toàn bộ lần build test lỗi TS2353 | `ng test` | Thêm hàm vào đối tượng mock mà quên cập nhật kiểu | sửa trước khi commit `feat(import)` |
+
+- **Sinh viên đã sửa/rà soát:** _chờ sinh viên rà soát_
+- **Commit / PR:** một commit `feat(import): accept .xlsx files in every import screen` trên nhánh `feat/xlsx-import`, PR vào `main` (xem `git log`).
+
+
 ## Phiên #20: CI job `security` đỏ do advisory picomatch chưa có bản vá (UI)
 
 ### 1. Thông tin phiên làm việc

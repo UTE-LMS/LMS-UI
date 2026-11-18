@@ -23,6 +23,7 @@ import { NzModalModule } from 'ng-zorro-antd/modal';
 import { NzSelectModule } from 'ng-zorro-antd/select';
 import { NzTableModule } from 'ng-zorro-antd/table';
 import { ToastrService } from 'ngx-toastr';
+import { ImportTemplateFormat, importFileNameError, saveBlobAs, templateFileNameFor } from '@services/common/import-file.util';
 
 /**
  * Modal nạp danh mục học phần hàng loạt từ tệp CSV (F03 US-09/AC-4, ADR 0010 - ADMIN & PROGRAM_MANAGER).
@@ -132,21 +133,12 @@ export class CourseImportModalComponent {
     }
   }
 
-  downloadTemplate(): void {
-    this.courseSvc.downloadCoursesImportTemplate().subscribe({
-      next: (blob) => {
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.setAttribute('download', 'courses-template.csv');
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-      },
+  downloadTemplate(format: ImportTemplateFormat = 'csv'): void {
+    this.courseSvc.downloadCoursesImportTemplate(format).subscribe({
+      next: (blob) => saveBlobAs(blob, templateFileNameFor('courses-template.csv', format)),
       error: (err) => {
         const apiErr = toApiError(err);
-        this.alert.error(apiErr?.message ?? 'Không thể tải tệp mẫu CSV');
+        this.alert.error(apiErr?.message ?? 'Không thể tải tệp mẫu');
       },
     });
   }
@@ -199,14 +191,15 @@ export class CourseImportModalComponent {
     this.importResult.set(null);
     this.errorMessage.set(null);
 
-    if (!file.name.toLowerCase().endsWith('.csv')) {
-      this.errorMessage.set('Định dạng tệp không hợp lệ! Vui lòng chỉ chọn tệp CSV (.csv).');
+    const nameError = importFileNameError(file.name);
+    if (nameError) {
+      this.errorMessage.set(nameError);
       this.selectedFile.set(null);
       return;
     }
 
     if (file.size === 0) {
-      this.errorMessage.set('Tệp CSV đã chọn rỗng, không có dữ liệu.');
+      this.errorMessage.set('Tệp đã chọn rỗng, không có dữ liệu.');
       this.selectedFile.set(null);
       return;
     }

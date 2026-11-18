@@ -67,8 +67,26 @@ describe('CourseImportModalComponent (F03 US-09/AC-4)', () => {
     expect(component.errorMessage()).toBeNull();
   });
 
-  it('từ chối tệp không có đuôi .csv và thông báo lỗi', () => {
-    const invalidFile = new File(['dummy'], 'courses.xlsx', { type: 'application/vnd.ms-excel' });
+  it('ADR 0015: nhận tệp Excel .xlsx', () => {
+    const xlsxFile = new File(['dummy'], 'courses.xlsx', { type: 'application/octet-stream' });
+
+    component.onFileSelected({ target: { files: [xlsxFile] } } as unknown as Event);
+
+    expect(component.selectedFile()).toBe(xlsxFile);
+    expect(component.errorMessage()).toBeNull();
+  });
+
+  it('ADR 0015: tệp .xls (Excel cũ) bị từ chối kèm hướng dẫn lưu thành .xlsx', () => {
+    const oldExcel = new File(['dummy'], 'courses.xls', { type: 'application/vnd.ms-excel' });
+
+    component.onFileSelected({ target: { files: [oldExcel] } } as unknown as Event);
+
+    expect(component.selectedFile()).toBeNull();
+    expect(component.errorMessage()).toContain('.xlsx');
+  });
+
+  it('từ chối tệp không phải CSV/Excel và thông báo lỗi', () => {
+    const invalidFile = new File(['dummy'], 'courses.pdf', { type: 'application/pdf' });
     const event = {
       target: {
         files: [invalidFile],
@@ -78,7 +96,7 @@ describe('CourseImportModalComponent (F03 US-09/AC-4)', () => {
     component.onFileSelected(event);
 
     expect(component.selectedFile()).toBeNull();
-    expect(component.errorMessage()).toContain('chỉ chọn tệp CSV (.csv)');
+    expect(component.errorMessage()).toContain('.csv hoặc .xlsx');
   });
 
   it('từ chối tệp rỗng dung lượng 0 bytes', () => {
@@ -92,7 +110,7 @@ describe('CourseImportModalComponent (F03 US-09/AC-4)', () => {
     component.onFileSelected(event);
 
     expect(component.selectedFile()).toBeNull();
-    expect(component.errorMessage()).toContain('Tệp CSV đã chọn rỗng');
+    expect(component.errorMessage()).toContain('Tệp đã chọn rỗng');
   });
 
   it('chấp nhận tệp .csv hợp lệ và lưu vào signal selectedFile', () => {

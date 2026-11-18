@@ -14,6 +14,7 @@ import { NzModalModule } from 'ng-zorro-antd/modal';
 import { NzSelectModule } from 'ng-zorro-antd/select';
 import { NzTableModule } from 'ng-zorro-antd/table';
 import { ToastrService } from 'ngx-toastr';
+import { ImportTemplateFormat, saveBlobAs, templateFileNameFor } from '@services/common/import-file.util';
 
 @Component({
   selector: 'app-program-courses-table',
@@ -112,21 +113,12 @@ export class ProgramCoursesTableComponent implements OnInit {
     this.importErrorMsg.set(null);
   }
 
-  downloadImportTemplate(): void {
-    this.courseSvc.downloadProgramCoursesImportTemplate(this.versionId()).subscribe({
-      next: blob => {
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.setAttribute('download', 'program-courses-template.csv');
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-      },
+  downloadImportTemplate(format: ImportTemplateFormat = 'csv'): void {
+    this.courseSvc.downloadProgramCoursesImportTemplate(this.versionId(), format).subscribe({
+      next: blob => saveBlobAs(blob, templateFileNameFor('program-courses-template.csv', format)),
       error: err => {
         const apiErr = toApiError(err);
-        this.alert?.error(apiErr?.message ?? 'Không thể tải tệp mẫu CSV');
+        this.alert?.error(apiErr?.message ?? 'Không thể tải tệp mẫu');
       },
     });
   }
