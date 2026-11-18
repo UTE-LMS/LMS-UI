@@ -3,6 +3,7 @@
     <h2 class="w-full text-center">{{langData.DANG_KY}}</h2>
     <!-- Toolbar here -->
   </div>
+  @if (form) {
   <div class="flex justify-center">
     <form nz-form [formGroup]="form" class="w-full max-w-112.5">
       <nz-form-item>
@@ -87,4 +88,5 @@
       </div>
     </form>
   </div>
+  }
 </div>

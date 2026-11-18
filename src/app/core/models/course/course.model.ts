@@ -11,7 +11,8 @@ export interface ICourse {
   id: string;
   code: string;
   name: string;
-  credits?: number;
+  /** API trả null khi học phần chưa khai số tín chỉ. */
+  credits?: number | null;
   facultyId?: string;
   facultyCode?: string;
   facultyName?: string;

@@ -682,3 +682,28 @@ Khi picomatch ra bản >4.0.7: chạy `npm update picomatch` (hoặc `npm audit 
 
 - **Sinh viên đã sửa/rà soát:** _chờ sinh viên rà soát_
 - **Commit / PR:** một commit `feat(auth): add Google sign-in button` trên nhánh `feat/google-login`, PR vào `main` (xem `git log`).
+
+
+## Phiên #22: Sửa 4 lỗi UI do quét bằng trình duyệt thật tìm ra
+
+### 1. Thông tin phiên làm việc
+- **Thời gian:** 2026-11-18
+- **Người thực hiện (`git config user.name`):** `TinMH`
+- **Sinh viên yêu cầu:** "sửa 4 lỗi UI vừa quét ra, tạo PR".
+- **Công cụ / mô hình:** Claude Code, Claude Sonnet 5.5. Không thêm package. Lỗi được tìm bằng `D:\TLCN\tools\ui-check` (Playwright + Chrome, API thật + MongoDB Docker; công cụ nằm ngoài repo).
+- **Nhánh:** `fix/ui-scan-bugs` (từ `main`).
+
+### 2. Các lỗi và cách sửa
+1. **`(null TC)` ở ô chọn học phần của màn Đề cương:** API trả `credits: null` nhưng mẫu kiểm tra `!== undefined`. Chuyển nhãn sang `courseLabel()` (xử lý cả `null`/thiếu, giữ "0 TC"); sửa kiểu `ICourse.credits` thành `number | null` cho đúng thực tế.
+2. **`NG01052 formGroup expects a FormGroup` ở `/auth/reset-password` (không có `?id=`) và `/auth/register` (khi đã đăng nhập):** form chỉ được tạo ở một nhánh của `ngOnInit` nhưng mẫu vẽ `[formGroup]="form"` vô điều kiện. Bọc phần form bằng `@if (form)` như trang đăng nhập.
+3. **Tràn ngang ở cỡ 390px:** `/mng/curriculum` (ô chọn CTĐT rộng cố định `w-72` trong hàng không xuống dòng; thêm `flex-wrap` và `max-w-full`), `/mng/courses` (nhóm nút không xuống dòng; thêm `flex-wrap`), `/mng/calculations` (3 bảng thiếu `nzScroll`, thêm `{ x: '720px' }` theo quy tắc rulebook).
+4. Test mới: `register.component.spec.ts` (3), `reset-password.component.spec.ts` (2), 2 ca `courseLabel` ở spec Đề cương. Đã kiểm tra các ca form **fail khi quay lại mẫu cũ** (stash 2 mẫu HTML) nên là test hồi quy thật.
+
+### 3. Kiểm chứng đã làm
+`ng test --no-watch`: 105 file, 1091 test đạt. `eslint src/app src/environments`: 0 lỗi. `ng build` thành công. **Quét lại bằng trình duyệt thật** (API thật, 23 màn × 2 cỡ): 0 vấn đề (trước đó 9); `scrollWidth` của 3 màn hẹp bằng đúng 390. Không có test tự động cho tràn ngang (jsdom không dựng được bố cục), nên phần này dựa vào lần quét trình duyệt.
+
+### 4. Bổ sung cho Phiên #21
+Bước gitleaks của PR Google báo ví dụ `idToken` cắt ngắn ở `doc/API-CONTRACT.md`; ngoại lệ hẹp trong `.gitleaks.toml` do sinh viên tự commit (`fb2f823`) theo mẫu ngoại lệ `accessToken` có sẵn. Đây là nới một cổng kiểm soát (rule 5), có chủ đích; nguyên nhân phát sinh là AI viết ví dụ token mà không kiểm tra luật gitleaks của repo.
+
+- **Sinh viên đã sửa/rà soát:** _chờ sinh viên rà soát_
+- **Commit / PR:** một commit `fix(ui): ...` trên nhánh `fix/ui-scan-bugs`, PR vào `main` (xem `git log`).

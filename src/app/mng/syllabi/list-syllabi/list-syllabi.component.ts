@@ -412,6 +412,12 @@ export class ListSyllabiComponent implements OnInit {
       });
   }
 
+  /** Nhãn học phần trong ô chọn: chỉ ghi "(n TC)" khi đã có số tín chỉ (API trả null nếu chưa khai). */
+  courseLabel(course: ICourse): string {
+    const credits = course.credits ?? undefined;
+    return `${course.code} — ${course.name}${credits === undefined ? '' : ` (${credits} TC)`}`;
+  }
+
   openImportModal(): void {
     this.importStep.set(1);
     this.importVersion.set('');
