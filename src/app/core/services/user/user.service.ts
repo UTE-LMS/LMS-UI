@@ -5,6 +5,7 @@ import { INLINE_ERRORS } from '@interceptors/http-context.token';
 import { ICsvImportResultResponse, IPagedResults } from '@models/common/response-data.model';
 import { IUser, IUserCreateDTO, IUserStatusDTO, IUserUpdateDTO, UserStatus } from '@models/user/user.model';
 import { Observable } from 'rxjs';
+import { ImportTemplateFormat, templateRequestParams } from '@services/common/import-file.util';
 
 /**
  * Quản trị người dùng (F01, US-02). Toàn bộ endpoint chỉ dành cho ADMIN (API-CONTRACT.md §5.3).
@@ -43,9 +44,10 @@ export class UserService {
     return this.http.put<IUser>(`${this.apiUrl}/${id}/status`, body, { context: this.inlineErrors() });
   }
 
-  downloadImportTemplate(): Observable<Blob> {
+  downloadImportTemplate(format: ImportTemplateFormat = 'csv'): Observable<Blob> {
     return this.http.get(UrlConstant.API.USER_IMPORT_TEMPLATE, {
       responseType: 'blob',
+      params: templateRequestParams(format),
       context: this.inlineErrors(),
     });
   }

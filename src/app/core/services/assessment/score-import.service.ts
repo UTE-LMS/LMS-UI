@@ -4,12 +4,14 @@ import { UrlConstant } from '@constants/url.constant';
 import {
   IImportBatch,
   IImportColumnMapping,
+  IImportFilePreview,
   IImportRowError,
   ImportSourceSystem,
   ReimportPolicy,
 } from '@models/assessment/score-import.model';
 import { IPagedResults } from '@models/common/response-data.model';
 import { Observable } from 'rxjs';
+import { ImportTemplateFormat, templateRequestParams } from '@services/common/import-file.util';
 
 @Injectable({
   providedIn: 'root',
@@ -43,6 +45,16 @@ export class ScoreImportService {
     );
   }
 
+  /**
+   * Nhờ API đọc dòng tiêu đề của tệp .xlsx (trình duyệt không đọc được) để tự ánh xạ cột; không tạo lô.
+   * Lỗi cấp tệp (tệp hỏng, thiếu dữ liệu) trả 400 giống khi tạo lô.
+   */
+  previewFile(sectionId: string, assessmentId: string, file: File): Observable<IImportFilePreview> {
+    const formData = new FormData();
+    formData.append('file', file);
+    return this.http.post<IImportFilePreview>(UrlConstant.API.IMPORT_BATCH_PREVIEW(sectionId, assessmentId), formData);
+  }
+
   listBatches(sectionId: string, assessmentId: string): Observable<IImportBatch[]> {
     return this.http.get<IImportBatch[]>(
       UrlConstant.API.IMPORT_BATCH_LIST(sectionId, assessmentId),
@@ -73,9 +85,10 @@ export class ScoreImportService {
     return this.http.post<IImportBatch>(UrlConstant.API.IMPORT_BATCH_ROLLBACK(id), {});
   }
 
-  downloadTemplateCsv(assessmentId: string): Observable<Blob> {
+  downloadTemplateCsv(assessmentId: string, format: ImportTemplateFormat = 'csv'): Observable<Blob> {
     return this.http.get(UrlConstant.API.ASSESSMENT_SCORE_TEMPLATE_CSV(assessmentId), {
       responseType: 'blob',
+      params: templateRequestParams(format),
     });
   }
 }

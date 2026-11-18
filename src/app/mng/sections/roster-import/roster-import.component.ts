@@ -16,6 +16,7 @@ import { catchError, of } from 'rxjs';
 import {
   buildRosterErrorCsv, IRosterRowError, ROSTER_TEMPLATE_CSV, toRosterRowErrors, validateRosterFile,
 } from '../sections.util';
+import { ImportTemplateFormat, saveBlobAs, templateFileNameFor } from '@services/common/import-file.util';
 
 type ImportStep = 'PICK' | 'DONE';
 
@@ -148,18 +149,15 @@ export class RosterImportComponent implements OnInit {
     this.download(buildRosterErrorCsv(this.rowErrors()), 'danh-sach-lop-bao-loi.csv');
   }
 
-  downloadTemplate(): void {
-    this.enrollmentSvc.downloadSectionImportTemplate(this.sectionId()).subscribe({
-      next: blob => {
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = 'enrollments-template.csv';
-        link.click();
-        URL.revokeObjectURL(url);
-      },
+  downloadTemplate(format: ImportTemplateFormat = 'csv'): void {
+    this.enrollmentSvc.downloadSectionImportTemplate(this.sectionId(), format).subscribe({
+      next: blob => saveBlobAs(blob, templateFileNameFor('enrollments-template.csv', format)),
       error: () => {
-        this.download(ROSTER_TEMPLATE_CSV, 'enrollments-template.csv');
+        if (format === 'csv') {
+          this.download(ROSTER_TEMPLATE_CSV, 'enrollments-template.csv');
+        } else {
+          this.submitError.set('Không tải được tệp mẫu Excel. Hãy thử lại hoặc tải bản CSV.');
+        }
       },
     });
   }

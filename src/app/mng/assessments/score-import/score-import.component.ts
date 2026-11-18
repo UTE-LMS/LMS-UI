@@ -18,6 +18,10 @@ import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzSelectModule } from 'ng-zorro-antd/select';
 import { NzTableModule } from 'ng-zorro-antd/table';
 import { ToastrService } from 'ngx-toastr';
+import { finalize } from 'rxjs';
+import {
+  ImportTemplateFormat, importFileNameError, isXlsxFileName, saveBlobAs, templateFileNameFor,
+} from '@services/common/import-file.util';
 
 export type ScoreImportStep = 'UPLOAD' | 'PREVIEW';
 
@@ -54,6 +58,7 @@ export class ScoreImportComponent implements OnInit {
   readonly sourceSystem = signal<ImportSourceSystem>('CSV');
   readonly isTemplateFormat = signal<boolean>(false);
   readonly isDownloadingTemplate = signal<boolean>(false);
+  readonly isReadingHeaders = signal<boolean>(false);
   readonly itemMappings = signal<{
     column: string;
     itemId: string;
@@ -123,22 +128,17 @@ export class ScoreImportComponent implements OnInit {
     this.itemMappings.set(mappings);
   }
 
-  downloadTemplateCsv(): void {
+  downloadTemplateCsv(format: ImportTemplateFormat = 'csv'): void {
     const currentAss = this.assessment();
     if (!currentAss) {
       return;
     }
     this.isDownloadingTemplate.set(true);
     this.errorMessage.set(null);
-    this.scoreImportSvc.downloadTemplateCsv(currentAss.id).subscribe({
+    this.scoreImportSvc.downloadTemplateCsv(currentAss.id, format).subscribe({
       next: (blob: Blob) => {
         this.isDownloadingTemplate.set(false);
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `${currentAss.code || 'assessment'}-scores-template.csv`;
-        link.click();
-        URL.revokeObjectURL(url);
+        saveBlobAs(blob, templateFileNameFor(`${currentAss.code || 'assessment'}-scores-template.csv`, format));
       },
       error: (err: unknown) => {
         this.isDownloadingTemplate.set(false);
@@ -153,12 +153,21 @@ export class ScoreImportComponent implements OnInit {
       return;
     }
     const selectedFile = inputEl.files[0];
-    if (!selectedFile.name.toLowerCase().endsWith('.csv')) {
-      this.errorMessage.set('Vui lòng chọn tệp định dạng .csv');
+    const nameError = importFileNameError(selectedFile.name);
+    if (nameError) {
+      this.errorMessage.set(nameError);
       return;
     }
     this.file.set(selectedFile);
     this.errorMessage.set(null);
+
+    if (isXlsxFileName(selectedFile.name)) {
+      // Trình duyệt không đọc được .xlsx nên nhờ API đọc dòng tiêu đề
+      this.sourceSystem.set('EXCEL');
+      this.readHeadersFromServer(selectedFile);
+      return;
+    }
+    this.sourceSystem.set('CSV');
 
     // Đọc header của CSV để tự động ánh xạ (loại bỏ UTF-8 BOM nếu có)
     const reader = new FileReader();
@@ -174,6 +183,29 @@ export class ScoreImportComponent implements OnInit {
       this.autoMapHeaders(headers);
     };
     reader.readAsText(selectedFile, 'UTF-8');
+  }
+
+  private readHeadersFromServer(selectedFile: File): void {
+    const currentAss = this.assessment();
+    if (!currentAss?.sectionId) {
+      this.file.set(null);
+      this.errorMessage.set('Thiếu thông tin lớp học phần');
+      return;
+    }
+    this.isReadingHeaders.set(true);
+    this.scoreImportSvc.previewFile(currentAss.sectionId, currentAss.id, selectedFile).pipe(
+      finalize(() => this.isReadingHeaders.set(false)),
+    ).subscribe({
+      next: preview => {
+        this.csvHeaders.set(preview.headers);
+        this.autoMapHeaders(preview.headers);
+      },
+      error: (err: unknown) => {
+        this.file.set(null);
+        this.csvHeaders.set([]);
+        this.errorMessage.set(toUserError(err).message);
+      },
+    });
   }
 
   private autoMapHeaders(headers: string[]): void {
@@ -237,7 +269,7 @@ export class ScoreImportComponent implements OnInit {
     if (!this.isTemplateFormat()) {
       const unmapped = this.itemMappings().find(m => !m.column);
       if (unmapped) {
-        this.errorMessage.set(`Vui lòng chọn cột trong tệp CSV cho câu "${unmapped.itemCode}"`);
+        this.errorMessage.set(`Vui lòng chọn cột trong tệp cho câu "${unmapped.itemCode}"`);
         return;
       }
 

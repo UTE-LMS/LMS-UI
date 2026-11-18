@@ -755,7 +755,7 @@ Phản hồi `200`:
 | PUT | `/sections/{id}` | như POST | body `{ lecturerIds[≥1] }` (học phần/đề cương/học kỳ **bất biến**) |
 | PUT | `/sections/{id}/status` | như POST | body `{ status: OPEN \| CLOSED \| LOCKED, reason? }`; mở lại lớp `LOCKED` bắt buộc `reason` |
 | GET | `/sections/{id}/enrollments?status=` | đọc được lớp | `EnrollmentListResponse` |
-| POST | `/sections/{id}/enrollments/import` | `ADMIN` hoặc giảng viên của lớp (`canAccessSection` WRITE) | `multipart/form-data`, trường **`file`** (CSV) → `EnrollmentImportResponse` |
+| POST | `/sections/{id}/enrollments/import` | `ADMIN` hoặc giảng viên của lớp (`canAccessSection` WRITE) | `multipart/form-data`, trường **`file`** (`.csv` hoặc `.xlsx`) → `EnrollmentImportResponse` |
 | PUT | `/enrollments/{id}/status` | `ADMIN` hoặc giảng viên của lớp | body `{ status: ENROLLED \| WITHDRAWN }` |
 
 **DTO:** `TermResponse { id, code, academicYear, startDate, endDate, status }`. `SectionResponse { id, code, courseId, syllabusId, termId, lecturerIds[], enrolledCount, status }`. `EnrollmentListResponse { sectionId, enrolled, withdrawn, enrollments[{ id, sectionId, studentId, studentRef, cohort, majorCode, status, enrolledAt }] }`. `EnrollmentImportResponse { sectionId, totalRows, newStudents, reusedStudents, sectionEnrolledCount, ignoredColumns[] }`.
@@ -764,10 +764,13 @@ Phản hồi `200`:
 
 > **Trạng thái:** đã hiện thực đầy đủ ở backend (`AssessmentController#getScoreTemplateCsv` & `ImportBatchController`). Tiền tố `/api/v1`.
 
+> **Định dạng tệp nhập (ADR 0015):** mọi endpoint nhận tệp `multipart/form-data` (người dùng, khoa, học phần, CTĐT, học phần trong CTĐT, đề cương, lớp, ghi danh, điểm) nhận **`.csv` hoặc `.xlsx`** theo đuôi tên tệp; `.xls` bị từ chối 400. Với `.xlsx`: chỉ đọc trang tính đầu tiên, dòng 1 là tiêu đề, số dòng trong báo lỗi bằng số dòng trong Excel, ô công thức lấy giá trị đã tính. Mọi endpoint tải tệp mẫu (`.../import-template`, `/assessments/{id}/scores/template-csv`) nhận thêm `?format=csv` (mặc định) hoặc `?format=xlsx`; giá trị khác trả 400.
+
 | Phương thức | Đường dẫn | Ai gọi được | Ghi chú |
 |---|---|---|---|
-| GET | `/assessments/{id}/scores/template-csv` | đọc được bài đánh giá (`canAccessAssessment` READ) | Tải tệp CSV mẫu có UTF-8 BOM, header chuẩn `MaSV,HoTen,<item.code> - <clo.code> (Max: <maxScore>)`, danh sách SV `ENROLLED` với ô điểm để trống. Trả 422 nếu bài chưa `LOCKED`/`SCORE_ENTERED` hoặc là bài khung `SYLLABUS_TEMPLATE`. |
-| POST | `/sections/{sectionId}/assessments/{assessmentId}/import-batches` | `LECTURER` của lớp (`canAccessSection` WRITE) | `multipart/form-data`: `file` (CSV), `reimportPolicy` (`REJECT_ON_CONFLICT`), `sourceSystem` (`CSV`\|`MOODLE_EXPORT`, tùy chọn), `columnMapping` (chuỗi JSON, tùy chọn). **Nếu bỏ trống `columnMapping` và CSV dùng header tệp mẫu, hệ thống tự động nhận diện ánh xạ cột.** Trả 201 `ImportBatchResponse` (`UPLOADED`). |
+| GET | `/assessments/{id}/scores/template-csv` | đọc được bài đánh giá (`canAccessAssessment` READ) | Tải tệp CSV mẫu (hoặc `.xlsx` nếu `?format=xlsx`) có UTF-8 BOM, header chuẩn `MaSV,HoTen,<item.code> - <clo.code> (Max: <maxScore>)`, danh sách SV `ENROLLED` với ô điểm để trống. Trả 422 nếu bài chưa `LOCKED`/`SCORE_ENTERED` hoặc là bài khung `SYLLABUS_TEMPLATE`. |
+| POST | `/sections/{sectionId}/assessments/{assessmentId}/import-batches` | `LECTURER` của lớp (`canAccessSection` WRITE) | `multipart/form-data`: `file` (`.csv` hoặc `.xlsx`), `reimportPolicy` (`REJECT_ON_CONFLICT`), `sourceSystem` (`CSV`\|`MOODLE_EXPORT`\|`EXCEL`, tùy chọn; tệp `.xlsx` luôn thành `EXCEL` trừ khi khai `MOODLE_EXPORT`, còn `EXCEL` với tệp `.csv` bị 422), `columnMapping` (chuỗi JSON, tùy chọn). **Nếu bỏ trống `columnMapping` và CSV dùng header tệp mẫu, hệ thống tự động nhận diện ánh xạ cột.** Trả 201 `ImportBatchResponse` (`UPLOADED`). Tệp `.xlsx` được lưu nguyên trạng làm tệp gốc. |
+| POST | `/sections/{sectionId}/assessments/{assessmentId}/import-batches/preview` | `LECTURER` của lớp (`canAccessSection` WRITE) | `multipart/form-data`: `file` (`.csv` hoặc `.xlsx`). Không tạo lô. Trả 200 `{ "headers": ["studentCode", "Q1"], "rowCount": 120 }` để UI tự ánh xạ cột. Lỗi cấp tệp trả 400 như khi tạo lô. |
 | GET | `/sections/{sectionId}/assessments/{assessmentId}/import-batches` | đọc được lớp | `ImportBatchResponse[]` (mới nhất trước). |
 | GET | `/import-batches/{id}` | đọc được lớp của lô | `ImportBatchResponse`. |
 | GET | `/import-batches/{id}/errors?page=0&size=20` | đọc được lớp của lô | `PageResponse<ImportRowErrorResponse>` sắp theo `rowNumber`. |

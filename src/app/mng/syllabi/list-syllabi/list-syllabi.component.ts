@@ -36,6 +36,7 @@ import {
   Subject,
   switchMap,
 } from 'rxjs';
+import { ImportTemplateFormat, saveBlobAs, templateFileNameFor } from '@services/common/import-file.util';
 
 @Component({
   selector: 'app-list-syllabi',
@@ -425,22 +426,18 @@ export class ListSyllabiComponent implements OnInit {
     this.isImportModalVisible.set(false);
   }
 
-  downloadCsvTemplate(): void {
+  downloadCsvTemplate(format: ImportTemplateFormat = 'csv'): void {
     const courseId = this.selectedCourseId();
     if (!courseId) {
       return;
     }
-    this.syllabusSvc.downloadImportTemplate(courseId).subscribe({
-      next: blob => {
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `syllabus-template-${this.selectedCourse()?.code ?? 'course'}.csv`;
-        a.click();
-        URL.revokeObjectURL(url);
-      },
+    this.syllabusSvc.downloadImportTemplate(courseId, format).subscribe({
+      next: blob => saveBlobAs(
+        blob,
+        templateFileNameFor(`syllabus-template-${this.selectedCourse()?.code ?? 'course'}.csv`, format),
+      ),
       error: () => {
-        this.alert.error('Không thể tải tệp CSV mẫu đề cương');
+        this.alert.error('Không thể tải tệp mẫu đề cương');
       },
     });
   }

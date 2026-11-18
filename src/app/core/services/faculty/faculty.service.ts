@@ -13,6 +13,7 @@ import {
 } from '@models/faculty/faculty.model';
 import { IUser } from '@models/user/user.model';
 import { map, Observable } from 'rxjs';
+import { ImportTemplateFormat, templateRequestParams } from '@services/common/import-file.util';
 
 @Injectable({
   providedIn: 'root',
@@ -101,9 +102,10 @@ export class FacultyService {
     });
   }
 
-  downloadImportTemplate(): Observable<Blob> {
+  downloadImportTemplate(format: ImportTemplateFormat = 'csv'): Observable<Blob> {
     return this.http.get(UrlConstant.API.FACULTY_IMPORT_TEMPLATE, {
       responseType: 'blob',
+      params: templateRequestParams(format),
       context: this.inlineErrors(),
     });
   }

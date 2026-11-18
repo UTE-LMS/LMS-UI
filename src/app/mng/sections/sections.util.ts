@@ -1,4 +1,5 @@
 import { IApiFieldError } from '@models/common/response-data.model';
+import { importFileNameError } from '@services/common/import-file.util';
 
 /** Dấu hiển thị cho dữ liệu chưa có (không bao giờ hiện 0 thay cho thiếu). */
 export const NOT_AVAILABLE = '—';
@@ -62,8 +63,9 @@ export const MAX_ROSTER_FILE_BYTES = 1024 * 1024;
 
 /** Kiểm tra nhanh phía client để báo lỗi sớm; backend vẫn kiểm lại và quyết định (US-20/AC-3). */
 export function validateRosterFile(file: { name: string; size: number; }): string | null {
-  if (!file.name.toLowerCase().endsWith('.csv')) {
-    return 'Chỉ nhận tệp CSV (.csv). Tệp Excel (.xlsx) chưa được hỗ trợ.';
+  const nameError = importFileNameError(file.name);
+  if (nameError) {
+    return nameError;
   }
   if (file.size === 0) {
     return 'Tệp rỗng, không có dòng nào để ghi danh.';

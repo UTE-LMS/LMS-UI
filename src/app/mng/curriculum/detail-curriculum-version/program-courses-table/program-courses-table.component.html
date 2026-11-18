@@ -160,17 +160,29 @@
     <div class="space-y-4">
       <div class="p-3 rounded-lg bg-slate-50 border border-slate-200 space-y-2">
         <div class="flex items-center justify-between gap-2">
-          <span class="text-xs font-medium text-slate-700">Tải tệp CSV mẫu khung học phần:</span>
-          <button
-            nz-button
-            nzType="default"
-            nzSize="small"
-            type="button"
-            data-testid="btn-download-program-courses-template"
-            (click)="downloadImportTemplate()"
-          >
-            <i class="fa-solid fa-download mr-1.5"></i> Tải file mẫu CSV
-          </button>
+          <span class="text-xs font-medium text-slate-700">Tải tệp mẫu khung học phần:</span>
+          <span class="flex gap-2">
+            <button
+              nz-button
+              nzType="default"
+              nzSize="small"
+              type="button"
+              data-testid="btn-download-program-courses-template"
+              (click)="downloadImportTemplate('csv')"
+            >
+              <i class="fa-solid fa-download mr-1.5"></i> Mẫu CSV
+            </button>
+            <button
+              nz-button
+              nzType="default"
+              nzSize="small"
+              type="button"
+              data-testid="btn-download-program-courses-template-xlsx"
+              (click)="downloadImportTemplate('xlsx')"
+            >
+              <i class="fa-solid fa-file-excel mr-1.5"></i> Mẫu Excel
+            </button>
+          </span>
         </div>
         <div class="text-xs text-slate-600">
           Cột hỗ trợ: <code>courseCode,semester,credits,type,category,previousCourseCodes,prerequisiteCourseCodes</code>
@@ -179,12 +191,12 @@
 
       <div>
         <label for="programCoursesCsvFile" class="block text-sm font-medium text-slate-700 mb-1">
-          Chọn tệp CSV <span class="text-rose-500">*</span>
+          Chọn tệp (.csv hoặc .xlsx) <span class="text-rose-500">*</span>
         </label>
         <input
           id="programCoursesCsvFile"
           type="file"
-          accept=".csv,text/csv"
+          accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
           class="block w-full text-sm text-slate-600 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
           (change)="onFileSelected($event)"
         />

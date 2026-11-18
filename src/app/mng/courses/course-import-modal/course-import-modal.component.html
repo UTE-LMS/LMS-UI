@@ -23,14 +23,26 @@
             Hệ thống hỗ trợ tiếng Việt có dấu (UTF-8).
           </p>
         </div>
-        <button
-          type="button"
-          class="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-blue-100 text-blue-700 border border-blue-300 rounded-md font-medium text-xs transition shadow-xs cursor-pointer"
-          (click)="downloadTemplate()"
-        >
-          <i class="fa-solid fa-download"></i>
-          Tải file mẫu CSV
-        </button>
+        <div class="shrink-0 flex flex-col gap-1.5">
+          <button
+            id="btn-template-csv"
+            type="button"
+            class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-blue-100 text-blue-700 border border-blue-300 rounded-md font-medium text-xs transition shadow-xs cursor-pointer"
+            (click)="downloadTemplate('csv')"
+          >
+            <i class="fa-solid fa-download"></i>
+            Tải file mẫu CSV
+          </button>
+          <button
+            id="btn-template-xlsx"
+            type="button"
+            class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-blue-100 text-blue-700 border border-blue-300 rounded-md font-medium text-xs transition shadow-xs cursor-pointer"
+            (click)="downloadTemplate('xlsx')"
+          >
+            <i class="fa-solid fa-file-excel"></i>
+            Tải file mẫu Excel
+          </button>
+        </div>
       </div>
     </div>
 
@@ -91,7 +103,7 @@
       <input
         #fileInput
         type="file"
-        accept=".csv,text/csv"
+        accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         class="hidden"
         (change)="onFileSelected($event)"
       />
@@ -102,9 +114,9 @@
           <i class="fa-solid fa-cloud-arrow-up"></i>
         </div>
         <p class="font-medium text-slate-800 text-sm mb-1">
-          Kéo thả tệp CSV vào đây, hoặc <span class="text-blue-600 hover:underline">nhấp để duyệt tệp</span>
+          Kéo thả tệp vào đây, hoặc <span class="text-blue-600 hover:underline">nhấp để duyệt tệp</span>
         </p>
-        <p class="text-xs text-slate-500 m-0">Hỗ trợ định dạng .csv (UTF-8), dung lượng tối đa 10MB</p>
+        <p class="text-xs text-slate-500 m-0">Hỗ trợ định dạng .csv (UTF-8) hoặc .xlsx, dung lượng tối đa 10MB</p>
       </div>
       } @else {
       <div class="flex items-center justify-between p-2">

@@ -34,7 +34,7 @@
   @if (step() === 'PICK') {
   <section class="mt-8">
     <p class="m-0 text-sm text-slate-800">
-      Tệp CSV (UTF-8, phân cách <code>,</code> hoặc <code>;</code>, tối đa 5000 dòng dữ liệu) có cột
+      Tệp CSV (UTF-8, phân cách <code>,</code> hoặc <code>;</code>) hoặc Excel <code>.xlsx</code> (trang tính đầu tiên), tối đa 5000 dòng dữ liệu, có cột
       <code>studentCode</code> (bắt buộc), <code>cohort</code>. Cột khác (họ tên, email…)
       bị bỏ qua và được báo lại. Hệ thống dùng Mã số sinh viên (MSSV).
     </p>
@@ -42,15 +42,18 @@
       <label class="inline-flex cursor-pointer items-center gap-2 rounded border border-slate-500 px-3 py-1.5 text-sm font-medium hover:bg-slate-50 focus-within:ring-2 focus-within:ring-blue-700"
         [class.opacity-50]="frozenReason()">
         <i class="fa-solid fa-file-csv" aria-hidden="true"></i>
-        <span>{{ file() ? 'Đổi tệp' : 'Chọn tệp CSV' }}</span>
-        <input #fileInput class="sr-only" type="file" accept=".csv,text/csv" [disabled]="!!frozenReason()"
+        <span>{{ file() ? 'Đổi tệp' : 'Chọn tệp CSV hoặc Excel' }}</span>
+        <input #fileInput class="sr-only" type="file" accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" [disabled]="!!frozenReason()"
           (change)="onFileSelected($event)" />
       </label>
       @if (file(); as picked) {
       <span class="text-sm text-slate-800">{{ picked.name }}</span>
       }
-      <button type="button" class="rounded px-2 py-1 text-sm font-medium text-blue-800 underline hover:bg-slate-100" (click)="downloadTemplate()">
-        <i class="fa-solid fa-download mr-1.5" aria-hidden="true"></i>Tải tệp mẫu
+      <button type="button" class="rounded px-2 py-1 text-sm font-medium text-blue-800 underline hover:bg-slate-100" (click)="downloadTemplate('csv')">
+        <i class="fa-solid fa-download mr-1.5" aria-hidden="true"></i>Tải mẫu CSV
+      </button>
+      <button type="button" class="rounded px-2 py-1 text-sm font-medium text-blue-800 underline hover:bg-slate-100" (click)="downloadTemplate('xlsx')">
+        <i class="fa-solid fa-file-excel mr-1.5" aria-hidden="true"></i>Tải mẫu Excel
       </button>
     </div>
     @if (fileError(); as message) {

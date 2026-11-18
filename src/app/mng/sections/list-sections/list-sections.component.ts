@@ -20,6 +20,7 @@ import { SectionService } from '@services/course/section.service';
 import { SyllabusService } from '@services/course/syllabus.service';
 import { TermService } from '@services/course/term.service';
 import { UserService } from '@services/user/user.service';
+import { ImportTemplateFormat } from '@services/common/import-file.util';
 import { CsvImportModalComponent } from '@widget/csv-import-modal/csv-import-modal.component';
 import { DisplayChipComponent } from '@widget/display-chip/display-chip.component';
 import { ErrorStateComponent } from '@widget/error-state/error-state.component';
@@ -103,9 +104,9 @@ export class ListSectionsComponent implements OnInit {
 
   readonly bulkEnrollmentGuideText = 'Cột CSV: sectionCode, studentCode, cohort. Dùng để ghi danh hàng loạt nhiều lớp học phần.';
 
-  readonly downloadSectionTemplateFn = () => this.sectionSvc.downloadImportTemplate();
+  readonly downloadSectionTemplateFn = (format: ImportTemplateFormat) => this.sectionSvc.downloadImportTemplate(format);
   readonly importSectionsFn = (file: File) => this.sectionSvc.importSections(file);
-  readonly downloadBulkEnrollmentTemplateFn = () => this.enrollmentSvc.downloadBulkImportTemplate();
+  readonly downloadBulkEnrollmentTemplateFn = (format: ImportTemplateFormat) => this.enrollmentSvc.downloadBulkImportTemplate(format);
   readonly importBulkEnrollmentsFn = (file: File) => this.enrollmentSvc.importEnrollmentsBulk(file);
 
   readonly lecturerNames = computed<ReadonlyMap<string, string>>(

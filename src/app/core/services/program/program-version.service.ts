@@ -10,6 +10,7 @@ import {
   ProgramVersionStatus,
 } from '@models/program/program-version.model';
 import { Observable } from 'rxjs';
+import { ImportTemplateFormat, templateRequestParams } from '@services/common/import-file.util';
 
 export interface IProgramVersionImportMetadata {
   totalCredits?: number | null;
@@ -67,9 +68,10 @@ export class ProgramVersionService {
     });
   }
 
-  downloadImportTemplate(): Observable<Blob> {
+  downloadImportTemplate(format: ImportTemplateFormat = 'csv'): Observable<Blob> {
     return this.http.get(UrlConstant.API.PROGRAM_VERSION_IMPORT_TEMPLATE, {
       responseType: 'blob',
+      params: templateRequestParams(format),
       context: this.inlineErrors(),
     });
   }
