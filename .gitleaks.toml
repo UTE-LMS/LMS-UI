@@ -5,7 +5,10 @@ title = "LMS-UI gitleaks"
 useDefault = true
 
 [[allowlists]]
-description = "Ví dụ JWT đã cắt ngắn ('...') trong tài liệu hợp đồng API; không phải token thật."
+description = "Ví dụ JWT đã cắt ngắn ('...') trong tài liệu hợp đồng API (đầu HS256 của accessToken, đầu RS256 của idToken Google); không phải token thật."
 paths = ['''doc/API-CONTRACT\.md''']
-regexes = ['''eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9\.\.\.''']
+regexes = [
+  '''eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9\.\.\.''',
+  '''eyJhbGciOiJSUzI1NiIs\.\.\.''',
+]
 condition = "AND"

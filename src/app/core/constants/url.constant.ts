@@ -23,6 +23,7 @@ export const UrlConstant = {
 
     // F01 - Xác thực và người dùng (API-CONTRACT.md §5)
     AUTH_LOGIN: environment.serverUrl + 'api/v1/auth/login',
+    AUTH_GOOGLE: environment.serverUrl + 'api/v1/auth/google',
     AUTH_LOGOUT: environment.serverUrl + 'api/v1/auth/logout',
     AUTH_ME: environment.serverUrl + 'api/v1/auth/me',
     AUTH_CHANGE_PASSWORD: environment.serverUrl + 'api/v1/auth/change-password',

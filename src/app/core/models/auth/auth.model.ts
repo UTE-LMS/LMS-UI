@@ -44,6 +44,11 @@ export interface ILoginRequest {
   password: string;
 }
 
+/** Body của POST /api/v1/auth/google (GoogleLoginRequest, §5.2.6): ID token do Google Identity Services cấp. */
+export interface IGoogleLoginRequest {
+  idToken: string;
+}
+
 /** LoginResponse (§5.2.1). */
 export interface ILoginResponse {
   accessToken: string;

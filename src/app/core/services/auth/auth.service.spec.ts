@@ -239,4 +239,33 @@ describe('AuthService (F01 US-01 & M01 Faculty Scope)', () => {
     });
     expect(unsuppMessage).toBeTruthy();
   });
+
+  it('ADR 0016: loginWithGoogle gửi ID token tới /auth/google, lưu phiên và giữ cờ mustChangePassword', () => {
+    const res = loginResponse();
+    res.user.mustChangePassword = true;
+
+    service.loginWithGoogle('id-token-gia').subscribe();
+
+    const req = http.expectOne(UrlConstant.API.AUTH_GOOGLE);
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({ idToken: 'id-token-gia' });
+    expect(req.request.context.get(INLINE_ERRORS)).toBe(true);
+    req.flush(res);
+
+    expect(service.getToken()).toBe('token-gia-lap');
+    expect(service.isAuthenticated()).toBe(true);
+    expect(service.mustChangePassword()).toBe(true);
+  });
+
+  it('ADR 0016: loginWithGoogle lỗi 401 không lưu phiên', () => {
+    let failed = false;
+    service.loginWithGoogle('id-token-gia').subscribe({ error: () => (failed = true) });
+
+    http.expectOne(UrlConstant.API.AUTH_GOOGLE)
+      .flush({ status: 401, message: 'Email Google này chưa được cấp tài khoản' }, { status: 401, statusText: 'Unauthorized' });
+
+    expect(failed).toBe(true);
+    expect(service.getToken()).toBe('');
+    expect(service.isAuthenticated()).toBe(false);
+  });
 });

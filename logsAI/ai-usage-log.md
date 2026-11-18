@@ -653,3 +653,32 @@ Khi picomatch ra bản >4.0.7: chạy `npm update picomatch` (hoặc `npm audit 
 
 - **Sinh viên đã sửa/rà soát:** _chờ sinh viên rà soát_
 - **Commit / PR:** một commit `ci: split dependency audit` trên nhánh `chore/fix-npm-audit` (xem `git log`).
+
+
+## Phiên #21: Nút "Đăng nhập bằng Google" (UI, ADR 0016 ở repo API)
+
+### 1. Thông tin phiên làm việc
+- **Thời gian:** 2026-11-18
+- **Người thực hiện (`git config user.name`):** `TinMH`
+- **Sinh viên yêu cầu:** "làm tiếp OAuth2"; chính sách tài khoản, cờ đổi mật khẩu và luồng do sinh viên chọn qua câu hỏi (xem ADR 0016).
+- **Công cụ / mô hình:** Claude Code, Claude Sonnet 5.5. **Không thêm package npm** (dùng `@abacritt/angularx-social-login` đã có).
+- **Nhánh:** `feat/google-login` (từ `main`).
+
+### 2. Các hạng mục đã thực hiện
+1. `AuthService.loginWithGoogle(idToken)` → `POST /api/v1/auth/google`, lưu phiên giống `login()` (kể cả cờ `mustChangePassword`); `url.constant`, `auth.model`.
+2. Trang đăng nhập: thay thẻ `<a>` Google không hoạt động bằng `asl-google-signin-button`; lắng nghe `SocialAuthService.authState`, đổi `idToken` lấy phiên rồi vào trang quản lý (giữ `returnUrl`); lỗi 401 hiện ngay trong thẻ đăng nhập; sau mỗi lần xử lý gọi `signOut()` của thư viện để `authState` (phát lại cho người đăng ký sau) không tự gửi lại token cũ.
+3. Client ID nạp lúc chạy như URL API: `runtime-config.ts` (`googleClientId`, chỉ nhận dạng `<số>-<chuỗi>.apps.googleusercontent.com`), `environment(.prod).ts`, `deploy/docker-entrypoint.d/40-runtime-config.sh` (biến `GOOGLE_CLIENT_ID`, kiểm tra định dạng để không chèn được mã vào `config.js`), `doc/deploy/staging.md`. Rỗng = ẩn nút và không nạp script Google. **Không dùng lại `keyGoogle`** (đang là muối băm của localStorage và là client ID cũ không rõ chủ).
+4. `core.providers.ts`: chỉ đăng ký `GoogleLoginProvider` khi có client ID.
+5. `doc/API-CONTRACT.md` §5.2.6.
+
+### 3. Kiểm chứng đã làm
+`ng test --no-watch`: 103 file, 1084 test đạt. `eslint src/app src/environments`: 0 lỗi (sau khi sửa lỗi thụt lề và kiểu `any` do AI viết). `ng build` thành công. Chạy thử script entrypoint với client ID hợp lệ, rỗng và chuỗi chèn mã (`"};alert(1);//`): đúng như dự kiến (ghi đúng, ghi rỗng, từ chối exit 1). **Chưa chạy với Google thật**: chưa có OAuth client ID nên chưa thấy nút hiện và chưa đổi được ID token thật; chưa chạy với backend thật.
+
+### 4. Lỗi/ảo giác AI đã phát hiện
+| Mô tả | Cách phát hiện | Nguyên nhân | Commit sửa |
+|---|---|---|---|
+| Truyền `width="320"` (chuỗi) cho `asl-google-signin-button` | `ng test` báo TS2322 | Không đối chiếu kiểu input của thư viện (là `number`) | sửa trước khi commit |
+| Một test `LoginComponent` tự dựng TestBed bị NullInjector vì thiếu `SocialAuthService` | `ng test` | Thêm dependency vào component mà quên stub ở test không dùng `setup()` chung | sửa trước khi commit |
+
+- **Sinh viên đã sửa/rà soát:** _chờ sinh viên rà soát_
+- **Commit / PR:** một commit `feat(auth): add Google sign-in button` trên nhánh `feat/google-login`, PR vào `main` (xem `git log`).

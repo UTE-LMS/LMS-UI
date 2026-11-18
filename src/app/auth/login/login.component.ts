@@ -1,7 +1,9 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, inject, OnInit, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormGroup, NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { GoogleSigninButtonDirective, SocialAuthService } from '@abacritt/angularx-social-login';
 import { ActivatedRoute, Router } from '@angular/router';
+import { environment } from '@env';
 import { UrlConstant } from '@constants/url.constant';
 import { ILoginRequest } from '@models/auth/auth.model';
 import { MakeForm } from '@models/common/make-form.model';
@@ -17,7 +19,7 @@ import { NzFormModule } from 'ng-zorro-antd/form';
 import { NzGridModule } from 'ng-zorro-antd/grid';
 import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
-import { catchError, EMPTY, exhaustMap, filter, finalize, Subject, tap } from 'rxjs';
+import { catchError, EMPTY, exhaustMap, filter, finalize, map, Subject, tap } from 'rxjs';
 
 /** Thông báo dùng chung khi lỗi 401 không có body chuẩn (sai tài khoản/mật khẩu hoặc tài khoản bị khóa). */
 const GENERIC_LOGIN_FAILED = 'Tên đăng nhập hoặc mật khẩu không chính xác';
@@ -37,12 +39,14 @@ const GENERIC_LOGIN_FAILED = 'Tên đăng nhập hoặc mật khẩu không chí
     NzCheckboxModule,
     NzTooltipModule,
     FieldErrorDisplayComponent,
+    GoogleSigninButtonDirective,
   ],
 })
 export class LoginComponent implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
   private readonly fb = inject(NonNullableFormBuilder);
   private readonly authSvc = inject(AuthService);
+  private readonly socialAuthSvc = inject(SocialAuthService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   protected readonly formValidSvc = inject(FormValidatorService);
@@ -52,11 +56,14 @@ export class LoginComponent implements OnInit {
   readonly showPassLogin = signal(false);
   /** Thông báo lỗi từ backend (401, 400 không gắn được vào ô nhập), hiển thị ngay trong thẻ đăng nhập. */
   readonly loginErrorMsg = signal('');
+  /** Chỉ hiện nút Google khi đã cấu hình client ID (ADR 0016); rỗng thì ẩn và không nạp script của Google. */
+  protected readonly googleEnabled = environment.googleClientId.length > 0;
 
   private readonly submit$ = new Subject<void>();
 
   constructor() {
     this.setupSubmitStream();
+    this.setupGoogleStream();
   }
 
   ngOnInit(): void {
@@ -104,6 +111,41 @@ export class LoginComponent implements OnInit {
       }),
       takeUntilDestroyed(this.destroyRef),
     ).subscribe();
+  }
+
+  /**
+   * Nút Google (Google Identity Services) phát ID token qua `authState`; đổi nó lấy phiên của hệ thống. Backend chỉ nhận
+   * email trùng tài khoản Admin đã tạo, nên lỗi 401 hiện ngay trong thẻ đăng nhập như đăng nhập mật khẩu.
+   */
+  private setupGoogleStream(): void {
+    this.socialAuthSvc.authState.pipe(
+      map(user => user?.idToken ?? ''),
+      filter(idToken => idToken.length > 0),
+      tap(() => {
+        this.loginErrorMsg.set('');
+        this.isSubmitting.set(true);
+      }),
+      exhaustMap(idToken => this.authSvc.loginWithGoogle(idToken).pipe(
+        tap(() => void this.router.navigateByUrl(this.resolveTargetUrl())),
+        catchError((err: unknown) => {
+          this.showLoginError(err);
+          return EMPTY;
+        }),
+        finalize(() => {
+          this.isSubmitting.set(false);
+          this.forgetGoogleUser();
+        }),
+      )),
+      takeUntilDestroyed(this.destroyRef),
+    ).subscribe();
+  }
+
+  /**
+   * `authState` giữ người dùng Google gần nhất và phát lại cho người đăng ký sau. Xóa đi để lần vào trang đăng nhập
+   * kế tiếp (ví dụ sau khi đăng xuất) không tự gửi lại ID token cũ đã hết hạn.
+   */
+  private forgetGoogleUser(): void {
+    void this.socialAuthSvc.signOut().catch(() => undefined);
   }
 
   private showLoginError(err: unknown): void {
