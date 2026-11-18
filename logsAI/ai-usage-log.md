@@ -581,8 +581,6 @@ Phần này chuẩn bị sẵn nội dung trả lời cho 4 câu hỏi trọng t
 
 ## Phiên #19: Nhập tệp Excel `.xlsx` ở mọi màn nhập và tải tệp mẫu Excel (UI)
 
-## Phiên #20: CI job `security` đỏ do advisory picomatch chưa có bản vá (UI)
-
 ### 1. Thông tin phiên làm việc
 - **Thời gian:** 2026-11-18
 - **Người thực hiện (`git config user.name`):** `TinMH`
@@ -609,6 +607,12 @@ Phần này chuẩn bị sẵn nội dung trả lời cho 4 câu hỏi trọng t
 - **Sinh viên đã sửa/rà soát:** _chờ sinh viên rà soát_
 - **Commit / PR:** một commit `feat(import): accept .xlsx files in every import screen` trên nhánh `feat/xlsx-import`, PR vào `main` (xem `git log`).
 
+
+## Phiên #20: CI job `security` đỏ do advisory picomatch chưa có bản vá (UI)
+
+### 1. Thông tin phiên làm việc
+- **Thời gian:** 2026-11-18
+- **Người thực hiện (`git config user.name`):** `TinMH`
 - **Sinh viên yêu cầu:** "CI bên UI sao đỏ toàn bộ vậy?", rồi "ok làm đi, tách nhánh từ main"; cách xử lý do sinh viên chọn (tách 2 bước audit).
 - **Công cụ / mô hình:** Claude Code, Claude Sonnet 5.5. Không đổi `package.json`/`package-lock.json`.
 - **Nhánh:** `chore/fix-npm-audit` (từ `main`).
