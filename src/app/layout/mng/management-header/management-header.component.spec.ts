@@ -3,7 +3,7 @@ import { provideRouter, Router } from '@angular/router';
 import { SystemConstant } from '@constants/system.constant';
 import { UrlConstant } from '@constants/url.constant';
 import { AuthService } from '@services/auth/auth.service';
-import { of } from 'rxjs';
+import { of, Subject } from 'rxjs';
 import { ManagementHeaderComponent } from './management-header.component';
 
 describe('ManagementHeaderComponent (Header Admin Layout)', () => {
@@ -17,6 +17,7 @@ describe('ManagementHeaderComponent (Header Admin Layout)', () => {
     getRoles: vi.fn(() => [SystemConstant.ROLE.ADMIN]),
     getAvatarOfLogin: vi.fn(() => ''),
     logout: vi.fn(() => of(undefined)),
+    profileUpdated$: new Subject<void>(),
   };
 
   beforeEach(async () => {
@@ -43,6 +44,14 @@ describe('ManagementHeaderComponent (Header Admin Layout)', () => {
 
   it('khởi tạo thành công', () => {
     expect(component).toBeTruthy();
+  });
+
+  it('F01/trang profile: tên hiển thị tự cập nhật khi người dùng sửa họ tên', () => {
+    fixture.detectChanges();
+    expect(component.fullName()).toBe('Quản trị viên Hệ thống');
+    authSvc.getNameOfLogin.mockReturnValue('Tên mới');
+    authSvc.profileUpdated$.next();
+    expect(component.fullName()).toBe('Tên mới');
   });
 
   it('hiển thị thương hiệu LOMS và sidebar điều hướng theo UI.pdf', () => {

@@ -627,6 +627,33 @@ Phần này chuẩn bị sẵn nội dung trả lời cho 4 câu hỏi trọng t
 - **Commit / PR:** một commit `feat(import): accept .xlsx files in every import screen` trên nhánh `feat/xlsx-import`, PR vào `main` (xem `git log`).
 
 
+## Phiên #18: Trang Tài khoản của tôi — sửa họ tên và đổi mật khẩu (UI)
+
+### 1. Thông tin phiên làm việc
+- **Thời gian:** 2026-11-18
+- **Người thực hiện (`git config user.name`):** `TinMH`
+- **Sinh viên yêu cầu:** "ok tắt server rồi làm tiếp trang profile".
+- **Công cụ / mô hình:** Claude Code, Claude Sonnet 5.5. Không thêm thư viện.
+- **Nhánh:** `feat/profile-page`, tách từ `feat/force-password-change` (cần commit của Phiên #17).
+
+### 2. Các hạng mục đã thực hiện
+1. Form đổi mật khẩu (đã tách thành `shared/component-shared/change-password-form` ở commit của Phiên #17) được dùng thêm trong trang profile.
+2. `mng/profile`: thêm ô sửa họ tên (PUT `/auth/me`, kiểm tra trống/≤100 ký tự khớp backend, lỗi backend hiện tại chỗ) và mục Đổi mật khẩu. Họ tên không còn hiện ở danh sách thông tin chỉ-đọc.
+3. `AuthService.updateProfile()` cập nhật họ tên lưu ở trình duyệt và phát `profileUpdated$`; `ManagementHeaderComponent` đăng ký để tên trên header đổi ngay (trước đó header chỉ đọc một lần lúc khởi tạo). Stub AuthService trong spec của header và layout được thêm `profileUpdated$`.
+4. `doc/API-CONTRACT.md`: thêm §5.2.5, sửa §5.2.4 (`GET /me` chỉ đọc khi còn cờ).
+
+### 3. Kiểm chứng đã làm
+`ng test --no-watch`: 101 file, 1049 test đạt. `eslint` trên `src/app/auth`, `core`, `layout/mng`, `mng/profile`, form dùng chung: 0 lỗi. `ng build` thành công, giữ nguyên 2 cảnh báo ngân sách có sẵn. **Chưa chạy thử trên trình duyệt với backend thật.** Header chính (`main-header`, khu người dùng không-quản-lý) cũng đọc tên một lần nhưng chưa nối `profileUpdated$` vì trang profile nằm trong khu `mng`.
+
+### 4. Lỗi/ảo giác AI đã phát hiện
+| Mô tả | Cách phát hiện | Nguyên nhân | Commit sửa |
+|---|---|---|---|
+| Sau khi thêm sửa họ tên, tên trên header vẫn cũ đến khi tải lại trang | Đọc `management-header.component.ts` (chỉ gọi `refreshUserInfo()` trong `ngOnInit`) trước khi báo xong | Không tính tới nơi khác đọc `getNameOfLogin()` | sửa trước khi commit `feat(profile)` |
+
+- **Sinh viên đã sửa/rà soát:** _chờ sinh viên rà soát_
+- **Commit / PR:** một commit `feat(profile): let users edit name and change password` trên nhánh `feat/profile-page` (xem `git log`; chưa mở PR).
+
+
 ## Phiên #20: CI job `security` đỏ do advisory picomatch chưa có bản vá (UI)
 
 ### 1. Thông tin phiên làm việc

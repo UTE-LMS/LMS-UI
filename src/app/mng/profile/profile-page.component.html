@@ -3,7 +3,7 @@
     <h1 class="text-2xl font-bold text-slate-900 tracking-tight m-0">Tài khoản của tôi</h1>
     <div class="title-underline"></div>
     <p class="text-sm text-slate-600 mt-2">
-      Thông tin do quản trị viên cấp. Cần đổi vai trò hoặc phạm vi, liên hệ quản trị viên.
+      Bạn tự sửa được họ tên và mật khẩu. Email, vai trò và phạm vi do quản trị viên cấp; cần đổi thì liên hệ quản trị viên.
     </p>
   </div>
   <span class="flex-1"></span>
@@ -22,7 +22,6 @@
       <h2 id="info-heading" class="text-base font-semibold mb-3">Thông tin</h2>
       <dl class="grid grid-cols-[160px_1fr] gap-x-6 gap-y-3 text-sm">
         <dt class="text-slate-600">Tên đăng nhập</dt><dd class="font-semibold">{{ p.username }}</dd>
-        <dt class="text-slate-600">Họ tên</dt><dd>{{ p.fullName || 'Chưa có' }}</dd>
         <dt class="text-slate-600">Email</dt><dd>{{ p.email || 'Chưa có' }}</dd>
         <dt class="text-slate-600">Trạng thái</dt>
         <dd>
@@ -33,6 +32,25 @@
           }
         </dd>
       </dl>
+
+      <form [formGroup]="nameForm" class="mt-4 max-w-112.5" (keydown.enter)="$event.preventDefault()" novalidate>
+        <label for="profile-fullname" class="block text-sm text-slate-600 mb-1">Họ tên</label>
+        @if (nameErrorMsg()) {
+          <div role="alert" class="mb-2 px-3.5 py-2.5 rounded-md border border-red-200 bg-red-50 text-red-800 text-sm">{{ nameErrorMsg() }}</div>
+        }
+        <div class="flex gap-2">
+          <input id="profile-fullname" nz-input formControlName="fullName" class="flex-1" autocomplete="name"
+            [nzStatus]="formValidSvc.displayFieldCssZorro(nameForm, 'fullName')" (keyup.enter)="onSaveName()" />
+          <button id="btn-save-name" nz-button nzType="primary" type="button" [nzLoading]="savingName()"
+            [disabled]="savingName() || nameForm.pristine" (click)="onSaveName()">
+            <i class="fa-solid fa-floppy-disk mr-1.25" aria-hidden="true"></i>Lưu
+          </button>
+        </div>
+        <app-field-error-display [displayError]="formValidSvc.isFieldValid(nameForm, 'fullName', 'required')"
+          errorMsg="Không được để trống" />
+        <app-field-error-display [displayError]="formValidSvc.isFieldValid(nameForm, 'fullName', 'maxlength')"
+          [errorMsg]="'Họ tên tối đa ' + maxFullNameLength + ' ký tự'" />
+      </form>
     </section>
 
     <section aria-labelledby="role-heading">
@@ -57,6 +75,14 @@
       <p class="text-xs text-slate-600 mt-2">
         Menu chỉ hiện mục bạn có quyền. Mở trang ngoài phạm vi sẽ thấy trang “Không có quyền”.
       </p>
+    </section>
+
+    <section aria-labelledby="password-heading" class="lg:col-span-2">
+      <h2 id="password-heading" class="text-base font-semibold mb-1">Đổi mật khẩu</h2>
+      <p class="text-xs text-slate-600 mb-3">
+        Đổi xong, các phiên đăng nhập khác của bạn bị đăng xuất; phiên hiện tại vẫn giữ.
+      </p>
+      <app-change-password-form />
     </section>
   </div>
 }
