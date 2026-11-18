@@ -1,7 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { AuthService } from '@services/auth/auth.service';
-import { of } from 'rxjs';
+import { of, Subject } from 'rxjs';
 import { ManagementLayoutComponent } from './management-layout.component';
 
 describe('ManagementLayoutComponent (Layout Quản trị)', () => {
@@ -14,6 +14,7 @@ describe('ManagementLayoutComponent (Layout Quản trị)', () => {
     getRoles: vi.fn(() => ['ADMIN']),
     getAvatarOfLogin: vi.fn(() => ''),
     logout: vi.fn(() => of(undefined)),
+    profileUpdated$: new Subject<void>(),
   };
 
   beforeEach(async () => {

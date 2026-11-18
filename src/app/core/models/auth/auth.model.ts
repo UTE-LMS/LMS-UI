@@ -32,6 +32,11 @@ export interface IUserProfile {
   roles: Role[];
 }
 
+/** Body của PUT /api/v1/auth/me (UpdateProfileRequest): người dùng chỉ tự sửa được họ tên. */
+export interface IUpdateProfileRequest {
+  fullName: string;
+}
+
 /** Body của POST /api/v1/auth/change-password (ChangePasswordRequest). Phản hồi cùng dạng LoginResponse. */
 export interface IChangePasswordRequest {
   currentPassword: string;

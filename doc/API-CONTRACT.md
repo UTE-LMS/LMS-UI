@@ -336,7 +336,7 @@ Lấy thông tin tài khoản và danh sách quyền hạn gắn với phạm vi
 ---
 
 #### 5.2.4. Đổi mật khẩu (`POST /api/v1/auth/change-password`) và cờ `mustChangePassword`
-Tài khoản do Admin tạo (`POST /api/v1/users` hoặc import CSV) có `mustChangePassword = true`. Cờ này được trả trong `user` của `LoginResponse` (§5.2.1) và trong `UserProfileResponse` (§5.2.3), kiểu boolean (`false` với tài khoản cũ chưa có trường này). Khi cờ còn bật, **backend chặn mọi API khác** bằng HTTP 403 (`FORBIDDEN`, thông điệp *"Bạn cần đổi mật khẩu trước khi tiếp tục sử dụng hệ thống"*); chỉ `POST /auth/change-password`, `GET /auth/me`, `POST /auth/logout` được gọi. UI dựa vào cờ để đưa người dùng tới trang đổi mật khẩu (`/auth/change-password`).
+Tài khoản do Admin tạo (`POST /api/v1/users` hoặc import CSV) có `mustChangePassword = true`. Cờ này được trả trong `user` của `LoginResponse` (§5.2.1) và trong `UserProfileResponse` (§5.2.3), kiểu boolean (`false` với tài khoản cũ chưa có trường này). Khi cờ còn bật, **backend chặn mọi API khác** bằng HTTP 403 (`FORBIDDEN`, thông điệp *"Bạn cần đổi mật khẩu trước khi tiếp tục sử dụng hệ thống"*); chỉ `POST /auth/change-password`, `GET /auth/me` (chỉ đọc), `POST /auth/logout` được gọi. UI dựa vào cờ để đưa người dùng tới trang đổi mật khẩu (`/auth/change-password`).
 
 - **Endpoint:** `POST /api/v1/auth/change-password`
 - **Xác thực:** Bắt buộc (`Authorization: Bearer <token>`).
@@ -358,6 +358,30 @@ Tài khoản do Admin tạo (`POST /api/v1/users` hoặc import CSV) có `mustCh
   - **HTTP 400 (`VALIDATION_ERROR`):** thiếu trường hoặc `newPassword` ngoài 8-72 bytes.
   - **HTTP 422 (`BUSINESS_RULE_VIOLATION`):** sai mật khẩu hiện tại, hoặc mật khẩu mới trùng mật khẩu cũ. Không dùng 401 để UI không tự đăng xuất người dùng.
   - **HTTP 401 (`UNAUTHORIZED`):** token không hợp lệ.
+
+---
+
+#### 5.2.5. Tự sửa họ tên (`PUT /api/v1/auth/me`)
+Trang "Tài khoản của tôi" cho người dùng tự sửa **họ tên** của mình. Cố ý không cho tự sửa email (dùng để định danh), vai trò, khoa, trạng thái (do Admin quản lý ở §5.3). Khi tài khoản còn cờ `mustChangePassword`, `PUT /auth/me` bị chặn 403 (chỉ `GET /auth/me` được gọi, xem §5.2.4).
+
+- **Endpoint:** `PUT /api/v1/auth/me`
+- **Xác thực:** Bắt buộc (`Authorization: Bearer <token>`).
+- **Request Body:**
+```json
+{
+  "fullName": "Nguyễn Văn An"
+}
+```
+| Trường | Kiểu | Bắt buộc | Ràng buộc |
+|---|---|---|---|
+| `fullName` | String | Có | Không để trống, tối đa 100 ký tự, tự động trim. |
+
+- **Cơ chế hoạt động:** chỉ cập nhật `fullName` và `updatedAt`, ghi `audit_logs` (`UPDATE`, collection `users`). Không đổi `tokenVersion` nên token hiện tại vẫn dùng được.
+- **Phản hồi thành công (HTTP 200 OK):** `UserProfileResponse` (§5.2.3) sau khi cập nhật.
+- **Phản hồi lỗi thường gặp:**
+  - **HTTP 400 (`VALIDATION_ERROR`):** `fullName` trống hoặc quá 100 ký tự.
+  - **HTTP 401 (`UNAUTHORIZED`):** token không hợp lệ.
+  - **HTTP 403 (`FORBIDDEN`):** tài khoản còn cờ `mustChangePassword`.
 
 ---
 

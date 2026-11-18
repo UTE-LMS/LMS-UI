@@ -135,6 +135,35 @@ describe('AuthService (F01 US-01 & M01 Faculty Scope)', () => {
     expect(service.mustChangePassword()).toBe(true);
   });
 
+  it('F01/trang profile: sửa họ tên gọi PUT /auth/me và cập nhật tên lưu ở trình duyệt, giữ nguyên token và vai trò', () => {
+    service.login({ username: 'admin', password: 'Password123!' }).subscribe();
+    http.expectOne(UrlConstant.API.AUTH_LOGIN).flush(loginResponse());
+
+    service.updateProfile({ fullName: 'Tên mới' }).subscribe();
+    const req = http.expectOne(UrlConstant.API.AUTH_ME);
+    expect(req.request.method).toBe('PUT');
+    expect(req.request.body).toEqual({ fullName: 'Tên mới' });
+    expect(req.request.context.get(INLINE_ERRORS)).toBe(true);
+    req.flush({ ...loginResponse().user, fullName: 'Tên mới' });
+
+    expect(service.getNameOfLogin()).toBe('Tên mới');
+    expect(service.getToken()).toBe('token-gia-lap');
+    expect(service.getRoles()).toEqual(['ADMIN', 'LECTURER']);
+  });
+
+  it('F01/trang profile: sửa họ tên bị lỗi 400 thì giữ nguyên tên đang lưu', () => {
+    service.login({ username: 'admin', password: 'Password123!' }).subscribe();
+    http.expectOne(UrlConstant.API.AUTH_LOGIN).flush(loginResponse());
+
+    let failed = false;
+    service.updateProfile({ fullName: '' }).subscribe({ error: () => (failed = true) });
+    http.expectOne(UrlConstant.API.AUTH_ME)
+      .flush({ status: 400, message: 'Họ và tên không được để trống' }, { status: 400, statusText: 'Bad Request' });
+
+    expect(failed).toBe(true);
+    expect(service.getNameOfLogin()).toBe('Quản trị thử nghiệm');
+  });
+
   it('phiên quá hạn ghi nhận lúc đăng nhập thì không còn xác thực', () => {
     service.login({ username: 'admin', password: 'Password123!' }).subscribe();
     http.expectOne(UrlConstant.API.AUTH_LOGIN).flush(loginResponse(-1));

@@ -8,11 +8,11 @@ import langDataEn from '@languages/en.json';
 import langDataVi from '@languages/vi.json';
 import {
   IAuthData, IChangePasswordRequest, ILoginDTO, ILoginRequest, ILoginResponse,
-  IRegisterDTO, IResetPasswordDTO, IResetPasswordRequsetDTO, IUserProfile,
+  IRegisterDTO, IResetPasswordDTO, IResetPasswordRequsetDTO, IUpdateProfileRequest, IUserProfile,
 } from '@models/auth/auth.model';
 import { sha256 } from 'js-sha256';
 import { ToastrService } from 'ngx-toastr';
-import { catchError, map, Observable, of, tap, timer } from 'rxjs';
+import { catchError, map, Observable, of, Subject, tap, timer } from 'rxjs';
 
 @Injectable({
   providedIn: 'root',
@@ -26,6 +26,9 @@ export class AuthService {
   //////////////////////////////
 
   private apiUrl = UrlConstant.API.LOGIN_ADMIN;
+
+  /** Phát khi người dùng tự sửa hồ sơ thành công, để các nơi đã hiện họ tên (header) đọc lại. */
+  readonly profileUpdated$ = new Subject<void>();
 
 
   /************************************
@@ -119,6 +122,25 @@ export class AuthService {
     return this.http.get<IUserProfile>(UrlConstant.API.AUTH_ME, {
       context: new HttpContext().set(INLINE_ERRORS, true),
     });
+  }
+
+  /**
+   * PUT /api/v1/auth/me: người dùng tự sửa họ tên. Cập nhật luôn họ tên lưu ở trình duyệt để các nơi đọc
+   * `getNameOfLogin()` thấy tên mới (token không đổi vì backend không đổi tokenVersion).
+   */
+  updateProfile(model: IUpdateProfileRequest): Observable<IUserProfile> {
+    // Phát sau khi đã lưu tên mới, để header (đọc tên một lần lúc khởi tạo) tự làm mới.
+    return this.http
+      .put<IUserProfile>(UrlConstant.API.AUTH_ME, model, {
+        context: new HttpContext().set(INLINE_ERRORS, true),
+      })
+      .pipe(tap(profile => {
+        const data = this.getAuthData();
+        if (data) {
+          this.setAuthData({ ...data, fullName: profile.fullName });
+        }
+        this.profileUpdated$.next();
+      }));
   }
 
   /**

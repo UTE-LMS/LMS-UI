@@ -1,4 +1,5 @@
-import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { SystemConstant } from '@constants/system.constant';
 import { UrlConstant } from '@constants/url.constant';
@@ -47,6 +48,7 @@ const dashboardMenu: ISiderMenu[] = [
   ],
 })
 export class ManagementHeaderComponent implements OnInit {
+  private readonly destroyRef = inject(DestroyRef);
   private authSvc = inject(AuthService);
   private router = inject(Router);
 
@@ -159,6 +161,8 @@ export class ManagementHeaderComponent implements OnInit {
 
   ngOnInit(): void {
     this.refreshUserInfo();
+    this.authSvc.profileUpdated$.pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.refreshUserInfo());
   }
 
   refreshUserInfo(): void {
