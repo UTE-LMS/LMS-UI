@@ -6,6 +6,12 @@ export type SectionStatus = 'OPEN' | 'CLOSED' | 'LOCKED';
 
 export type EnrollmentStatus = 'ENROLLED' | 'WITHDRAWN';
 
+export interface ISectionLecturerSummary {
+  id: string;
+  fullName?: string | null;
+  username?: string | null;
+}
+
 export interface ISection {
   id: string;
   code: string;
@@ -13,6 +19,8 @@ export interface ISection {
   syllabusId: string;
   termId: string;
   lecturerIds: string[];
+  lecturers?: ISectionLecturerSummary[];
+  lecturerNames?: string[];
   /**
    * Sĩ số (số ENROLLED), là mẫu số của tỷ lệ đạt, do backend tính lại sau mỗi lần nhập/rút/ghi danh lại.
    * Backend mặc định 0 cho lớp mới mở nên 0 và "chưa nhập danh sách" không phân biệt được ở đây; UI hiển thị

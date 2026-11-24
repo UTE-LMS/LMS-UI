@@ -9,6 +9,7 @@ import { EnrollmentService } from '@services/course/enrollment.service';
 import { SectionService } from '@services/course/section.service';
 import { TermService } from '@services/course/term.service';
 import { ActionDockComponent, DockTone } from '@widget/action-dock/action-dock.component';
+import { ImportFilePreviewComponent } from '@widget/import-file-preview/import-file-preview.component';
 import { TestDataFlagComponent } from '@widget/test-data-flag/test-data-flag.component';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzTableModule } from 'ng-zorro-antd/table';
@@ -29,7 +30,7 @@ type ImportStep = 'PICK' | 'DONE';
   selector: 'app-roster-import',
   templateUrl: './roster-import.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, NzButtonModule, NzTableModule, ActionDockComponent, TestDataFlagComponent],
+  imports: [RouterLink, NzButtonModule, NzTableModule, ActionDockComponent, ImportFilePreviewComponent, TestDataFlagComponent],
 })
 export class RosterImportComponent implements OnInit {
   private readonly sectionSvc = inject(SectionService);
@@ -83,7 +84,7 @@ export class RosterImportComponent implements OnInit {
     }
     return this.file()
       ? { tone: 'neutral', message: 'Sẵn sàng ghi danh. Hệ thống ghi tất cả hoặc không ghi gì.' }
-      : { tone: 'neutral', message: 'Chọn tệp CSV danh sách lớp để bắt đầu.' };
+      : { tone: 'neutral', message: 'Chọn tệp danh sách lớp (.csv hoặc .xlsx) để bắt đầu.' };
   });
 
   ngOnInit(): void {

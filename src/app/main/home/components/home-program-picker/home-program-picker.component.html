@@ -1,0 +1,217 @@
+<div class="space-y-4">
+  <!-- Thanh điều khiển lọc & tìm kiếm CTĐT -->
+  <div class="bg-white rounded-2xl border border-slate-200 shadow-xs p-4 space-y-3.5">
+    <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+      <div class="flex items-start gap-3">
+        <div class="w-10 h-10 rounded-xl bg-[#edf4ff] border border-[#c7ddf7] text-[#005a94] flex items-center justify-center shrink-0">
+          <i class="fa-solid fa-graduation-cap text-base" aria-hidden="true"></i>
+        </div>
+        <div>
+          <div class="flex flex-wrap items-center gap-2">
+            <h2 class="text-sm sm:text-base font-bold text-[#003b64] m-0">
+              Chương trình Đào tạo đang còn áp dụng
+            </h2>
+            <span
+              data-testid="active-programs-count"
+              class="px-2 py-0.5 rounded-full bg-[#edf4ff] text-[#003b64] border border-[#c7ddf7] text-xs font-bold"
+            >
+              {{ filteredPrograms().length }}/{{ programs().length }}
+            </span>
+          </div>
+          <p class="text-xs text-slate-600 m-0 mt-0.5">
+            Chọn trực tiếp thẻ chương trình bên dưới để tra cứu <strong>Phiên bản CTĐT</strong> hoặc <strong>Đề cương học phần</strong>.
+          </p>
+        </div>
+      </div>
+
+      <div class="relative w-full lg:w-80">
+        <i
+          class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none"
+          aria-hidden="true"
+        ></i>
+        <input
+          type="search"
+          aria-label="Tìm kiếm chương trình đào tạo"
+          placeholder="Tìm theo mã ngành, tên CTĐT, khoa..."
+          class="w-full pl-8 pr-8 py-2 rounded-xl border border-slate-300 bg-slate-50/60 focus:bg-white text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-[#005a94] focus:ring-2 focus:ring-[#005a94]/15 transition-colors"
+          [ngModel]="searchQuery()"
+          (ngModelChange)="searchQuery.set($event)"
+        />
+        @if (searchQuery()) {
+        <button
+          type="button"
+          aria-label="Xóa từ khóa tìm kiếm"
+          (click)="searchQuery.set('')"
+          class="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 bg-transparent border-0 p-0.5 cursor-pointer text-xs"
+        >
+          <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+        </button>
+        }
+      </div>
+    </div>
+
+    @if (facultyChips().length > 1) {
+    <div class="flex flex-wrap items-center gap-1.5 pt-2 border-t border-slate-100">
+      <span class="text-[11px] font-semibold uppercase tracking-wide text-slate-500 mr-1">
+        Lọc theo Khoa:
+      </span>
+      <button
+        type="button"
+        [attr.aria-pressed]="selectedFacultyId() === null"
+        (click)="selectFaculty(null)"
+        class="px-3 py-1 rounded-full text-xs font-semibold border transition-colors cursor-pointer"
+        [class.bg-[#005a94]]="selectedFacultyId() === null"
+        [class.text-white]="selectedFacultyId() === null"
+        [class.border-[#005a94]]="selectedFacultyId() === null"
+        [class.bg-white]="selectedFacultyId() !== null"
+        [class.text-slate-700]="selectedFacultyId() !== null"
+        [class.border-slate-300]="selectedFacultyId() !== null"
+      >
+        Tất cả ({{ programs().length }})
+      </button>
+
+      @for (chip of facultyChips(); track chip.id) {
+      <button
+        type="button"
+        [attr.aria-pressed]="selectedFacultyId() === chip.id"
+        [title]="chip.name"
+        (click)="selectFaculty(chip.id)"
+        class="faculty-filter-chip px-3 py-1 rounded-full text-xs font-semibold border transition-colors cursor-pointer inline-flex items-center gap-1.5"
+        [class.bg-[#005a94]]="selectedFacultyId() === chip.id"
+        [class.text-white]="selectedFacultyId() === chip.id"
+        [class.border-[#005a94]]="selectedFacultyId() === chip.id"
+        [class.bg-white]="selectedFacultyId() !== chip.id"
+        [class.text-slate-700]="selectedFacultyId() !== chip.id"
+        [class.border-slate-300]="selectedFacultyId() !== chip.id"
+      >
+        <span>{{ chip.code }}</span>
+        <span
+          class="px-1.5 py-0.2 rounded-full text-[10px]"
+          [class.bg-white/20]="selectedFacultyId() === chip.id"
+          [class.text-white]="selectedFacultyId() === chip.id"
+          [class.bg-slate-100]="selectedFacultyId() !== chip.id"
+          [class.text-slate-600]="selectedFacultyId() !== chip.id"
+        >
+          {{ chip.count }}
+        </span>
+      </button>
+      }
+    </div>
+    }
+  </div>
+
+  <!-- Trạng thái đang tải -->
+  @if (loading()) {
+  <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4" aria-busy="true">
+    @for (item of [1, 2, 3, 4, 5, 6]; track item) {
+    <div class="rounded-xl border border-slate-200 bg-white p-4 space-y-3 animate-pulse">
+      <div class="flex items-center justify-between">
+        <div class="h-5 w-24 rounded bg-slate-200"></div>
+        <div class="h-5 w-20 rounded-full bg-slate-200"></div>
+      </div>
+      <div class="h-5 w-4/5 rounded bg-slate-200"></div>
+      <div class="h-4 w-2/3 rounded bg-slate-100"></div>
+      <div class="pt-3 border-t border-slate-100 grid grid-cols-2 gap-2">
+        <div class="h-8 rounded-lg bg-slate-200"></div>
+        <div class="h-8 rounded-lg bg-slate-200"></div>
+      </div>
+    </div>
+    }
+  </div>
+  } @else {
+  <!-- Lưới thẻ Chương trình đào tạo -->
+  <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+    @for (prog of filteredPrograms(); track prog.id) {
+    <article
+      class="active-program-row program-card group rounded-xl border border-slate-200 bg-white shadow-xs hover:shadow-md hover:border-[#005a94]/50 transition-all duration-200 flex flex-col overflow-hidden"
+    >
+      <div class="h-1 w-full bg-gradient-to-r from-[#005a94] to-[#3d91d7]"></div>
+
+      <div class="p-4 flex-1 flex flex-col gap-3">
+        <div class="flex items-center justify-between gap-2">
+          <span class="font-mono text-xs font-bold px-2.5 py-0.5 rounded-md bg-[#edf4ff] text-[#003b64] border border-[#c7ddf7]">
+            {{ prog.code }}
+          </span>
+          <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 font-semibold text-[11px]">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-600" aria-hidden="true"></span>
+            <span>Đang áp dụng</span>
+          </span>
+        </div>
+
+        <h3 class="text-base font-bold text-slate-900 leading-snug m-0 line-clamp-2" [title]="prog.name">
+          {{ prog.name }}
+        </h3>
+
+        <div class="mt-auto space-y-2 text-xs text-slate-600 pt-1">
+          <div class="flex items-start gap-2">
+            <i class="fa-solid fa-building-columns text-[#005a94] mt-0.5 shrink-0" aria-hidden="true"></i>
+            <span class="font-medium text-slate-700">{{ getFacultyLabel(prog) }}</span>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-1.5">
+            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 font-medium">
+              <i class="fa-solid fa-award text-slate-500 text-[10px]" aria-hidden="true"></i>
+              <span>{{ prog.level || 'Đại học' }}</span>
+            </span>
+            @if (prog.degree) {
+            <span class="inline-flex items-center px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 font-medium">
+              {{ prog.degree }}
+            </span>
+            }
+          </div>
+        </div>
+      </div>
+
+      <div class="px-4 py-3 bg-slate-50/80 border-t border-slate-100 grid grid-cols-2 gap-2">
+        <button
+          type="button"
+          data-testid="btn-open-versions"
+          (click)="openVersions.emit(prog)"
+          class="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-[#005a94] hover:bg-[#003b64] text-white text-xs font-semibold border-0 cursor-pointer transition-colors"
+        >
+          <i class="fa-solid fa-layer-group" aria-hidden="true"></i>
+          <span>Phiên bản</span>
+        </button>
+
+        <button
+          type="button"
+          data-testid="btn-open-syllabi"
+          (click)="openSyllabi.emit(prog)"
+          class="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-[#15803d] hover:bg-[#166534] text-white text-xs font-semibold border-0 cursor-pointer transition-colors"
+        >
+          <i class="fa-solid fa-file-lines" aria-hidden="true"></i>
+          <span>Đề cương</span>
+        </button>
+      </div>
+    </article>
+    } @empty {
+    <div class="col-span-full bg-slate-50 rounded-2xl border border-dashed border-slate-300 p-8 text-center space-y-3">
+      <div class="w-11 h-11 rounded-full bg-white border border-slate-200 text-slate-400 flex items-center justify-center mx-auto">
+        <i class="fa-solid fa-folder-open text-lg" aria-hidden="true"></i>
+      </div>
+      @if (hasActiveFilters()) {
+      <div class="space-y-1">
+        <p class="text-sm font-semibold text-slate-800 m-0">
+          Không tìm thấy chương trình đào tạo phù hợp
+        </p>
+        <p class="text-xs text-slate-600 m-0">
+          Thử thay đổi từ khóa tìm kiếm hoặc chọn lại khoa quản lý.
+        </p>
+      </div>
+      <button
+        type="button"
+        (click)="clearFilters()"
+        class="px-3.5 py-1.5 rounded-lg bg-[#005a94] hover:bg-[#003b64] text-white text-xs font-semibold border-0 cursor-pointer"
+      >
+        Xóa bộ lọc
+      </button>
+      } @else {
+      <p class="text-xs text-slate-600 m-0">
+        Hiện chưa có chương trình đào tạo nào đang áp dụng.
+      </p>
+      }
+    </div>
+    }
+  </div>
+  }
+</div>

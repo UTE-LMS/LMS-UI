@@ -30,7 +30,7 @@ import { NzSelectModule } from 'ng-zorro-antd/select';
 import { NzTableModule } from 'ng-zorro-antd/table';
 import { catchError, forkJoin, map, Observable, of } from 'rxjs';
 import { SectionModalComponent } from '../section-modal/section-modal.component';
-import { displayEnrolledCount, lecturerLabel } from '../sections.util';
+import { displayEnrolledCount, sectionLecturersText, userDisplayName } from '../sections.util';
 
 /**
  * Danh sách lớp học phần (F05a US-19). Giảng viên chỉ thấy lớp mình phụ trách: do API lọc, UI không tự lọc quyền.
@@ -61,6 +61,7 @@ export class ListSectionsComponent implements OnInit {
 
   readonly roles = signal<string[]>([]);
   readonly currentUserId = signal('');
+  readonly currentUserName = signal('');
   readonly terms = signal<ITerm[]>([]);
   readonly courses = signal<ICourse[]>([]);
   readonly syllabi = signal<ReadonlyMap<string, ISyllabus>>(new Map());
@@ -96,13 +97,13 @@ export class ListSectionsComponent implements OnInit {
   });
 
   readonly sectionImportGuideText = computed(() => {
-    const base = 'Cột CSV: code, courseCode, syllabusVersion, termCode, lecturerUsernames (nhiều giảng viên ngăn cách bằng dấu ;).';
+    const base = 'Các cột: code, courseCode, syllabusVersion, termCode, lecturerUsernames (nhiều giảng viên ngăn cách bằng dấu ;).';
     return this.isProgramManagerOnly()
       ? `${base} Lưu ý: Trưởng chương trình đào tạo chỉ được import lớp cho các học phần thuộc khoa của mình.`
       : base;
   });
 
-  readonly bulkEnrollmentGuideText = 'Cột CSV: sectionCode, studentCode, cohort. Dùng để ghi danh hàng loạt nhiều lớp học phần.';
+  readonly bulkEnrollmentGuideText = 'Các cột: sectionCode, studentCode, cohort. Dùng để ghi danh hàng loạt nhiều lớp học phần.';
 
   readonly downloadSectionTemplateFn = (format: ImportTemplateFormat) => this.sectionSvc.downloadImportTemplate(format);
   readonly importSectionsFn = (file: File) => this.sectionSvc.importSections(file);
@@ -110,10 +111,10 @@ export class ListSectionsComponent implements OnInit {
   readonly importBulkEnrollmentsFn = (file: File) => this.enrollmentSvc.importEnrollmentsBulk(file);
 
   readonly lecturerNames = computed<ReadonlyMap<string, string>>(
-    () => new Map(this.users().map(user => [user.id, user.username])),
+    () => new Map(this.users().map(user => [user.id, userDisplayName(user)])),
   );
 
-  /** Giảng viên chọn được khi mở lớp: người dùng LECTURER đang ACTIVE (danh sách chỉ ADMIN tải được). */
+  /** Giảng viên chọn được khi mở lớp: người dùng LECTURER đang ACTIVE. */
   readonly lecturerOptions = computed(() => this.users().filter(user => user.status === 'ACTIVE' && user.roles.includes(SystemConstant.ROLE.LECTURER)));
 
   readonly lecturerListAvailable = signal(false);
@@ -127,6 +128,7 @@ export class ListSectionsComponent implements OnInit {
   ngOnInit(): void {
     this.roles.set(this.authSvc.getRoles());
     this.currentUserId.set(this.authSvc.getUserId());
+    this.currentUserName.set(this.authSvc.getNameOfLogin?.() ?? '');
     this.loadCatalogs();
     this.loadSections();
   }
@@ -136,8 +138,15 @@ export class ListSectionsComponent implements OnInit {
     this.courseSvc.getCourses(0, 100).pipe(catchError(() => of(null))).subscribe(page => this.courses.set(page?.content ?? []));
     if (this.roles().includes(SystemConstant.ROLE.ADMIN)) {
       this.userSvc.filter(0, 100).pipe(catchError(() => of(null))).subscribe(page => {
-        this.users.set(page?.content ?? []);
+        this.mergeUsers(page?.content ?? []);
         this.lecturerListAvailable.set(page !== null);
+      });
+    } else if (typeof this.sectionSvc.getLecturers === 'function') {
+      this.sectionSvc.getLecturers().pipe(catchError(() => of([] as IUser[]))).subscribe(list => {
+        this.mergeUsers(list);
+        if (list.length > 0 && this.canCreate()) {
+          this.lecturerListAvailable.set(true);
+        }
       });
     }
   }
@@ -179,14 +188,14 @@ export class ListSectionsComponent implements OnInit {
   }
 
   lecturersText(section: ISection): string {
-    return section.lecturerIds.map(id => lecturerLabel(id, this.lecturerNames(), this.currentUserId())).join(', ');
+    return sectionLecturersText(section, this.lecturerNames(), this.currentUserId(), this.currentUserName());
   }
 
   onSaved(): void {
     this.loadSections();
   }
 
-  /** Tra thêm các học phần/đề cương chưa có trong danh mục đã tải (danh mục học phần phân trang tối đa 100). */
+  /** Tra thêm các học phần/đề cương/giảng viên chưa có trong danh mục đã tải. */
   private hydrateReferences(list: ISection[]): void {
     const missingCourseIds = [...new Set(list.map(s => s.courseId))].filter(id => !this.courseOf(id));
     if (missingCourseIds.length > 0) {
@@ -196,6 +205,26 @@ export class ListSectionsComponent implements OnInit {
     if (syllabusIds.length > 0) {
       this.fetchAll(syllabusIds.map(id => this.syllabusSvc.getSyllabusById(id))).subscribe(found => this.syllabi.update(current => new Map([...current, ...found.map(s => [s.id, s] as const)])));
     }
+    if (this.roles().includes(SystemConstant.ROLE.ADMIN) && typeof this.userSvc.getById === 'function') {
+      const knownUserIds = new Set(this.users().map(u => u.id));
+      const missingLecturerIds = [...new Set(list.flatMap(s => s.lecturerIds))].filter(id => !knownUserIds.has(id));
+      if (missingLecturerIds.length > 0) {
+        this.fetchAll(missingLecturerIds.map(id => this.userSvc.getById(id))).subscribe(found => this.mergeUsers(found));
+      }
+    }
+  }
+
+  private mergeUsers(incoming: IUser[]): void {
+    if (incoming.length === 0) {
+      return;
+    }
+    this.users.update(current => {
+      const merged = new Map(current.map(u => [u.id, u] as const));
+      for (const user of incoming) {
+        merged.set(user.id, user);
+      }
+      return [...merged.values()];
+    });
   }
 
   /** Gọi song song, lỗi một phần tử bị bỏ qua (khi đó giao diện hiện mã thay vì tên). */

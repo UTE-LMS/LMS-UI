@@ -74,7 +74,7 @@
       class="import-course-btn inline-flex items-center"
       (click)="openImportCourseModal()"
     >
-      <i class="fa-solid fa-file-import mr-1.5 text-blue-600"></i>Nhập từ CSV
+      <i class="fa-solid fa-file-import mr-1.5 text-blue-600"></i>Import Học phần
     </button>
     <button nz-button nzType="primary" class="add-course-btn" (click)="openCreateCourseModal()">
       <i class="fa-solid fa-plus mr-1.5"></i>Thêm học phần mới
@@ -341,7 +341,7 @@
 <!-- Modal Giải trình mở lại Học kỳ đã khóa sổ điểm (US-18/AC-3) -->
 <nz-modal
   [nzVisible]="isReopenModalVisible()"
-  nzTitle="Mở lại sổ điểm học kỳ (US-18/AC-3)"
+  nzTitle="Mở lại sổ điểm học kỳ"
   (nzOnCancel)="isReopenModalVisible.set(false)"
   (nzOnOk)="submitReopenTerm()"
   [nzOkLoading]="isReopening()"

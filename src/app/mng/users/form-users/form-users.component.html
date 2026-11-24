@@ -178,16 +178,9 @@
             <span class="text-sm text-slate-500 italic">Quản trị viên có toàn quyền hệ thống.</span>
             } @else if (roleForm.controls.role.value === pmRole) {
             <div class="pm-faculty-readonly text-sm">
-              @if (modalData().data?.facultyCode && modalData().data?.facultyName) {
+              @if (assignedFacultyLabel(); as facultyLabel) {
               <span class="font-medium text-slate-800">
-                Khoa phụ trách: {{ modalData().data?.facultyCode }} - {{ modalData().data?.facultyName }}
-              </span>
-              <span class="block text-xs text-slate-500 mt-0.5">
-                (Phân công hoặc điều chuyển Khoa được thực hiện tại màn hình Quản lý Khoa)
-              </span>
-              } @else if (modalData().data?.facultyName || modalData().data?.facultyCode) {
-              <span class="font-medium text-slate-800">
-                Khoa phụ trách: {{ modalData().data?.facultyName || modalData().data?.facultyCode }}
+                Khoa phụ trách: {{ facultyLabel }}
               </span>
               <span class="block text-xs text-slate-500 mt-0.5">
                 (Phân công hoặc điều chuyển Khoa được thực hiện tại màn hình Quản lý Khoa)

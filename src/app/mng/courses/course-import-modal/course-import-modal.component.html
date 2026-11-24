@@ -1,8 +1,8 @@
 <nz-modal
   [nzVisible]="isVisible()"
-  nzTitle="Nhập danh mục học phần từ tệp CSV"
+  nzTitle="Import Học phần"
   [nzFooter]="modalFooterTpl"
-  [nzWidth]="640"
+  [nzWidth]="780"
   (nzOnCancel)="handleCancel()"
   (nzVisibleChange)="onVisibleChange($event)"
 >
@@ -16,7 +16,7 @@
             Quy cách dữ liệu danh mục học phần
           </div>
           <p class="m-0 text-blue-800">
-            Tệp CSV gồm các cột: <code class="bg-white px-1 py-0.5 rounded border border-blue-200 font-mono text-blue-700">code</code> (mã học phần),
+            Tệp nhập (.csv hoặc .xlsx) gồm các cột: <code class="bg-white px-1 py-0.5 rounded border border-blue-200 font-mono text-blue-700">code</code> (mã học phần),
             <code class="bg-white px-1 py-0.5 rounded border border-blue-200 font-mono text-blue-700">name</code> (tên học phần),
             <code class="bg-white px-1 py-0.5 rounded border border-blue-200 font-mono text-blue-700">credits</code> (số tín chỉ &ge; 0),
             và tùy chọn <code class="bg-white px-1 py-0.5 rounded border border-blue-200 font-mono text-blue-700">facultyCode</code> (mã Khoa).
@@ -66,7 +66,7 @@
         }
       </nz-select>
       <p class="m-0 text-xs text-slate-600 leading-relaxed">
-        Nếu file CSV có cột <code>facultyCode</code> (mã Khoa) thì từng dòng sẽ gán theo <code>facultyCode</code>; nếu để trống thì dùng Khoa mặc định đã chọn.
+        Nếu tệp nhập có cột <code>facultyCode</code> (mã Khoa) thì từng dòng sẽ gán theo <code>facultyCode</code>; nếu để trống thì dùng Khoa mặc định đã chọn.
       </p>
     </div>
     } @else if (isPmOnly()) {
@@ -122,7 +122,7 @@
       <div class="flex items-center justify-between p-2">
         <div class="flex items-center gap-3 text-left">
           <div class="w-10 h-10 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center text-lg shrink-0">
-            <i class="fa-solid fa-file-csv"></i>
+            <i class="fa-solid fa-file-lines"></i>
           </div>
           <div>
             <div class="font-medium text-slate-900 text-sm truncate max-w-sm" [title]="selectedFile()!.name">
@@ -143,6 +143,15 @@
       </div>
       }
     </div>
+
+    @if (selectedFile()) {
+    <app-import-file-preview
+      class="block mt-4"
+      [file]="selectedFile()"
+      [requiredColumns]="['code', 'name', 'credits']"
+      title="Xem trước danh mục học phần trước khi nhập"
+    />
+    }
     }
 
     <!-- Khối hiển thị kết quả xử lý Best-effort -->
@@ -186,7 +195,7 @@
           Chi tiết các dòng không thể nhập (Đã bỏ qua)
         </div>
         <p class="m-0 text-amber-800 mb-2">
-          Các dòng hợp lệ đã được lưu thành công. Bạn chỉ cần sửa lại các dòng lỗi trong file CSV rồi tải lên lại (hệ thống sẽ bỏ qua các mã môn đã có).
+          Các dòng hợp lệ đã được lưu thành công. Bạn chỉ cần sửa lại các dòng lỗi trong tệp nhập rồi tải lên lại (hệ thống sẽ bỏ qua các mã môn đã có).
         </p>
 
         <div class="max-h-48 overflow-y-auto rounded border border-amber-200 bg-white">
@@ -221,7 +230,7 @@
       } @else {
       <div class="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-lg text-xs flex items-center gap-2">
         <i class="fa-solid fa-circle-check text-emerald-600 text-base"></i>
-        <span>Tất cả học phần trong tệp CSV đã được nạp thành công vào hệ thống!</span>
+        <span>Tất cả học phần trong tệp nhập đã được nạp thành công vào hệ thống!</span>
       </div>
       }
     </div>

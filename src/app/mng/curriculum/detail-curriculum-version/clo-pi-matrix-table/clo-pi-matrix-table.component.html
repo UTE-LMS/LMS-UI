@@ -11,7 +11,7 @@
   <div class="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 rounded-xl bg-slate-50 border border-slate-200 mb-4">
     <div>
       <label for="matrixCourseSelect" class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">
-        1. Học phần thuộc Phiên bản CTĐT (TD-28)
+        1. Học phần thuộc Phiên bản CTĐT
       </label>
       <nz-select
         id="matrixCourseSelect"
@@ -44,7 +44,7 @@
         @for (syl of syllabi(); track syl.id) {
         <nz-option
           [nzValue]="syl.id"
-          [nzLabel]="syl.version + ' (' + syl.status + ')'"
+          [nzLabel]="syl.version + ' (' + (syl.status === 'CONFIRMED' ? 'Đã duyệt' : 'Lưu trữ') + ')'"
         />
         }
       </nz-select>
@@ -56,14 +56,14 @@
     <div class="flex items-center gap-2">
       <span>Trạng thái đề cương đang chọn:</span>
       @if (syl.status === 'CONFIRMED') {
-      <app-status-chip label="Đã duyệt (CONFIRMED)" tone="success" icon="fa-circle-check" />
+      <app-status-chip label="Đã duyệt" tone="success" icon="fa-circle-check" />
       } @else {
-      <app-status-chip label="Lưu trữ (ARCHIVED)" tone="neutral" icon="fa-box-archive" />
+      <app-status-chip label="Lưu trữ" tone="neutral" icon="fa-box-archive" />
       }
     </div>
     <div>
       <span class="text-slate-600">
-        Ma trận liên kết CLO–PI chỉ xem (cập nhật thông qua Import CSV Đề cương).
+        Ma trận liên kết CLO–PI chỉ xem (cập nhật thông qua Import Đề cương).
       </span>
     </div>
   </div>
@@ -121,7 +121,7 @@
                 <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-blue-600 text-white text-xs font-bold" title="Đã liên kết">
                   ✓
                 </span>
-                <span class="text-slate-700 font-medium" title="Trọng số đóng góp (Q22)">
+                <span class="text-slate-700 font-medium" title="Trọng số đóng góp">
                   W: {{ cell.weight !== null && cell.weight !== undefined ? cell.weight : '—' }}
                 </span>
               </div>

@@ -123,6 +123,19 @@ export class ListFacultiesComponent implements OnInit {
     return Boolean(faculty.isActive ?? faculty.active);
   }
 
+  getCandidateFacultyCode(candidate: IUser): string | null {
+    if (candidate.facultyCode) {
+      return candidate.facultyCode;
+    }
+    if (!candidate.facultyId) {
+      return null;
+    }
+    const pool = this.allFaculties().length > 0
+      ? this.allFaculties()
+      : (this.manager.listData().data || []);
+    return pool.find(f => f.id === candidate.facultyId)?.code ?? null;
+  }
+
   /** Nút xác nhận điều chuyển chỉ bật khi đã chọn Khoa đích và nhập lý do khác khoảng trắng */
   readonly canConfirmTransfer = computed(() => {
     return Boolean(this.transferTargetFacultyId().trim() && this.transferReason().trim());
@@ -286,7 +299,7 @@ export class ListFacultiesComponent implements OnInit {
         ) {
           const warningMsg =
             api.message ||
-            'Khoa còn chương trình đào tạo đang hoạt động (ACTIVE). Không thể tắt trạng thái hoạt động của Khoa.';
+            'Khoa còn chương trình đào tạo đang hoạt động. Không thể tắt trạng thái hoạt động của Khoa.';
           this.activeProgramWarningMessage.set(warningMsg);
           this.activeProgramWarningModalVisible.set(true);
           this.nzModalSvc.warning({

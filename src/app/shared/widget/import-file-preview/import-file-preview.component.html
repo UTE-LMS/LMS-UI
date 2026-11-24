@@ -1,0 +1,93 @@
+@if (file()) {
+<section
+  class="rounded-xl border border-slate-200 bg-white p-3.5 shadow-xs space-y-3 text-xs"
+  aria-label="Xem trước dữ liệu tệp nhập"
+  data-testid="import-file-preview"
+>
+  <div class="flex flex-wrap items-center justify-between gap-2">
+    <div class="flex items-center gap-2 font-semibold text-slate-900">
+      <i class="fa-solid fa-table-list text-[#005a94]" aria-hidden="true"></i>
+      <span>{{ title() }}</span>
+    </div>
+
+    @if (preview(); as pv) {
+    <div class="flex flex-wrap items-center gap-1.5">
+      <span class="rounded-full bg-slate-100 border border-slate-200 px-2.5 py-0.5 font-medium text-slate-700">
+        {{ pv.fileFormat === 'xlsx' ? 'Excel (.xlsx)' : 'CSV' }}
+      </span>
+      @if (!pv.unreadable) {
+      <span class="rounded-full bg-blue-50 border border-blue-200 px-2.5 py-0.5 font-medium text-blue-800">
+        {{ pv.headers.length }} cột · {{ pv.totalRows }} dòng dữ liệu
+      </span>
+      }
+    </div>
+    }
+  </div>
+
+  @if (loading()) {
+  <div class="flex items-center gap-2 py-3 text-slate-600">
+    <i class="fa-solid fa-spinner fa-spin text-[#005a94]" aria-hidden="true"></i>
+    <span>Đang đọc dữ liệu xem trước…</span>
+  </div>
+  } @else if (preview(); as pv) {
+    @if (pv.missingRequiredColumns.length > 0) {
+    <div class="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-amber-900 flex items-start gap-2" role="status">
+      <i class="fa-solid fa-triangle-exclamation text-amber-600 mt-0.5 shrink-0" aria-hidden="true"></i>
+      <div>
+        Thiếu cột bắt buộc so với tệp mẫu:
+        <span class="font-mono font-semibold">{{ pv.missingRequiredColumns.join(', ') }}</span>.
+        Hãy kiểm tra lại trước khi bấm nhập.
+      </div>
+    </div>
+    }
+
+    @for (w of pv.warnings; track w) {
+    <div class="rounded-lg border border-amber-200 bg-amber-50/70 px-3 py-2 text-amber-900 flex items-start gap-2" role="status">
+      <i class="fa-solid fa-circle-info text-amber-600 mt-0.5 shrink-0" aria-hidden="true"></i>
+      <span>{{ w }}</span>
+    </div>
+    }
+
+    @if (pv.headers.length > 0) {
+    <div class="max-h-60 overflow-auto rounded-lg border border-slate-200">
+      <table class="min-w-full border-collapse text-left text-xs">
+        <thead class="sticky top-0 bg-slate-100 text-slate-800 border-b border-slate-200">
+          <tr>
+            <th class="px-2.5 py-2 font-semibold text-center w-10 border-r border-slate-200">#</th>
+            @for (col of pv.headers; track $index) {
+            <th class="px-3 py-2 font-semibold whitespace-nowrap border-r border-slate-200 last:border-r-0">
+              {{ col }}
+            </th>
+            }
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100 bg-white">
+          @for (row of pv.rows; track $index; let rowIdx = $index) {
+          <tr class="hover:bg-slate-50/80">
+            <td class="px-2.5 py-1.5 text-center font-medium text-slate-500 border-r border-slate-100">{{ rowIdx + 1 }}</td>
+            @for (cell of row; track $index) {
+            <td class="px-3 py-1.5 text-slate-800 whitespace-nowrap max-w-60 truncate border-r border-slate-100 last:border-r-0" [title]="cell">
+              {{ cell || '—' }}
+            </td>
+            }
+          </tr>
+          } @empty {
+          <tr>
+            <td [attr.colspan]="pv.headers.length + 1" class="px-3 py-4 text-center text-slate-500">
+              Chưa có dòng dữ liệu nào ngoài dòng tiêu đề.
+            </td>
+          </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    }
+
+    @if (pv.truncated) {
+    <p class="m-0 text-slate-600">
+      Đang hiển thị {{ pv.rows.length }} / {{ pv.totalRows }} dòng dữ liệu đầu tiên để kiểm tra trước khi nhập.
+    </p>
+    }
+  }
+</section>
+}

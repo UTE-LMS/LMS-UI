@@ -37,7 +37,9 @@ describe('UnofficialLabelComponent - nhãn "Không chính thức" (rule 02)', ()
 
   it('quy tắc DRAFT: nêu lý do bằng chữ', () => {
     render(false, ['RULE_DRAFT']);
-    expect(host().querySelector('.unofficial-reasons')?.textContent).toContain('bản nháp (DRAFT)');
+    const reasonText = host().querySelector('.unofficial-reasons')?.textContent;
+    expect(reasonText).toContain('bản nháp');
+    expect(reasonText).not.toContain('(DRAFT)');
   });
 
   it('liên kết CLO–PI chưa VERIFIED: nêu lý do bằng chữ', () => {

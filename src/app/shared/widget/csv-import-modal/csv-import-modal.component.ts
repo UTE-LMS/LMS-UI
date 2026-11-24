@@ -13,6 +13,7 @@ import { toApiError } from '@services/common/api-error.util';
 import {
   IMPORT_FILE_ACCEPT, ImportTemplateFormat, importFileNameError, saveBlobAs, templateFileNameFor,
 } from '@services/common/import-file.util';
+import { ImportFilePreviewComponent } from '@widget/import-file-preview/import-file-preview.component';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzModalModule } from 'ng-zorro-antd/modal';
 import { NzTableModule } from 'ng-zorro-antd/table';
@@ -23,7 +24,7 @@ import { Observable } from 'rxjs';
   selector: 'app-csv-import-modal',
   templateUrl: './csv-import-modal.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [NzModalModule, NzButtonModule, NzTableModule],
+  imports: [NzModalModule, NzButtonModule, NzTableModule, ImportFilePreviewComponent],
 })
 export class CsvImportModalComponent {
   private readonly alert = inject(ToastrService);
@@ -37,6 +38,7 @@ export class CsvImportModalComponent {
   readonly templateFileName = input.required<string>();
   readonly keyColumnLabel = input<string>('Mã');
   readonly entityLabel = input<string>('bản ghi');
+  readonly requiredColumns = input<readonly string[]>([]);
   /** Tải tệp mẫu theo định dạng: caller phải truyền `format` xuống service (mặc định của service là CSV). */
   readonly downloadTemplateFn = input.required<(format: ImportTemplateFormat) => Observable<Blob>>();
   readonly importFileFn = input.required<(file: File) => Observable<ICsvImportResultResponse>>();

@@ -37,7 +37,7 @@
         type="button"
         (click)="openImportModal()"
       >
-        <i class="fa-solid fa-file-import mr-1.5 text-blue-600"></i>Import Khoa (CSV)
+        <i class="fa-solid fa-file-import mr-1.5 text-blue-600"></i>Import Khoa
       </button>
       <button
         id="btnOpenCreateFaculty"
@@ -534,10 +534,11 @@
             [ngModel]="selectedPmUserId()"
             (ngModelChange)="selectedPmUserId.set($event)"
           >
-            <option value="">-- Chọn tài khoản có vai trò Quản lý CTĐT (PROGRAM_MANAGER) --</option>
+            <option value="">-- Chọn tài khoản có vai trò Quản lý CTĐT --</option>
             @for (candidate of pmCandidates(); track candidate.id) {
             <option [value]="candidate.id">
-              {{ candidate.fullName }} ({{ candidate.username }}) {{ candidate.facultyCode ? '- Đang thuộc: ' + candidate.facultyCode : '' }}
+              @let candidateFacultyCode = getCandidateFacultyCode(candidate);
+              {{ candidate.fullName }} ({{ candidate.username }}) {{ candidateFacultyCode ? '- Đang thuộc: ' + candidateFacultyCode : '' }}
             </option>
             }
           </select>
@@ -575,12 +576,13 @@
 <app-csv-import-modal
   [isVisible]="isImportModalVisible()"
   (isVisibleChange)="isImportModalVisible.set($event)"
-  nzTitle="Import Khoa từ CSV"
-  guideTitle="Quy cách tệp CSV danh mục Khoa"
-  guideText="Tệp CSV gồm các cột: code (mã Khoa), name (tên Khoa), description (mô tả), isActive (true/false)."
+  nzTitle="Import Khoa"
+  guideTitle="Quy cách tệp nhập danh mục Khoa (.csv hoặc .xlsx)"
+  guideText="Các cột: code (mã Khoa), name (tên Khoa), description (mô tả). Tất cả Khoa sau khi import mặc định ở trạng thái Hoạt động."
   templateFileName="faculties-template.csv"
   keyColumnLabel="Mã khoa"
   entityLabel="khoa"
+  [requiredColumns]="['code', 'name']"
   [downloadTemplateFn]="downloadFacultyTemplate"
   [importFileFn]="importFacultyCsv"
   (importSuccess)="onImportSuccess()"

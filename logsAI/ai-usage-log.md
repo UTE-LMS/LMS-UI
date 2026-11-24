@@ -707,3 +707,29 @@ Bước gitleaks của PR Google báo ví dụ `idToken` cắt ngắn ở `doc/A
 
 - **Sinh viên đã sửa/rà soát:** _chờ sinh viên rà soát_
 - **Commit / PR:** một commit `fix(ui): ...` trên nhánh `fix/ui-scan-bugs`, PR vào `main` (xem `git log`).
+
+
+## Phiên #23: Đồng bộ giao diện và tài liệu import Khoa & Người dùng (bỏ cột trạng thái)
+
+### 1. Thông tin phiên làm việc
+- **Thời gian:** 2026-11-24
+- **Người thực hiện (`git config user.name`):** `minhat5`
+- **Nhánh:** `main` (chưa commit/push)
+- **Phạm vi nghiệp vụ:** Đồng bộ `LMS-UI` theo cập nhật `LMS-API` bỏ cột `isActive` khi import Khoa và bỏ cột `status` khi import Người dùng (mặc định trạng thái hoạt động).
+
+### 2. Các hạng mục đã thực hiện
+1. **Rà soát toàn bộ repo (`LMS-UI`):**
+   - Kiểm tra cả 2 luồng import đều dùng `CsvImportModalComponent` gọi trực tiếp API backend (`/api/v1/faculties/import-template`, `/api/v1/faculties/import`, `/api/v1/users/import-template`, `/api/v1/users/import`) hỗ trợ cả `.csv` và `.xlsx`, không hardcode cột mẫu hay validate cột phía client.
+2. **Cập nhật UI & hướng dẫn nhập tệp:**
+   - `src/app/mng/faculties/list-faculties/list-faculties.component.html`: bỏ `isActive (true/false)` khỏi `guideText`; cập nhật nhãn thành `Import Khoa (CSV/Excel)`, tiêu đề `Import Khoa từ tệp CSV / Excel` và ghi chú danh sách cột `code, name, description`, mặc định trạng thái `Hoạt động`.
+   - `src/app/mng/users/list-users/list-users.component.html`: bỏ `status (mặc định ACTIVE)` khỏi `guideText`; cập nhật nhãn thành `Import Người dùng (CSV/Excel)`, tiêu đề `Import Người dùng từ tệp CSV / Excel` và ghi chú danh sách cột `username, email, password, fullName, roles, facultyCode`, mặc định trạng thái `Hoạt động` và bắt buộc đổi mật khẩu ở lần đăng nhập đầu.
+3. **Cập nhật tài liệu (`doc/API-CONTRACT.md`):**
+   - Bổ sung §5.3.6 (import Người dùng: `username,email,password,fullName,roles,facultyCode`, mặc định `status = ACTIVE` & `mustChangePassword = true`) và §5.6 (import Khoa: `code,name,description`, mặc định `isActive = true`), nêu rõ backend bỏ qua cột trạng thái cũ nếu tệp cũ vẫn còn.
+4. **Cập nhật & bổ sung unit tests:**
+   - `src/app/core/services/faculty/faculty.service.spec.ts`: cập nhật header mẫu CSV bỏ `isActive`, bổ sung kiểm tra `downloadImportTemplate('xlsx')` gửi `?format=xlsx`.
+   - `src/app/core/services/user/user.service.spec.ts`: cập nhật header mẫu CSV bỏ `status`.
+   - `src/app/mng/faculties/list-faculties/list-faculties.component.spec.ts` & `src/app/mng/users/list-users/list-users.component.spec.ts`: bổ sung kiểm tra `guideText` của `CsvImportModalComponent` và ủy quyền tải file mẫu `csv`/`xlsx`.
+
+### 3. Kết quả kiểm chứng
+- **`npm run check` (`ng lint` + `ng build --configuration development`):** All files pass linting; build thành công 0 errors.
+- **Unit tests (`ng test --no-watch` trên 5 file liên quan):** 5/5 test files passed, 60/60 tests passed (`user.service.spec.ts` 7/7, `faculty.service.spec.ts` 19/19, `csv-import-modal.component.spec.ts` 8/8, `list-users.component.spec.ts` 12/12, `list-faculties.component.spec.ts` 14/14).

@@ -28,12 +28,10 @@ import { ProgramService } from '@services/program/program.service';
 import { BloomLevelLabelComponent } from '@widget/level-label/bloom-level-label.component';
 import { StatusChipComponent } from '@widget/status-chip/status-chip.component';
 import { NzButtonModule } from 'ng-zorro-antd/button';
-import { NzEmptyModule } from 'ng-zorro-antd/empty';
 import { NzSelectModule } from 'ng-zorro-antd/select';
-import { NzSpinModule } from 'ng-zorro-antd/spin';
-import { NzTableModule } from 'ng-zorro-antd/table';
-import { NzTagModule } from 'ng-zorro-antd/tag';
-import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
+import { HomeProgramPickerComponent } from '../components/home-program-picker/home-program-picker.component';
+import { HomeSyllabusSelectorComponent } from '../components/home-syllabus-selector/home-syllabus-selector.component';
+import { HomeVersionSelectorComponent } from '../components/home-version-selector/home-version-selector.component';
 
 export type HomepageViewMode = 'PROGRAMS' | 'VERSIONS' | 'SYLLABI';
 export type AcademicTabKey = 'PLO_PI' | 'COURSES' | 'CLO_PI_MATRIX';
@@ -51,6 +49,26 @@ export interface IPloTreeRow {
   sourceLabel?: string;
 }
 
+export interface IPloGroupPiItem {
+  id: string;
+  code: string;
+  content: string;
+  capabilityLevel?: number;
+  targetPassRate?: number;
+}
+
+export interface IPloGroup {
+  id: string;
+  code: string;
+  categoryLabel?: string;
+  content: string;
+  original?: string;
+  capabilityLevel?: number;
+  piCount: number;
+  sourceLabel: string;
+  pis: IPloGroupPiItem[];
+}
+
 export interface ISemesterSummary {
   semesterLabel: string;
   semesterNumber: number | null;
@@ -66,14 +84,12 @@ export interface ISemesterSummary {
     CommonModule,
     FormsModule,
     NzSelectModule,
-    NzTableModule,
     NzButtonModule,
-    NzSpinModule,
-    NzEmptyModule,
-    NzTooltipModule,
-    NzTagModule,
     StatusChipComponent,
     BloomLevelLabelComponent,
+    HomeProgramPickerComponent,
+    HomeVersionSelectorComponent,
+    HomeSyllabusSelectorComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -210,10 +226,46 @@ export class HomepageComponent implements OnInit {
     () => this.syllabi().find(s => s.id === this.selectedSyllabusId()) ?? null,
   );
 
+  readonly selectedCourse = computed(
+    () => this.programCourses().find(pc => pc.courseId === this.selectedCourseId()) ?? null,
+  );
+
   // --- Computed Tree Rows for Tab 1 (sorted by displayOrder ascending) ---
   readonly sortedPlos = computed<IPlo[]>(() => {
     const list = [...this.plos()];
     return list.sort((a, b) => a.displayOrder - b.displayOrder);
+  });
+
+  readonly ploGroups = computed<IPloGroup[]>(() => {
+    const currentPlos = this.sortedPlos();
+    const currentPis = this.pis();
+
+    return currentPlos.map(plo => {
+      const childPis = currentPis
+        .filter(pi => pi.ploId === plo.id)
+        .sort((a, b) => a.displayOrder - b.displayOrder);
+
+      const summary = plo.contentSummary ?? plo.contentOriginal ?? '';
+      const original = plo.contentOriginal !== plo.contentSummary ? plo.contentOriginal : undefined;
+
+      return {
+        id: plo.id,
+        code: plo.code,
+        categoryLabel: plo.category ? this.ploCategoryLabels[plo.category] : undefined,
+        content: summary,
+        original,
+        capabilityLevel: plo.capabilityLevelRaw,
+        piCount: childPis.length,
+        sourceLabel: plo.contentOriginal ? 'Đã đối chiếu bản gốc' : 'Chuẩn đầu ra CTĐT',
+        pis: childPis.map(pi => ({
+          id: pi.id,
+          code: pi.code,
+          content: pi.contentShort ?? pi.contentOriginal ?? '',
+          capabilityLevel: pi.capabilityLevelRaw,
+          targetPassRate: pi.targetPassRate,
+        })),
+      };
+    });
   });
 
   readonly treeRows = computed<IPloTreeRow[]>(() => {
@@ -696,6 +748,14 @@ export class HomepageComponent implements OnInit {
     } else {
       this.viewMode.set('VERSIONS');
     }
+  }
+
+  toggleSemesterFilter(semester: number | null): void {
+    if (semester === null) {
+      this.filterSemester.set(null);
+      return;
+    }
+    this.filterSemester.set(this.filterSemester() === semester ? null : semester);
   }
 
   scrollToCatalog(): void {

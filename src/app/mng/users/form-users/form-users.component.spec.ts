@@ -3,6 +3,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { SystemConstant } from '@constants/system.constant';
 import { ModalData } from '@models/common/modal-data.model';
 import { IUser } from '@models/user/user.model';
+import { FacultyService } from '@services/faculty/faculty.service';
 import { UserService } from '@services/user/user.service';
 import { ToastrService } from 'ngx-toastr';
 import { Observable, of, Subject, throwError } from 'rxjs';
@@ -28,21 +29,25 @@ describe('FormUsersComponent (F01 US-02)', () => {
     create: vi.fn((): Observable<unknown> => of({})),
     update: vi.fn((): Observable<unknown> => of({})),
   };
+  const facultySvc = {
+    getFacultyById: vi.fn(() => of({ id: 'fac_fit_01', code: 'FIT', name: 'Khoa Công nghệ Thông tin', isActive: true })),
+  };
   const alert = { success: vi.fn(), error: vi.fn(), warning: vi.fn() };
   let closed: boolean[];
 
-  const setup = (mode: 'add' | 'edit'): void => {
+  const setup = (mode: 'add' | 'edit', userOverride: IUser = existingUser): void => {
     TestBed.configureTestingModule({
       imports: [FormUsersComponent],
       providers: [
         { provide: UserService, useValue: userSvc },
+        { provide: FacultyService, useValue: facultySvc },
         { provide: ToastrService, useValue: alert },
       ],
     });
     const modal = new ModalData<IUser>();
     if (mode === 'edit') {
       modal.action = SystemConstant.ACTION.EDIT;
-      modal.data = existingUser;
+      modal.data = userOverride;
     }
     fixture = TestBed.createComponent(FormUsersComponent);
     fixture.componentRef.setInput('modalData', modal);
@@ -65,6 +70,7 @@ describe('FormUsersComponent (F01 US-02)', () => {
     vi.clearAllMocks();
     userSvc.create.mockImplementation(() => of({}));
     userSvc.update.mockImplementation(() => of({}));
+    facultySvc.getFacultyById.mockImplementation(() => of({ id: 'fac_fit_01', code: 'FIT', name: 'Khoa Công nghệ Thông tin', isActive: true }));
   });
 
   describe('thêm người dùng', () => {
@@ -257,6 +263,19 @@ describe('FormUsersComponent (F01 US-02)', () => {
       userSvc.update.mockImplementation(() => throwError(() => apiError(409, 'Email đã tồn tại')));
       component.onSubmit();
       expect(component.formErrorMsg()).toBe('Email đã tồn tại');
+    });
+
+    it('tra cứu và hiển thị tên Khoa khi user PROGRAM_MANAGER chỉ có facultyId', () => {
+      TestBed.resetTestingModule();
+      setup('edit', {
+        ...existingUser,
+        roles: ['PROGRAM_MANAGER'],
+        facultyId: 'fac_fit_01',
+      });
+      expect(facultySvc.getFacultyById).toHaveBeenCalledWith('fac_fit_01');
+      expect((fixture.nativeElement as HTMLElement).textContent).toContain(
+        'Khoa phụ trách: FIT - Khoa Công nghệ Thông tin',
+      );
     });
   });
 });

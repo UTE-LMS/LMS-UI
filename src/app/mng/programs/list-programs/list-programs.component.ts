@@ -219,9 +219,9 @@ export class ListProgramsComponent implements OnInit {
           const msg =
             rawMsg.length > 0
               ? rawMsg
-              : 'Chương trình đào tạo đã có phiên bản ban hành (ACTIVE/ARCHIVED). Không được chỉnh sửa.';
+              : 'Chương trình đào tạo đã có phiên bản ban hành. Không được chỉnh sửa.';
           this.nzModalSvc?.warning({
-            nzTitle: 'Thao tác bị từ chối (422 Locked)',
+            nzTitle: 'Không thể chỉnh sửa chương trình đào tạo',
             nzContent: msg,
             nzOkText: 'Đã hiểu',
             nzWidth: 460,

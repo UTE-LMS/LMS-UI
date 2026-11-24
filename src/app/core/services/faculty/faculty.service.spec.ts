@@ -247,14 +247,22 @@ describe('FacultyService (M01 Core Infrastructure)', () => {
       req.flush(null);
     });
 
-    it('downloadImportTemplate và importFaculties gọi đúng endpoint import CSV Khoa', () => {
+    it('downloadImportTemplate và importFaculties gọi đúng endpoint import Khoa', () => {
       service.downloadImportTemplate().subscribe();
       const tplReq = http.expectOne(UrlConstant.API.FACULTY_IMPORT_TEMPLATE);
       expect(tplReq.request.method).toBe('GET');
+      expect(tplReq.request.params.keys()).toEqual([]);
       expect(tplReq.request.responseType).toBe('blob');
-      tplReq.flush(new Blob(['code,name,description,isActive\n'], { type: 'text/csv' }));
+      tplReq.flush(new Blob(['code,name,description\n'], { type: 'text/csv' }));
 
-      const file = new File(['code,name\nFIT,CNTT'], 'faculties.csv', { type: 'text/csv' });
+      service.downloadImportTemplate('xlsx').subscribe();
+      const xlsxReq = http.expectOne(r => r.url === UrlConstant.API.FACULTY_IMPORT_TEMPLATE);
+      expect(xlsxReq.request.method).toBe('GET');
+      expect(xlsxReq.request.params.get('format')).toBe('xlsx');
+      expect(xlsxReq.request.responseType).toBe('blob');
+      xlsxReq.flush(new Blob(['x']));
+
+      const file = new File(['code,name,description\nFIT,CNTT,Mo ta'], 'faculties.csv', { type: 'text/csv' });
       service.importFaculties(file).subscribe(res => {
         expect(res.successCount).toBe(1);
       });

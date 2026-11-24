@@ -37,7 +37,7 @@
         type="button"
         (click)="openImportModal()"
       >
-        <i class="fa-solid fa-file-import mr-1.5 text-blue-600"></i>Import Người dùng (CSV)
+        <i class="fa-solid fa-file-import mr-1.5 text-blue-600"></i>Import Người dùng
       </button>
       }
 
@@ -114,13 +114,13 @@
           @for (role of item.roles; track role) {
           <div class="user-scope-text">
             @if (role === 'PROGRAM_MANAGER') {
-              @if (item.facultyCode || item.facultyName) {
-                <span class="text-slate-800 font-medium">{{ describeRoleScope(role, item) }}</span>
+              @if (hasAssignedFaculty(item)) {
+                <span class="text-slate-800 font-medium">{{ describeRoleScope(role, item, facultyMap()) }}</span>
               } @else {
                 <span class="text-slate-400 italic">Chưa gán Khoa</span>
               }
             } @else {
-              <span class="text-slate-600">{{ describeRoleScope(role, item) }}</span>
+              <span class="text-slate-600">{{ describeRoleScope(role, item, facultyMap()) }}</span>
             }
           </div>
           }
@@ -216,12 +216,13 @@
 <app-csv-import-modal
   [isVisible]="isImportModalVisible()"
   (isVisibleChange)="isImportModalVisible.set($event)"
-  nzTitle="Import Người dùng từ CSV"
-  guideTitle="Quy cách tệp CSV danh sách Người dùng"
-  guideText="Các cột: username, email, password, fullName, roles (phân cách nhiều vai trò bằng dấu ; ví dụ LECTURER;QA), facultyCode (tùy chọn để gán Khoa cho PROGRAM_MANAGER), status (mặc định ACTIVE)."
+  nzTitle="Import Người dùng"
+  guideTitle="Quy cách tệp nhập danh sách Người dùng (.csv hoặc .xlsx)"
+  guideText="Các cột: username, email, password, fullName, roles (phân cách nhiều vai trò bằng dấu ; ví dụ LECTURER;QA), facultyCode (tùy chọn để gán Khoa cho PROGRAM_MANAGER). Tất cả tài khoản sau khi import mặc định ở trạng thái Hoạt động và bắt buộc đổi mật khẩu ở lần đăng nhập đầu."
   templateFileName="users-template.csv"
   keyColumnLabel="Username"
   entityLabel="người dùng"
+  [requiredColumns]="['username', 'email', 'password', 'fullName', 'roles']"
   [downloadTemplateFn]="downloadUserTemplate"
   [importFileFn]="importUserCsv"
   (importSuccess)="onImportSuccess()"

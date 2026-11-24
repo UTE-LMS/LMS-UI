@@ -204,9 +204,9 @@ export class CourseModalComponent implements OnInit {
       const msg =
         rawMsg.length > 0
           ? rawMsg
-          : 'Học phần đã thuộc về phiên bản CTĐT đang áp dụng (ACTIVE) hoặc lưu trữ (ARCHIVED). Không được chỉnh sửa.';
+          : 'Học phần đã thuộc về phiên bản CTĐT đang áp dụng hoặc lưu trữ. Không được chỉnh sửa.';
       this.nzModalSvc?.warning({
-        nzTitle: 'Thao tác bị từ chối (422 Locked)',
+        nzTitle: 'Không thể chỉnh sửa học phần',
         nzContent: msg,
         nzOkText: 'Đã hiểu',
         nzWidth: 460,

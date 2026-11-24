@@ -35,8 +35,8 @@
         [disabled]="!selectedProgramId()"
         (click)="openImportModal()"
       >
-        <i class="fa-solid fa-file-csv text-sm"></i>
-        <span>Import CSV CTĐT</span>
+        <i class="fa-solid fa-file-import text-sm"></i>
+        <span>Import CTĐT</span>
       </button>
     </div>
     }
@@ -158,7 +158,7 @@
 <!-- Modal Import CSV Phiên bản CTĐT 3 bước (Chọn tệp & Phiên bản -> Xem trước & Xác nhận PLO/PI -> Khung học phần) -->
 <nz-modal
   [(nzVisible)]="isImportModalVisible"
-  nzTitle="Import phiên bản CTĐT từ CSV"
+  nzTitle="Import phiên bản CTĐT"
   [nzWidth]="760"
   (nzOnCancel)="closeImportModal()"
   [nzFooter]="null"
@@ -233,7 +233,7 @@
 
       <div class="p-3 rounded-lg bg-slate-50 border border-slate-200 space-y-2">
         <div class="flex items-center justify-between gap-2">
-          <span class="text-xs font-medium text-slate-700">Tải tệp CSV mẫu đúng định dạng PLO, PI, Học phần:</span>
+          <span class="text-xs font-medium text-slate-700">Tải tệp mẫu đúng định dạng PLO, PI, Học phần:</span>
           <span class="flex gap-2">
             <button nz-button nzType="default" nzSize="small" type="button" (click)="downloadImportTemplate('csv')">
               <i class="fa-solid fa-download mr-1.5"></i> Mẫu CSV
@@ -246,17 +246,53 @@
       </div>
 
       <div>
-        <label for="programCsvFile" class="block text-sm font-medium text-slate-700 mb-1">
+        <label for="programCsvFile" class="block text-sm font-medium text-slate-700 mb-1.5">
           Chọn tệp (.csv hoặc .xlsx) <span class="text-rose-500">*</span>
         </label>
-        <input
-          id="programCsvFile"
-          type="file"
-          accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-          class="block w-full text-sm text-slate-600 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-          (change)="onFileSelected($event)"
-        />
+        <div class="flex flex-wrap items-center gap-2.5 rounded-lg border border-slate-300 bg-white px-3 py-2">
+          <input
+            #programCsvInput
+            id="programCsvFile"
+            type="file"
+            accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            class="sr-only"
+            (change)="onFileSelected($event)"
+          />
+          <label
+            for="programCsvFile"
+            class="inline-flex cursor-pointer items-center gap-1.5 rounded-md bg-blue-50 px-3 py-1.5 text-sm font-semibold text-blue-700 hover:bg-blue-100 transition m-0"
+          >
+            <i class="fa-solid fa-folder-open" aria-hidden="true"></i>
+            <span>{{ selectedFile() ? 'Đổi tệp' : 'Chọn tệp' }}</span>
+          </label>
+          @if (selectedFile(); as picked) {
+          <span class="flex-1 min-w-0 flex items-center gap-1.5 text-sm text-slate-800">
+            <i class="fa-solid fa-file-lines text-emerald-600 shrink-0" aria-hidden="true"></i>
+            <span class="font-medium truncate">{{ picked.name }}</span>
+          </span>
+          <button
+            type="button"
+            class="text-slate-400 hover:text-red-500 p-1 rounded transition cursor-pointer bg-transparent border-0"
+            title="Gỡ bỏ tệp"
+            aria-label="Gỡ bỏ tệp"
+            (click)="selectedFile.set(null); programCsvInput.value = ''"
+          >
+            <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+          </button>
+          } @else {
+          <span class="text-sm text-slate-500">Chưa chọn tệp nào</span>
+          }
+        </div>
       </div>
+
+      @if (selectedFile()) {
+      <app-import-file-preview
+        class="block"
+        [file]="selectedFile()"
+        [maxRows]="8"
+        title="Xem trước nhanh tệp phiên bản CTĐT"
+      />
+      }
 
       <div class="flex justify-end gap-2 pt-3 border-t border-slate-100">
         <button nz-button type="button" (click)="closeImportModal()">Hủy</button>
@@ -276,7 +312,7 @@
     @if (importResult(); as res) {
     <div class="space-y-4">
       <div class="p-4 rounded-lg bg-blue-50 border border-blue-200 text-sm text-blue-900">
-        Kết quả xem trước phiên bản <strong>{{ res.version }}</strong> (sẽ tự động lưu ở trạng thái <code>ACTIVE</code> & <code>VERIFIED</code>):
+        Kết quả xem trước phiên bản <strong>{{ res.version }}</strong> (sẽ tự động lưu ở trạng thái <strong>Đang áp dụng</strong> và <strong>Đã xác nhận</strong>):
         <ul class="list-disc pl-5 mt-2 space-y-1">
           <li>Khóa đào tạo: <strong>{{ res.applicableCohort || '—' }}</strong></li>
           <li>Thời gian đào tạo: <strong>{{ res.durationYears ?? '—' }} năm</strong></li>
@@ -299,12 +335,13 @@
       }
 
       @if (previewRows().length > 0) {
-      <div class="max-h-60 overflow-y-auto border border-slate-200 rounded-lg">
+      <div class="border border-slate-200 rounded-lg overflow-hidden">
         <nz-table
           #previewTable
           [nzData]="previewRows()"
           [nzShowPagination]="false"
           [nzFrontPagination]="false"
+          [nzScroll]="{ x: '560px', y: '220px' }"
           nzSize="small"
         >
           <thead>
@@ -346,13 +383,13 @@
     } @else if (importStep() === 2) {
     <div class="space-y-4">
       <div class="p-4 rounded-lg bg-emerald-50 border border-emerald-200 text-sm text-emerald-900">
-        Đã tạo phiên bản CTĐT <strong>{{ importResult()?.version }}</strong> ở trạng thái <code>ACTIVE</code> (Đang áp dụng).
+        Đã tạo phiên bản CTĐT <strong>{{ importResult()?.version }}</strong> ở trạng thái <strong>Đang áp dụng</strong>.
         Vui lòng tải lên và import <strong>Khung học phần theo học kỳ</strong> (bắt buộc) để hoàn tất phiên bản.
       </div>
 
       <div class="p-3 rounded-lg bg-slate-50 border border-slate-200 space-y-2">
         <div class="flex items-center justify-between gap-2">
-          <span class="text-xs font-medium text-slate-700">Tải tệp CSV mẫu Khung học phần theo học kỳ:</span>
+          <span class="text-xs font-medium text-slate-700">Tải tệp mẫu Khung học phần theo học kỳ:</span>
           <span class="flex gap-2">
             <button nz-button nzType="default" nzSize="small" type="button" (click)="downloadCoursesImportTemplate('csv')">
               <i class="fa-solid fa-download mr-1.5"></i> Mẫu CSV
@@ -368,17 +405,53 @@
       </div>
 
       <div>
-        <label for="programCoursesCsvFile" class="block text-sm font-medium text-slate-700 mb-1">
+        <label for="programCoursesCsvFile" class="block text-sm font-medium text-slate-700 mb-1.5">
           Chọn tệp Khung học phần (.csv hoặc .xlsx)
         </label>
-        <input
-          id="programCoursesCsvFile"
-          type="file"
-          accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-          class="block w-full text-sm text-slate-600 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-          (change)="onCoursesFileSelected($event)"
-        />
+        <div class="flex flex-wrap items-center gap-2.5 rounded-lg border border-slate-300 bg-white px-3 py-2">
+          <input
+            #programCoursesInput
+            id="programCoursesCsvFile"
+            type="file"
+            accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            class="sr-only"
+            (change)="onCoursesFileSelected($event)"
+          />
+          <label
+            for="programCoursesCsvFile"
+            class="inline-flex cursor-pointer items-center gap-1.5 rounded-md bg-blue-50 px-3 py-1.5 text-sm font-semibold text-blue-700 hover:bg-blue-100 transition m-0"
+          >
+            <i class="fa-solid fa-folder-open" aria-hidden="true"></i>
+            <span>{{ selectedCoursesFile() ? 'Đổi tệp' : 'Chọn tệp' }}</span>
+          </label>
+          @if (selectedCoursesFile(); as picked) {
+          <span class="flex-1 min-w-0 flex items-center gap-1.5 text-sm text-slate-800">
+            <i class="fa-solid fa-file-lines text-emerald-600 shrink-0" aria-hidden="true"></i>
+            <span class="font-medium truncate">{{ picked.name }}</span>
+          </span>
+          <button
+            type="button"
+            class="text-slate-400 hover:text-red-500 p-1 rounded transition cursor-pointer bg-transparent border-0"
+            title="Gỡ bỏ tệp"
+            aria-label="Gỡ bỏ tệp"
+            (click)="selectedCoursesFile.set(null); coursesImportResult.set(null); programCoursesInput.value = ''"
+          >
+            <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+          </button>
+          } @else {
+          <span class="text-sm text-slate-500">Chưa chọn tệp nào</span>
+          }
+        </div>
       </div>
+
+      @if (selectedCoursesFile() && !coursesImportResult()) {
+      <app-import-file-preview
+        class="block"
+        [file]="selectedCoursesFile()"
+        [requiredColumns]="['courseCode']"
+        title="Xem trước Khung học phần trước khi nhập"
+      />
+      }
 
       @if (coursesImportResult(); as cRes) {
       <div class="p-3 rounded-lg bg-blue-50 border border-blue-200 text-xs text-blue-900 space-y-1">

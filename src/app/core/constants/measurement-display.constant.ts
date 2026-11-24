@@ -119,9 +119,9 @@ export const UNOFFICIAL_DEFAULT_DESCRIPTION
   = 'Kết quả này chưa phải kết luận chính thức: chỉ kết quả được hệ thống xác nhận là chính thức mới được dùng làm kết luận.';
 
 export const UNOFFICIAL_REASON_LABEL: Record<UnofficialReason, string> = {
-  RULE_DRAFT: 'Quy tắc đo lường còn ở bản nháp (DRAFT).',
-  RULE_NOT_CONFIRMED: 'Quy tắc đo lường chưa được xác nhận (CONFIRMED).',
-  LINK_NOT_VERIFIED: 'Liên kết CLO–PI chưa được xác minh (VERIFIED).',
+  RULE_DRAFT: 'Quy tắc đo lường còn ở bản nháp.',
+  RULE_NOT_CONFIRMED: 'Quy tắc đo lường chưa được xác nhận.',
+  LINK_NOT_VERIFIED: 'Liên kết CLO–PI chưa được xác minh.',
 };
 
 export const STALE_WARNING_TITLE = 'Điểm đã thay đổi sau lần tính';

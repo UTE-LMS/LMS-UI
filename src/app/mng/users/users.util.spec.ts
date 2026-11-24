@@ -14,6 +14,10 @@ describe('users.util (roles phẳng & phạm vi theo Khoa)', () => {
         facultyName: 'Khoa Công nghệ Thông tin',
       })).toBe('FIT - Khoa Công nghệ Thông tin');
       expect(describeRoleScope('PROGRAM_MANAGER', { facultyName: 'Khoa Cơ khí' })).toBe('Khoa Cơ khí');
+      expect(describeRoleScope('PROGRAM_MANAGER', { facultyId: 'fac_fit_01' }, new Map([
+        ['fac_fit_01', { code: 'FIT', name: 'Khoa Công nghệ Thông tin' }],
+      ]))).toBe('FIT - Khoa Công nghệ Thông tin');
+      expect(describeRoleScope('PROGRAM_MANAGER', { facultyId: 'fac_unknown' })).toBe('Đã gán Khoa');
       expect(describeRoleScope('PROGRAM_MANAGER', {})).toBe('Chưa gán Khoa');
     });
   });

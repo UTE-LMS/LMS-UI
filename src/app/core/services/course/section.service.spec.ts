@@ -105,4 +105,19 @@ describe('SectionService (F05a US-19)', () => {
     expect(req.request.method).toBe('GET');
     req.flush({ sectionId, sectionCode: 'TEST101-01', courseId: 'c1', syllabusId: 's1', assessmentCount: 0, totalPoints: 0, cloWithWarningCount: 0, clos: [] });
   });
+
+  it('getLecturers gọi GET /sections/lecturers và gửi facultyId khi được truyền', () => {
+    service.getLecturers().subscribe(list => {
+      expect(list.length).toBe(1);
+    });
+    const req1 = http.expectOne(r => r.url === UrlConstant.API.SECTION_LECTURERS);
+    expect(req1.request.method).toBe('GET');
+    expect(req1.request.params.keys()).toEqual([]);
+    req1.flush([{ id: 'u1', username: 'gv1', fullName: 'Nguyễn Văn A' }]);
+
+    service.getLecturers('fac-1').subscribe();
+    const req2 = http.expectOne(r => r.url === UrlConstant.API.SECTION_LECTURERS);
+    expect(req2.request.params.get('facultyId')).toBe('fac-1');
+    req2.flush([]);
+  });
 });

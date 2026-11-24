@@ -3,6 +3,11 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, computed, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
+import {
+  CALCULATION_SCOPE_LABEL,
+  CALCULATION_STATUS_LABEL,
+  RESULT_LEVEL_LABEL,
+} from '@constants/analytics-display.constant';
 import { ISection } from '@models/course/section.model';
 import { ITerm } from '@models/course/term.model';
 import {
@@ -64,6 +69,10 @@ export class CalculationsPageComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly toastr = inject(ToastrService);
+
+  protected readonly scopeLabel = CALCULATION_SCOPE_LABEL;
+  protected readonly statusLabel = CALCULATION_STATUS_LABEL;
+  protected readonly levelLabel = RESULT_LEVEL_LABEL;
 
   readonly runs = signal<CalculationRunResponse[]>([]);
   readonly loadingRuns = signal<boolean>(false);
@@ -213,7 +222,7 @@ export class CalculationsPageComponent implements OnInit {
   triggerRun(): void {
     const scope = this.selectedScope();
     if (scope === 'SECTION' && this.selectedSectionIds().length === 0) {
-      this.toastr.warning('Vui lòng chọn ít nhất một lớp học phần cho phạm vi SECTION');
+      this.toastr.warning('Vui lòng chọn ít nhất một lớp học phần cho phạm vi lớp học phần');
       return;
     }
 
@@ -363,7 +372,7 @@ export class CalculationsPageComponent implements OnInit {
             seen.add(item.subjectId);
             opts.push({
               id: item.subjectId,
-              label: `${item.level}: ${item.subjectCode ?? item.subjectId}`,
+              label: `${this.levelLabel[item.level] ?? item.level}: ${item.subjectCode ?? item.subjectId}`,
             });
           }
         }
@@ -371,6 +380,10 @@ export class CalculationsPageComponent implements OnInit {
       },
       error: () => this.subjectOptions.set([]),
     });
+  }
+
+  versionStatusLabel(status: string): string {
+    return status === 'ACTIVE' ? 'Đang áp dụng' : 'Lưu trữ';
   }
 
   openTrace(studentResultId: string): void {

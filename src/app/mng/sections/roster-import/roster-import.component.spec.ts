@@ -53,7 +53,7 @@ describe('RosterImportComponent (F05a US-20)', () => {
   it('trạng thái ban đầu: chưa chọn tệp thì nút Ghi danh bị vô hiệu hóa và thanh dưới hướng dẫn chọn tệp', async () => {
     await setup();
     expect(submitButton().disabled).toBe(true);
-    expect(el().querySelector('app-action-dock')?.textContent).toContain('Chọn tệp CSV danh sách lớp');
+    expect(el().querySelector('app-action-dock')?.textContent).toContain('Chọn tệp danh sách lớp');
   });
 
   it('US-20/AC-3: tệp không phải CSV/Excel bị từ chối ngay ở bước chọn tệp với thông báo rõ', async () => {

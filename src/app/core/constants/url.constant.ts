@@ -93,6 +93,7 @@ export const UrlConstant = {
 
     // F05a - Lớp học phần, ghi danh, nhập danh sách lớp (API-CONTRACT.md §6.4)
     SECTIONS: environment.serverUrl + 'api/v1/sections',
+    SECTION_LECTURERS: environment.serverUrl + 'api/v1/sections/lecturers',
     SECTION_IMPORT_TEMPLATE: environment.serverUrl + 'api/v1/sections/import-template',
     SECTION_IMPORT: environment.serverUrl + 'api/v1/sections/import',
     SECTION_DETAIL: (id: string) => `${environment.serverUrl}api/v1/sections/${id}`,

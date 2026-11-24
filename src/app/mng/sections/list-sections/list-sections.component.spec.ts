@@ -31,6 +31,9 @@ describe('ListSectionsComponent (F05a US-19)', () => {
 
   const sectionSvc = {
     getSections: vi.fn(),
+    getLecturers: vi.fn(() => of([
+      { id: 'u1', username: 'gv.khoa', fullName: 'GV Khoa Thử', email: 'a@test.local', status: 'ACTIVE', createdAt: '', updatedAt: '', roles: ['LECTURER'] },
+    ])),
     downloadImportTemplate: vi.fn(() => of(new Blob([''], { type: 'text/csv' }))),
     importSections: vi.fn(),
   };
@@ -49,8 +52,9 @@ describe('ListSectionsComponent (F05a US-19)', () => {
       content: [{ id: 'u1', username: 'gv.test01', fullName: 'GV Thử', email: 'a@test.local', status: 'ACTIVE', createdAt: '', updatedAt: '', roles: ['LECTURER'] }],
       page: 0, size: 100, totalElements: 1, totalPages: 1, last: true,
     })),
+    getById: vi.fn(),
   };
-  const authSvc = { getRoles: vi.fn<() => string[]>(), getUserId: vi.fn(() => 'u1') };
+  const authSvc = { getRoles: vi.fn<() => string[]>(), getUserId: vi.fn(() => 'u1'), getNameOfLogin: vi.fn(() => 'Nguyễn Văn Thử') };
 
   async function setup(roles: string[], list: ISection[] = sections): Promise<void> {
     sectionSvc.getSections.mockReset();
@@ -79,14 +83,15 @@ describe('ListSectionsComponent (F05a US-19)', () => {
 
   const text = (): string => (fixture.nativeElement as HTMLElement).textContent ?? '';
 
-  it('US-19/AC-4: hiển thị lớp với tên học phần, học kỳ, đề cương và tên giảng viên tra được', async () => {
+  it('US-19/AC-4: hiển thị lớp với tên học phần, học kỳ, đề cương và họ tên giảng viên tra được', async () => {
     await setup([SystemConstant.ROLE.ADMIN]);
     expect(text()).toContain('TEST101-01');
     expect(text()).toContain('TEST101');
     expect(text()).toContain('Học phần thử nghiệm');
     expect(text()).toContain('2026-HK1');
     expect(text()).toContain('Bản 1');
-    expect(text()).toContain('gv.test01');
+    expect(text()).toContain('GV Thử');
+    expect(text()).not.toContain('gv.test01');
   });
 
   it('hiện "—" (không phải 0) cho lớp chưa có danh sách ghi danh và hiện số khi có', async () => {
@@ -110,11 +115,19 @@ describe('ListSectionsComponent (F05a US-19)', () => {
     expect(fixture.componentInstance.canCreate()).toBe(false);
   });
 
-  it('PROGRAM_MANAGER thấy nút "Thêm lớp" và không tải danh sách người dùng (API chỉ cho ADMIN)', async () => {
+  it('PROGRAM_MANAGER thấy nút "Thêm lớp", không gọi userSvc.filter và lấy họ tên giảng viên qua sectionSvc.getLecturers()', async () => {
     await setup([SystemConstant.ROLE.PROGRAM_MANAGER]);
     expect(text()).toContain('Thêm lớp');
     expect(userSvc.filter).not.toHaveBeenCalled();
-    expect(fixture.componentInstance.lecturerListAvailable()).toBe(false);
+    expect(sectionSvc.getLecturers).toHaveBeenCalled();
+    expect(text()).toContain('GV Khoa Thử');
+    expect(fixture.componentInstance.lecturerListAvailable()).toBe(true);
+  });
+
+  it('LECTURER hiển thị họ tên của chính mình thay vì mã khi getLecturers() trả rỗng', async () => {
+    sectionSvc.getLecturers.mockReturnValueOnce(of([]));
+    await setup([SystemConstant.ROLE.LECTURER]);
+    expect(text()).toContain('Nguyễn Văn Thử');
   });
 
   it('trạng thái rỗng: hướng dẫn việc kế tiếp theo vai trò', async () => {

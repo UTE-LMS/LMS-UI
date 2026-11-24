@@ -1,6 +1,6 @@
 <nz-modal
   [(nzVisible)]="visible"
-  nzTitle="Truy vết ngược kết quả đo lường (US-34)"
+  nzTitle="Truy vết ngược kết quả đo lường"
   [nzWidth]="820"
   [nzFooter]="null"
   (nzOnCancel)="close()">
@@ -14,7 +14,7 @@
         <div class="mb-4 rounded-lg border border-slate-200 p-3 bg-slate-50/50">
           <div class="flex items-center justify-between mb-2">
             <div class="flex items-center gap-2">
-              <nz-tag nzColor="blue">Bước {{ idx + 1 }}: {{ node.level }}</nz-tag>
+              <nz-tag nzColor="blue">Bước {{ idx + 1 }}: {{ levelLabel[node.level] || node.level }}</nz-tag>
               <span class="font-semibold text-slate-800">{{ node.subjectCode || node.subjectId }}</span>
               <span class="text-xs text-slate-500">SV: {{ node.studentCode || node.studentId }}</span>
             </div>
@@ -24,7 +24,7 @@
                   {{ (node.value ?? 0) * 100 | number: '1.1-1' }}% ({{ node.passed ? 'Đạt' : 'Chưa đạt' }})
                 </nz-tag>
               } @else {
-                <nz-tag nzColor="orange">{{ node.status }}</nz-tag>
+                <nz-tag nzColor="orange">{{ resultStatusLabel[node.status] || node.status }}</nz-tag>
               }
             </div>
           </div>
@@ -45,7 +45,7 @@
                   <tr>
                     <td>
                       <nz-tag [nzColor]="inp.sourceType === 'SCORE' ? 'purple' : 'geekblue'">
-                        {{ inp.sourceType }}
+                        {{ sourceLabel[inp.sourceType] || inp.sourceType }}
                       </nz-tag>
                     </td>
                     <td>{{ inp.label }}</td>
@@ -79,7 +79,7 @@
             <nz-descriptions-item nzTitle="Sinh viên">{{ st.studentCode }}</nz-descriptions-item>
             <nz-descriptions-item nzTitle="Câu / CLO">{{ st.itemCode }} / {{ st.cloCode }}</nz-descriptions-item>
             <nz-descriptions-item nzTitle="Điểm thực / Tối đa">{{ st.rawScore }} / {{ st.maxScore }}</nz-descriptions-item>
-            <nz-descriptions-item nzTitle="Dòng CSV (sourceRow)">Dòng {{ st.sourceRow ?? '—' }}</nz-descriptions-item>
+            <nz-descriptions-item nzTitle="Dòng trong tệp">Dòng {{ st.sourceRow ?? '—' }}</nz-descriptions-item>
             <nz-descriptions-item nzTitle="Tên tệp">{{ st.fileName || '—' }}</nz-descriptions-item>
             <nz-descriptions-item nzTitle="Hệ thống nguồn">{{ st.sourceSystem || '—' }}</nz-descriptions-item>
           </nz-descriptions>

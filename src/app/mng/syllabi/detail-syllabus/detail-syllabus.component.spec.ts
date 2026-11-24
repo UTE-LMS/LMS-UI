@@ -165,7 +165,8 @@ describe('DetailSyllabusComponent (F03 US-10, US-11, TD-27, ADR 0010)', () => {
     expect(syllabusSvc.lockSyllabus).toHaveBeenCalledWith(syllabusId);
     expect(component.syllabus()?.status).toBe('ARCHIVED');
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.textContent).toContain('TD-27');
+    expect(compiled.textContent).toContain('Đề cương đã khóa lưu trữ');
+    expect(compiled.textContent).not.toContain('TD-27');
   });
 
   it('F04: có liên kết sang khung bài đánh giá của đề cương (mở được ở mọi trạng thái đề cương)', () => {

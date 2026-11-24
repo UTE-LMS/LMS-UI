@@ -2,7 +2,7 @@
   [nzVisible]="isVisible()"
   [nzTitle]="nzTitle()"
   [nzFooter]="modalFooterTpl"
-  [nzWidth]="660"
+  [nzWidth]="780"
   (nzOnCancel)="handleCancel()"
   (nzVisibleChange)="onVisibleChange($event)"
 >
@@ -83,7 +83,7 @@
       <div class="flex items-center justify-between p-2">
         <div class="flex items-center gap-3 text-left">
           <div class="w-10 h-10 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center text-lg shrink-0">
-            <i class="fa-solid fa-file-csv"></i>
+            <i class="fa-solid fa-file-lines"></i>
           </div>
           <div>
             <div class="font-medium text-slate-900 text-sm truncate max-w-sm" [title]="selectedFile()!.name">
@@ -104,6 +104,15 @@
       </div>
       }
     </div>
+
+    @if (selectedFile()) {
+    <app-import-file-preview
+      class="block mt-4"
+      [file]="selectedFile()"
+      [requiredColumns]="requiredColumns()"
+      title="Xem trước dữ liệu trước khi nhập"
+    />
+    }
     }
 
     @if (importResult(); as result) {

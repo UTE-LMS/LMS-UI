@@ -1,4 +1,5 @@
 import { IApiFieldError } from '@models/common/response-data.model';
+import { ISection } from '@models/course/section.model';
 import { importFileNameError } from '@services/common/import-file.util';
 
 /** Dấu hiển thị cho dữ liệu chưa có (không bao giờ hiện 0 thay cho thiếu). */
@@ -81,14 +82,65 @@ export function shortId(id: string): string {
   return id.length > 6 ? id.slice(-6) : id;
 }
 
+function firstNonEmpty(...values: (string | null | undefined)[]): string {
+  for (const value of values) {
+    const trimmed = value?.trim();
+    if (trimmed) {
+      return trimmed;
+    }
+  }
+  return '';
+}
+
+/** Tên hiển thị ưu tiên họ tên đầy đủ (`fullName`), chỉ rơi về `username` khi chưa có họ tên. */
+export function userDisplayName(user: { fullName?: string | null; username?: string | null; }): string {
+  return firstNonEmpty(user.fullName, user.username);
+}
+
 /**
- * Nhãn giảng viên phụ trách. Backend chỉ trả `lecturerIds`; tên lấy từ danh sách người dùng khi người xem
- * có quyền tải (ADMIN), hoặc "Bạn" khi đó là chính người đăng nhập. Không tra được thì hiện mã ngắn, không đoán tên.
+ * Nhãn giảng viên phụ trách. Ưu tiên họ tên tra được từ danh sách người dùng / giảng viên cùng khoa,
+ * hoặc tên người đăng nhập hiện tại (rơi về "Bạn") nếu trùng `currentUserId`; không tra được thì hiện mã ngắn.
  */
-export function lecturerLabel(id: string, names: ReadonlyMap<string, string>, currentUserId: string): string {
-  const name = names.get(id);
+export function lecturerLabel(
+  id: string,
+  names: ReadonlyMap<string, string>,
+  currentUserId: string,
+  currentUserName?: string,
+): string {
+  const name = firstNonEmpty(names.get(id));
   if (name) {
     return name;
   }
-  return id === currentUserId ? 'Bạn' : `GV …${shortId(id)}`;
+  if (id === currentUserId) {
+    return firstNonEmpty(currentUserName) || 'Bạn';
+  }
+  return `GV …${shortId(id)}`;
+}
+
+/** Ghép danh sách tên giảng viên của lớp học phần (hỗ trợ cả `section.lecturers`, `section.lecturerNames` và `section.lecturerIds`). */
+export function sectionLecturersText(
+  section: ISection | null | undefined,
+  names: ReadonlyMap<string, string>,
+  currentUserId: string,
+  currentUserName?: string,
+): string {
+  if (!section) {
+    return NOT_AVAILABLE;
+  }
+  let labels: string[];
+  if (section.lecturers && section.lecturers.length > 0) {
+    labels = section.lecturers.map(entry => (
+      firstNonEmpty(entry.fullName, names.get(entry.id), entry.username)
+      || lecturerLabel(entry.id, names, currentUserId, currentUserName)
+    ));
+  } else if (section.lecturerNames && section.lecturerNames.length > 0) {
+    labels = section.lecturerNames.map((rawName, idx) => (
+      firstNonEmpty(rawName)
+      || lecturerLabel(section.lecturerIds[idx] ?? '', names, currentUserId, currentUserName)
+    ));
+  } else {
+    labels = section.lecturerIds.map(id => lecturerLabel(id, names, currentUserId, currentUserName));
+  }
+  const filtered = labels.map(item => item.trim()).filter(item => item.length > 0);
+  return filtered.length > 0 ? filtered.join(', ') : NOT_AVAILABLE;
 }

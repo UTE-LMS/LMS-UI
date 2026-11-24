@@ -24,6 +24,7 @@ import { NzSelectModule } from 'ng-zorro-antd/select';
 import { NzTableModule } from 'ng-zorro-antd/table';
 import { ToastrService } from 'ngx-toastr';
 import { ImportTemplateFormat, importFileNameError, saveBlobAs, templateFileNameFor } from '@services/common/import-file.util';
+import { ImportFilePreviewComponent } from '@widget/import-file-preview/import-file-preview.component';
 
 /**
  * Modal nạp danh mục học phần hàng loạt từ tệp CSV (F03 US-09/AC-4, ADR 0010 - ADMIN & PROGRAM_MANAGER).
@@ -33,7 +34,7 @@ import { ImportTemplateFormat, importFileNameError, saveBlobAs, templateFileName
   templateUrl: './course-import-modal.component.html',
   styleUrl: './course-import-modal.component.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FormsModule, NzModalModule, NzButtonModule, NzSelectModule, NzTableModule],
+  imports: [FormsModule, NzModalModule, NzButtonModule, NzSelectModule, NzTableModule, ImportFilePreviewComponent],
 })
 export class CourseImportModalComponent {
   private readonly courseSvc = inject(CourseService);
@@ -146,7 +147,7 @@ export class CourseImportModalComponent {
   submitImport(): void {
     const file = this.selectedFile();
     if (!file) {
-      this.errorMessage.set('Vui lòng chọn tệp CSV trước khi nạp dữ liệu.');
+      this.errorMessage.set('Vui lòng chọn tệp (.csv hoặc .xlsx) trước khi nạp dữ liệu.');
       return;
     }
 
@@ -173,7 +174,7 @@ export class CourseImportModalComponent {
       error: (err) => {
         this.isLoading.set(false);
         const apiErr = toApiError(err);
-        this.errorMessage.set(apiErr?.message ?? 'Đã xảy ra lỗi trong quá trình nạp tệp CSV.');
+        this.errorMessage.set(apiErr?.message ?? 'Đã xảy ra lỗi trong quá trình nạp tệp.');
         this.alert.error(this.errorMessage()!);
       },
     });

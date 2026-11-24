@@ -653,6 +653,16 @@ Khóa hoặc mở khóa tài khoản người dùng.
 
 ---
 
+#### 5.3.6. Nhập hàng loạt Người dùng (`GET /api/v1/users/import-template`, `POST /api/v1/users/import`)
+- **Xác thực:** Bắt buộc (`Authorization: Bearer <token>`). Vai trò: `ADMIN`.
+- **Tải tệp mẫu:** `GET /api/v1/users/import-template` (hỗ trợ `?format=csv` mặc định hoặc `?format=xlsx`).
+- **Tải lên nhập dữ liệu:** `POST /api/v1/users/import` (`multipart/form-data`, trường `file`, nhận `.csv` hoặc `.xlsx`).
+- **Danh sách cột:** `username,email,password,fullName,roles,facultyCode`.
+  - Đã bỏ cột `status` (nếu tệp cũ vẫn có cột `status`, backend sẽ bỏ qua).
+  - Mọi tài khoản được import mặc định luôn ở trạng thái hoạt động (`status = ACTIVE`) và bắt buộc đổi mật khẩu ở lần đăng nhập đầu tiên (`mustChangePassword = true`).
+
+---
+
 ### 5.4. Khung Định Hướng Phân Quyền Theo Phạm Vi (US-03, OBE v0.7 / ADR 0014)
 Hệ thống tinh gọn còn **4 vai trò cốt lõi**: `ADMIN`, `PROGRAM_MANAGER`, `LECTURER`, `QA` (loại bỏ `DEPARTMENT_HEAD`, `VIEWER`, `QA_OFFICER` và `STUDENT` khỏi enum `Role`). Backend kiểm tra quyền hạn của người dùng trên từng tài nguyên theo cặp `(vai trò, phạm vi)` và phân định hành vi `READ` / `WRITE`:
 - **Nguyên tắc nạp quyền động:** Quyền hạn được nạp từ CSDL mỗi request và đóng gói trong `UserPrincipal` (trong package `dto`). Thay đổi vai trò hoặc phạm vi trên CSDL lập tức có hiệu lực ở request tiếp theo mà không cần cấp lại token.
@@ -702,6 +712,16 @@ Phản hồi `200`:
 ```
 - `userId` có thể `null` nếu hành động không gắn với người dùng đã xác thực. `before`/`after` là object hoặc `null`; trường nhạy cảm (mật khẩu, token, secret...) luôn hiển thị là `"[PROTECTED]"`. `reason` bắt buộc có với `SCORE_UPDATE`.
 - Lỗi `400 VALIDATION_ERROR`: `page`/`size` ngoài biên, `action` không thuộc danh sách, `userId` sai định dạng, `from`/`to` sai định dạng ISO-8601, hoặc `from` sau `to`.
+
+---
+
+### 5.6. Nhập Hàng Loạt Danh Mục Khoa (Faculties Import)
+- **Xác thực:** Bắt buộc (`Authorization: Bearer <token>`). Vai trò: `ADMIN`.
+- **Tải tệp mẫu:** `GET /api/v1/faculties/import-template` (hỗ trợ `?format=csv` mặc định hoặc `?format=xlsx`).
+- **Tải lên nhập dữ liệu:** `POST /api/v1/faculties/import` (`multipart/form-data`, trường `file`, nhận `.csv` hoặc `.xlsx`).
+- **Danh sách cột:** `code,name,description`.
+  - Đã bỏ cột `isActive` (nếu tệp cũ vẫn có cột `isActive`, backend sẽ bỏ qua).
+  - Mọi Khoa được import mặc định luôn ở trạng thái hoạt động (`isActive = true`).
 
 ---
 
