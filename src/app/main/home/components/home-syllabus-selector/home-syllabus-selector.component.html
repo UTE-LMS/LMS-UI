@@ -1,0 +1,303 @@
+<div class="bg-white rounded-2xl border border-slate-200 shadow-xs p-4 sm:p-5 space-y-5">
+  <!-- Tiêu đề & Chỉ báo 5 bước -->
+  <div class="flex flex-col xl:flex-row xl:items-center justify-between gap-3 pb-3.5 border-b border-slate-200">
+    <div>
+      <h2 class="text-base font-bold text-[#003b64] m-0 flex items-center gap-2">
+        <i class="fa-solid fa-file-lines text-[#15803d]" aria-hidden="true"></i>
+        <span>Tra cứu Đề cương Học phần &amp; Ma trận CLO × PI</span>
+      </h2>
+      <p class="text-xs text-slate-600 m-0 mt-1">
+        Chọn ngữ cảnh CTĐT ở hàng trên, sau đó nhấp trực tiếp thẻ Học phần và thẻ Đề cương để xem ma trận CLO × PI.
+      </p>
+    </div>
+
+    <div class="flex flex-wrap items-center gap-1.5 text-[11px]">
+      <span
+        class="px-2 py-0.5 rounded-full font-semibold border"
+        [class.bg-[#edf4ff]]="selectedFacultyId()"
+        [class.text-[#003b64]]="selectedFacultyId()"
+        [class.border-[#c7ddf7]]="selectedFacultyId()"
+        [class.bg-slate-100]="!selectedFacultyId()"
+        [class.text-slate-600]="!selectedFacultyId()"
+        [class.border-slate-200]="!selectedFacultyId()"
+      >
+        1. Khoa
+      </span>
+      <span
+        class="px-2 py-0.5 rounded-full font-semibold border"
+        [class.bg-[#edf4ff]]="selectedProgramId()"
+        [class.text-[#003b64]]="selectedProgramId()"
+        [class.border-[#c7ddf7]]="selectedProgramId()"
+        [class.bg-slate-100]="!selectedProgramId()"
+        [class.text-slate-600]="!selectedProgramId()"
+        [class.border-slate-200]="!selectedProgramId()"
+      >
+        2. CTĐT
+      </span>
+      <span
+        class="px-2 py-0.5 rounded-full font-semibold border"
+        [class.bg-[#edf4ff]]="selectedVersionId()"
+        [class.text-[#003b64]]="selectedVersionId()"
+        [class.border-[#c7ddf7]]="selectedVersionId()"
+        [class.bg-slate-100]="!selectedVersionId()"
+        [class.text-slate-600]="!selectedVersionId()"
+        [class.border-slate-200]="!selectedVersionId()"
+      >
+        3. Phiên bản
+      </span>
+      <span
+        class="px-2 py-0.5 rounded-full font-semibold border"
+        [class.bg-[#edf4ff]]="selectedCourseId()"
+        [class.text-[#003b64]]="selectedCourseId()"
+        [class.border-[#c7ddf7]]="selectedCourseId()"
+        [class.bg-slate-100]="!selectedCourseId()"
+        [class.text-slate-600]="!selectedCourseId()"
+        [class.border-slate-200]="!selectedCourseId()"
+      >
+        4. Học phần
+      </span>
+      <span
+        class="px-2 py-0.5 rounded-full font-semibold border"
+        [class.bg-emerald-50]="selectedSyllabusId()"
+        [class.text-emerald-800]="selectedSyllabusId()"
+        [class.border-emerald-200]="selectedSyllabusId()"
+        [class.bg-slate-100]="!selectedSyllabusId()"
+        [class.text-slate-600]="!selectedSyllabusId()"
+        [class.border-slate-200]="!selectedSyllabusId()"
+      >
+        5. Đề cương
+      </span>
+    </div>
+  </div>
+
+  <!-- Tầng 1: Ngữ cảnh Khoa / Chương trình / Phiên bản -->
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-3.5">
+    <div>
+      <label for="filterFaculty" class="block text-xs font-bold text-slate-700 uppercase mb-1">
+        1. Khoa đào tạo
+      </label>
+      <nz-select
+        nzId="filterFaculty"
+        class="w-full"
+        nzShowSearch
+        nzAllowClear
+        nzPlaceHolder="Chọn Khoa..."
+        [nzLoading]="isLoadingFaculties()"
+        [ngModel]="selectedFacultyId()"
+        (ngModelChange)="facultyChange.emit($event)"
+      >
+        @for (fac of faculties(); track fac.id) {
+        <nz-option [nzValue]="fac.id" [nzLabel]="fac.code + ' — ' + fac.name" />
+        }
+      </nz-select>
+    </div>
+
+    <div>
+      <label for="filterProgram" class="block text-xs font-bold text-slate-700 uppercase mb-1">
+        2. Chương trình đào tạo
+      </label>
+      <nz-select
+        nzId="filterProgram"
+        class="w-full"
+        nzShowSearch
+        nzAllowClear
+        [nzDisabled]="!selectedFacultyId()"
+        nzPlaceHolder="Chọn CTĐT..."
+        [nzLoading]="isLoadingPrograms()"
+        [ngModel]="selectedProgramId()"
+        (ngModelChange)="programChange.emit($event)"
+      >
+        @for (prog of programs(); track prog.id) {
+        <nz-option [nzValue]="prog.id" [nzLabel]="prog.code + ' — ' + prog.name" />
+        }
+      </nz-select>
+    </div>
+
+    <div>
+      <label for="filterVersion" class="block text-xs font-bold text-slate-700 uppercase mb-1">
+        3. Phiên bản CTĐT
+      </label>
+      <nz-select
+        nzId="filterVersion"
+        class="w-full"
+        nzShowSearch
+        nzAllowClear
+        [nzDisabled]="!selectedProgramId()"
+        nzPlaceHolder="Chọn phiên bản..."
+        [nzLoading]="isLoadingVersions()"
+        [ngModel]="selectedVersionId()"
+        (ngModelChange)="versionChange.emit($event)"
+      >
+        @for (ver of filteredVersions(); track ver.id) {
+        <nz-option [nzValue]="ver.id" [nzLabel]="ver.version + ' (' + (ver.status === 'ACTIVE' ? 'Đang áp dụng' : 'Lưu trữ') + ')'" />
+        }
+      </nz-select>
+    </div>
+  </div>
+
+  <!-- Chọn nhanh Khoa khi chưa chọn -->
+  @if (!selectedFacultyId() && faculties().length > 0 && !isLoadingFaculties()) {
+  <div class="space-y-2 pt-1">
+    <div class="text-xs font-semibold text-slate-600">Chọn nhanh Khoa đào tạo:</div>
+    <div class="flex flex-wrap gap-2">
+      @for (fac of faculties(); track fac.id) {
+      <button
+        type="button"
+        (click)="facultyChange.emit(fac.id)"
+        class="px-3 py-1.5 rounded-xl border border-slate-200 bg-slate-50/70 hover:bg-[#edf4ff] hover:border-[#005a94] text-left transition-colors cursor-pointer"
+      >
+        <span class="text-xs font-bold text-[#003b64] mr-1.5">{{ fac.code }}</span>
+        <span class="text-xs text-slate-700">{{ fac.name }}</span>
+      </button>
+      }
+    </div>
+  </div>
+  }
+
+  <!-- Chọn nhanh CTĐT khi đã chọn Khoa nhưng chưa chọn CTĐT -->
+  @if (selectedFacultyId() && !selectedProgramId() && programs().length > 0 && !isLoadingPrograms()) {
+  <div class="space-y-2 pt-1">
+    <div class="text-xs font-semibold text-slate-600">Chọn nhanh Chương trình đào tạo:</div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+      @for (prog of programs(); track prog.id) {
+      <button
+        type="button"
+        (click)="programChange.emit(prog.id)"
+        class="text-left rounded-xl border border-slate-200 bg-slate-50/60 hover:bg-[#edf4ff] hover:border-[#005a94] p-3 transition-all cursor-pointer"
+      >
+        <div class="font-mono text-xs font-bold text-[#003b64]">{{ prog.code }}</div>
+        <div class="text-xs font-semibold text-slate-800 mt-0.5">{{ prog.name }}</div>
+      </button>
+      }
+    </div>
+  </div>
+  }
+
+  <!-- Tầng 2: Bước 4 — Chọn Học phần dạng thẻ -->
+  @if (selectedVersionId()) {
+  <div class="space-y-3 pt-2 border-t border-slate-100">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+      <div class="text-xs font-bold text-slate-700 uppercase">
+        4. Chọn Học phần ({{ filteredProgramCourses().length }}/{{ programCourses().length }})
+      </div>
+
+      @if (programCourses().length > 0) {
+      <div class="relative w-full sm:w-64">
+        <i
+          class="fa-solid fa-magnifying-glass absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none"
+          aria-hidden="true"
+        ></i>
+        <input
+          type="search"
+          aria-label="Tìm nhanh học phần"
+          placeholder="Lọc mã hoặc tên môn..."
+          class="w-full pl-8 pr-3 py-1.5 rounded-lg border border-slate-300 bg-slate-50/60 focus:bg-white text-xs text-slate-800 focus:outline-none focus:border-[#005a94]"
+          [ngModel]="courseSearch()"
+          (ngModelChange)="courseSearch.set($event)"
+        />
+      </div>
+      }
+    </div>
+
+    @if (isLoadingCourses()) {
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5" aria-busy="true">
+      @for (item of [1, 2, 3]; track item) {
+      <div class="rounded-xl border border-slate-200 p-3 space-y-2 animate-pulse">
+        <div class="h-4 w-24 rounded bg-slate-200"></div>
+        <div class="h-4 w-44 rounded bg-slate-100"></div>
+      </div>
+      }
+    </div>
+    } @else {
+    <div class="max-h-60 overflow-y-auto pr-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+      @for (pc of filteredProgramCourses(); track pc.id) {
+      <button
+        type="button"
+        [attr.aria-pressed]="pc.courseId === selectedCourseId()"
+        (click)="courseChange.emit(pc.courseId)"
+        class="course-select-card text-left rounded-xl border p-3 transition-all cursor-pointer"
+        [class.border-[#005a94]]="pc.courseId === selectedCourseId()"
+        [class.bg-[#f4faff]]="pc.courseId === selectedCourseId()"
+        [class.ring-2]="pc.courseId === selectedCourseId()"
+        [class.ring-[#005a94]/20]="pc.courseId === selectedCourseId()"
+        [class.border-slate-200]="pc.courseId !== selectedCourseId()"
+        [class.bg-white]="pc.courseId !== selectedCourseId()"
+      >
+        <div class="flex items-center justify-between gap-2 mb-1">
+          <span class="font-mono text-xs font-bold text-[#003b64]">
+            {{ pc.course?.code ?? pc.courseId }}
+          </span>
+          <div class="flex items-center gap-1 text-[11px]">
+            @if (pc.semester) {
+            <span class="px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 font-medium">
+              HK {{ pc.semester }}
+            </span>
+            }
+            <span class="px-1.5 py-0.5 rounded bg-[#edf4ff] text-[#003b64] font-semibold">
+              {{ pc.credits ?? pc.course?.credits ?? '—' }} TC
+            </span>
+          </div>
+        </div>
+        <div class="text-xs font-semibold text-slate-800 line-clamp-2" [title]="pc.course?.name ?? ''">
+          {{ pc.course?.name ?? '—' }}
+        </div>
+      </button>
+      } @empty {
+      <div class="col-span-full rounded-xl border border-dashed border-slate-300 bg-slate-50 p-4 text-center text-xs text-slate-600">
+        Không tìm thấy học phần nào trong phiên bản này.
+      </div>
+      }
+    </div>
+    }
+  </div>
+  }
+
+  <!-- Tầng 3: Bước 5 — Chọn Đề cương dạng thẻ -->
+  @if (selectedCourseId()) {
+  <div class="space-y-3 pt-2 border-t border-slate-100">
+    <div class="text-xs font-bold text-slate-700 uppercase">
+      5. Chọn Đề cương Học phần ({{ syllabi().length }})
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+      @for (syl of syllabi(); track syl.id) {
+      <button
+        type="button"
+        [attr.aria-pressed]="syl.id === selectedSyllabusId()"
+        (click)="syllabusChange.emit(syl.id)"
+        class="syllabus-select-card text-left rounded-xl border p-3.5 transition-all cursor-pointer"
+        [class.border-[#15803d]]="syl.id === selectedSyllabusId()"
+        [class.bg-emerald-50/60]="syl.id === selectedSyllabusId()"
+        [class.ring-2]="syl.id === selectedSyllabusId()"
+        [class.ring-[#15803d]/20]="syl.id === selectedSyllabusId()"
+        [class.border-slate-200]="syl.id !== selectedSyllabusId()"
+        [class.bg-white]="syl.id !== selectedSyllabusId()"
+      >
+        <div class="flex items-start justify-between gap-2">
+          <div class="flex items-center gap-2">
+            <span class="w-8 h-8 rounded-lg bg-emerald-50 border border-emerald-200 text-[#15803d] flex items-center justify-center shrink-0">
+              <i class="fa-solid fa-file-lines text-xs" aria-hidden="true"></i>
+            </span>
+            <div>
+              <div class="text-sm font-bold text-slate-900">{{ syl.version }}</div>
+              @if (syl.id === selectedSyllabusId()) {
+              <span class="inline-flex items-center gap-1 text-[11px] font-semibold text-[#15803d]">
+                <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
+                <span>Đang xem</span>
+              </span>
+              }
+            </div>
+          </div>
+
+          <app-status-chip [label]="syl.status === 'CONFIRMED' ? 'Đã duyệt' : 'Lưu trữ'" [tone]="syl.status === 'CONFIRMED' ? 'success' : 'neutral'" />
+        </div>
+      </button>
+      } @empty {
+      <div class="col-span-full rounded-xl border border-dashed border-slate-300 bg-slate-50 p-4 text-center text-xs text-slate-600">
+        Học phần này chưa có đề cương được công bố.
+      </div>
+      }
+    </div>
+  </div>
+  }
+</div>

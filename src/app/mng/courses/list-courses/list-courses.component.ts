@@ -214,7 +214,7 @@ export class ListCoursesComponent implements OnInit {
       return;
     }
     if (!reason) {
-      this.alert.error('Vui lòng nhập lý do giải trình khi mở lại sổ điểm học kỳ (US-18/AC-3)');
+      this.alert.error('Vui lòng nhập lý do giải trình khi mở lại sổ điểm học kỳ');
       return;
     }
 

@@ -3,7 +3,7 @@ import { ChangeDetectionStrategy, Component, computed, DestroyRef, inject, OnIni
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { createListManagerFilter } from '@builder/list-mng-filter.builder';
-import { AUDIT_ACTION_LABEL } from '@constants/analytics-display.constant';
+import { AUDIT_ACTION_LABEL, AUDIT_ENTITY_LABEL } from '@constants/analytics-display.constant';
 import { toOptions } from '@constants/assessment-display.constant';
 import { AuditAction, IAuditLog, IAuditLogFilter } from '@models/common/audit-log.model';
 import { IUser } from '@models/user/user.model';
@@ -61,11 +61,8 @@ export class ListAuditLogsComponent implements OnInit {
 
   protected readonly actionLabel = AUDIT_ACTION_LABEL;
   protected readonly actionOptions = toOptions(AUDIT_ACTION_LABEL);
-  protected readonly entityOptions = [
-    'users', 'faculties', 'programs', 'program_versions', 'plos', 'pis',
-    'courses', 'syllabi', 'clos', 'clo_pi_links', 'terms', 'sections', 'enrollments',
-    'assessments', 'scores', 'import_batches', 'calculation_runs',
-  ];
+  protected readonly entityLabel = AUDIT_ENTITY_LABEL;
+  protected readonly entityOptions = Object.entries(AUDIT_ENTITY_LABEL).map(([value, label]) => ({ value, label }));
 
   readonly users = signal<IUser[]>([]);
   readonly usernameById = computed(() => new Map(this.users().map(u => [u.id, u.username])));

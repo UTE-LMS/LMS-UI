@@ -1,6 +1,6 @@
 import {
   buildRosterErrorCsv, displayEnrolledCount, lecturerLabel, MAX_ROSTER_FILE_BYTES, parseImportLine,
-  toRosterRowErrors, validateRosterFile,
+  sectionLecturersText, toRosterRowErrors, userDisplayName, validateRosterFile,
 } from './sections.util';
 
 /** DỮ LIỆU THỬ NGHIỆM: mã sinh viên và ID giả. */
@@ -93,19 +93,48 @@ describe('sections.util (F05a)', () => {
     });
   });
 
-  describe('lecturerLabel', () => {
-    const names = new Map([['u1', 'gv.test01']]);
+  describe('lecturerLabel & userDisplayName', () => {
+    const names = new Map([['u1', 'Nguyễn Văn A']]);
 
-    it('dùng tên đăng nhập khi tra được', () => {
-      expect(lecturerLabel('u1', names, 'me')).toBe('gv.test01');
+    it('userDisplayName ưu tiên fullName và rơi về username nếu chưa có họ tên', () => {
+      expect(userDisplayName({ fullName: 'Nguyễn Văn A', username: 'gv.test01' })).toBe('Nguyễn Văn A');
+      expect(userDisplayName({ fullName: '   ', username: 'gv.test01' })).toBe('gv.test01');
     });
 
-    it('hiện "Bạn" khi là người đang đăng nhập và không tra được tên', () => {
+    it('dùng họ tên khi tra được', () => {
+      expect(lecturerLabel('u1', names, 'me')).toBe('Nguyễn Văn A');
+    });
+
+    it('hiện tên đăng nhập hiện tại hoặc "Bạn" khi trùng currentUserId mà chưa tra được trong map', () => {
+      expect(lecturerLabel('me', names, 'me', 'Trần Thị B')).toBe('Trần Thị B');
       expect(lecturerLabel('me', names, 'me')).toBe('Bạn');
     });
 
     it('không đoán tên: hiện mã ngắn khi không tra được', () => {
       expect(lecturerLabel('671dcba5f123456789abcd01', names, 'me')).toBe('GV …abcd01');
+    });
+
+    it('sectionLecturersText ưu tiên section.lecturers rồi tới map tên', () => {
+      expect(sectionLecturersText({
+        id: 'sec1',
+        code: 'L01',
+        courseId: 'c1',
+        syllabusId: 's1',
+        termId: 't1',
+        lecturerIds: ['u1', 'u2'],
+        lecturers: [{ id: 'u2', fullName: 'Lê Văn C', username: 'gv.c' }],
+        status: 'OPEN',
+      }, names, 'me')).toBe('Lê Văn C');
+
+      expect(sectionLecturersText({
+        id: 'sec1',
+        code: 'L01',
+        courseId: 'c1',
+        syllabusId: 's1',
+        termId: 't1',
+        lecturerIds: ['u1', 'me'],
+        status: 'OPEN',
+      }, names, 'me', 'Trần Thị B')).toBe('Nguyễn Văn A, Trần Thị B');
     });
   });
 });

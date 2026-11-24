@@ -1,13 +1,15 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, inject, input, OnInit, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, DestroyRef, inject, input, OnInit, output, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { SystemConstant } from '@constants/system.constant';
 import { MakeForm } from '@models/common/make-form.model';
 import { ModalData } from '@models/common/modal-data.model';
 import { IApiError } from '@models/common/response-data.model';
+import { IFaculty } from '@models/faculty/faculty.model';
 import { IUser, IUserCreateDTO, IUserUpdateDTO, Role } from '@models/user/user.model';
 import { toApiError } from '@services/common/api-error.util';
 import { FormValidatorService } from '@services/common/form-validator.service';
+import { FacultyService } from '@services/faculty/faculty.service';
 import { UserService } from '@services/user/user.service';
 import { passwordBytesValidator } from '@validators/password-bytes.validator';
 import { notBlankValidator, trimmedEmailValidator, trimmedMinLength } from '@validators/trimmed.validator';
@@ -18,8 +20,8 @@ import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzSelectModule } from 'ng-zorro-antd/select';
 import { NzTableModule } from 'ng-zorro-antd/table';
 import { ToastrService } from 'ngx-toastr';
-import { catchError, EMPTY, exhaustMap, filter, finalize, Subject, tap } from 'rxjs';
-import { describeRoleScope, ROLE_LABELS } from '../users.util';
+import { catchError, EMPTY, exhaustMap, filter, finalize, of, Subject, tap } from 'rxjs';
+import { describeRoleScope, formatUserFacultyLabel, ROLE_LABELS } from '../users.util';
 
 type RoleRowForm = FormGroup<{ role: FormControl<Role>; }>;
 
@@ -45,6 +47,7 @@ export class FormUsersComponent implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
   private readonly fb = inject(NonNullableFormBuilder);
   private readonly userSvc = inject(UserService);
+  private readonly facultySvc = inject(FacultyService);
   protected readonly formValidSvc = inject(FormValidatorService);
   private readonly alert = inject(ToastrService);
 
@@ -52,6 +55,16 @@ export class FormUsersComponent implements OnInit {
   readonly closeModal = output<boolean>();
 
   form!: FormGroup<MakeForm<IUserCreateDTO>>;
+  readonly resolvedFaculty = signal<IFaculty | null>(null);
+  readonly assignedFacultyLabel = computed<string | null>(() => {
+    const data = this.modalData().data;
+    if (!data) {
+      return null;
+    }
+    const fac = this.resolvedFaculty();
+    const map = fac ? new Map([[fac.id, fac]]) : undefined;
+    return formatUserFacultyLabel(data, map);
+  });
 
   protected readonly roleOptions = SystemConstant.ROLE_TITLE.map(item => ({ value: item.id, label: item.title.vi }));
   protected readonly adminRole: Role = SystemConstant.ROLE.ADMIN;
@@ -83,6 +96,17 @@ export class FormUsersComponent implements OnInit {
 
   ngOnInit(): void {
     this.createForm();
+    const user = this.modalData().data;
+    if (user?.facultyId && !user.facultyCode && !user.facultyName) {
+      this.facultySvc.getFacultyById(user.facultyId).pipe(
+        catchError(() => of(null)),
+        takeUntilDestroyed(this.destroyRef),
+      ).subscribe(fac => {
+        if (fac) {
+          this.resolvedFaculty.set(fac);
+        }
+      });
+    }
   }
 
   createForm(): void {

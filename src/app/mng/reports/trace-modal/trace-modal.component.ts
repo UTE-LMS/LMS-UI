@@ -2,6 +2,11 @@ import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, inject, input, model, effect, signal } from '@angular/core';
 import {
+  RESULT_LEVEL_LABEL,
+  RESULT_STATUS_LABEL,
+  TRACE_SOURCE_LABEL,
+} from '@constants/analytics-display.constant';
+import {
   ScoreTraceResponse,
   StudentResultTraceResponse,
 } from '@models/measurement/measurement.model';
@@ -32,6 +37,10 @@ import { NzTagModule } from 'ng-zorro-antd/tag';
 })
 export class TraceModalComponent {
   private reportSvc = inject(ReportService);
+
+  protected readonly levelLabel = RESULT_LEVEL_LABEL;
+  protected readonly resultStatusLabel = RESULT_STATUS_LABEL;
+  protected readonly sourceLabel = TRACE_SOURCE_LABEL;
 
   visible = model<boolean>(false);
   studentResultId = input<string | null>(null);

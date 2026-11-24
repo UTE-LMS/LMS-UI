@@ -3,6 +3,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { SystemConstant } from '@constants/system.constant';
 import { IEnrollment, IEnrollmentList, ISection } from '@models/course/section.model';
+import { IUser } from '@models/user/user.model';
 import { AuthService } from '@services/auth/auth.service';
 import { CourseService } from '@services/course/course.service';
 import { EnrollmentService } from '@services/course/enrollment.service';
@@ -35,22 +36,44 @@ describe('DetailSectionComponent (F05a US-19, US-20)', () => {
     ],
   };
 
-  const sectionSvc = { getSection: vi.fn(), updateStatus: vi.fn(), updateLecturers: vi.fn() };
+  const sectionSvc = {
+    getSection: vi.fn(),
+    getLecturers: vi.fn(() => of([
+      { id: 'u1', username: 'gv.khoa', fullName: 'Trần Thị Khoa', email: 'a@test.local', status: 'ACTIVE', createdAt: '', updatedAt: '', roles: ['LECTURER'] },
+    ])),
+    updateStatus: vi.fn(),
+    updateLecturers: vi.fn(),
+  };
   const enrollmentSvc = { getEnrollments: vi.fn(), updateStatus: vi.fn() };
   const termSvc = { getTermById: vi.fn() };
   const courseSvc = { getCourseById: vi.fn(() => of({ id: 'c1', code: 'TEST101', name: 'Học phần thử nghiệm' })) };
   const syllabusSvc = { getSyllabusById: vi.fn(() => of({ id: 's1', courseId: 'c1', version: '1', status: 'CONFIRMED' })) };
-  const userSvc = { filter: vi.fn(() => of({ content: [], page: 0, size: 100, totalElements: 0, totalPages: 0, last: true })) };
-  const authSvc = { getRoles: vi.fn<() => string[]>(), getUserId: vi.fn(() => 'u1') };
+  const userSvc = {
+    filter: vi.fn(() => of({
+      content: [{ id: 'u1', username: 'gv.test01', fullName: 'Nguyễn Văn Thử', email: 'a@test.local', status: 'ACTIVE', createdAt: '', updatedAt: '', roles: ['LECTURER'] }],
+      page: 0, size: 100, totalElements: 1, totalPages: 1, last: true,
+    })),
+    getById: vi.fn(),
+  };
+  const authSvc = { getRoles: vi.fn<() => string[]>(), getUserId: vi.fn(() => 'u1'), getNameOfLogin: vi.fn(() => 'Lê Văn Giảng') };
   const alertSvc = { success: vi.fn(), error: vi.fn() };
 
   async function setup(
     roles: string[],
-    opts: { section?: ISection; roster?: IEnrollmentList; termStatus?: 'OPEN' | 'SCORE_LOCKED' | 'CLOSED'; } = {},
+    opts: { section?: ISection; roster?: IEnrollmentList; termStatus?: 'OPEN' | 'SCORE_LOCKED' | 'CLOSED'; lecturers?: IUser[]; } = {},
   ): Promise<void> {
     vi.clearAllMocks();
     authSvc.getRoles.mockReturnValue(roles);
+    authSvc.getUserId.mockReturnValue('u1');
+    authSvc.getNameOfLogin.mockReturnValue('Lê Văn Giảng');
+    userSvc.filter.mockReturnValue(of({
+      content: [{ id: 'u1', username: 'gv.test01', fullName: 'Nguyễn Văn Thử', email: 'a@test.local', status: 'ACTIVE', createdAt: '', updatedAt: '', roles: ['LECTURER'] }],
+      page: 0, size: 100, totalElements: 1, totalPages: 1, last: true,
+    }));
     sectionSvc.getSection.mockReturnValue(of(opts.section ?? section));
+    sectionSvc.getLecturers.mockReturnValue(of(opts.lecturers ?? [
+      { id: 'u1', username: 'gv.khoa', fullName: 'Trần Thị Khoa', email: 'a@test.local', status: 'ACTIVE', createdAt: '', updatedAt: '', roles: ['LECTURER'] },
+    ]));
     enrollmentSvc.getEnrollments.mockReturnValue(of(opts.roster ?? roster));
     termSvc.getTermById.mockReturnValue(of({ id: 't1', code: '2026-HK1', status: opts.termStatus ?? 'OPEN' }));
     await TestBed.configureTestingModule({
@@ -217,6 +240,26 @@ describe('DetailSectionComponent (F05a US-19, US-20)', () => {
       await setup([SystemConstant.ROLE.LECTURER]);
       expect(component.canManage()).toBe(false);
       expect(buttonByLabel('Đổi trạng thái lớp')).toBeUndefined();
+    });
+  });
+
+  describe('hiển thị họ tên giảng viên ở màn chi tiết', () => {
+    it('ADMIN thấy fullName thay vì username', async () => {
+      await setup([SystemConstant.ROLE.ADMIN]);
+      expect(el().textContent).toContain('Nguyễn Văn Thử');
+      expect(el().textContent).not.toContain('gv.test01');
+    });
+
+    it('PROGRAM_MANAGER thấy fullName từ sectionSvc.getLecturers() (không gọi /api/v1/users)', async () => {
+      await setup([SystemConstant.ROLE.PROGRAM_MANAGER]);
+      expect(userSvc.filter).not.toHaveBeenCalled();
+      expect(sectionSvc.getLecturers).toHaveBeenCalled();
+      expect(el().textContent).toContain('Trần Thị Khoa');
+    });
+
+    it('LECTURER thấy fullName của mình (khi getLecturers trả rỗng)', async () => {
+      await setup([SystemConstant.ROLE.LECTURER], { lecturers: [] });
+      expect(el().textContent).toContain('Lê Văn Giảng');
     });
   });
 });

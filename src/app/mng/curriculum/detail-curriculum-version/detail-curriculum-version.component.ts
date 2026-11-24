@@ -167,7 +167,7 @@ export class DetailCurriculumVersionComponent implements OnInit {
 
     this.modal?.confirm({
       nzTitle: 'Khóa phiên bản chương trình đào tạo',
-      nzContent: `Bạn có chắc chắn muốn khóa phiên bản CTĐT [${ver.version}]? Sau khi khóa, phiên bản sẽ chuyển sang trạng thái Đã lưu trữ (ARCHIVED), ngăn chặn hoàn toàn việc nhập điểm, sửa đổi đề cương và các cấu hình liên quan.`,
+      nzContent: `Bạn có chắc chắn muốn khóa phiên bản CTĐT [${ver.version}]? Sau khi khóa, phiên bản sẽ chuyển sang trạng thái Đã lưu trữ, ngăn chặn hoàn toàn việc nhập điểm, sửa đổi đề cương và các cấu hình liên quan.`,
       nzOkText: 'Khóa phiên bản',
       nzOkType: 'primary',
       nzOkDanger: true,

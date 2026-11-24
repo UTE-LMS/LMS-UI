@@ -2,6 +2,7 @@ import { DatePipe, DecimalPipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, DestroyRef, inject, OnInit, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
+import { CALCULATION_SCOPE_LABEL } from '@constants/analytics-display.constant';
 import { PLACEHOLDER } from '@constants/measurement-display.constant';
 import { SystemConstant } from '@constants/system.constant';
 import { UrlConstant } from '@constants/url.constant';
@@ -69,6 +70,7 @@ export class DashboardComponent implements OnInit {
 
   protected readonly route = ROUTE;
   protected readonly placeholder = PLACEHOLDER;
+  protected readonly scopeLabel = CALCULATION_SCOPE_LABEL;
 
   readonly username = this.authSvc.getUsername();
   readonly quickLinks = QUICK_LINKS.filter(l => this.authSvc.hasAnyRole(l.roles));

@@ -22,7 +22,7 @@
     </a>
     @if (assessment()?.status === 'LOCKED' || assessment()?.status === 'SCORE_ENTERED') {
       <a nz-button nzType="default" [routerLink]="urlConst.ASSESSMENT_SCORE_IMPORT(id())">
-        <i class="fa-solid fa-file-import mr-1.5" aria-hidden="true"></i>Nhập điểm từ CSV
+        <i class="fa-solid fa-file-import mr-1.5" aria-hidden="true"></i>Import điểm
       </a>
     }
     @if (studentRows().length > 0) {
@@ -96,7 +96,7 @@
         <p class="m-0 mb-3">Bài đánh giá này chưa có điểm sinh viên nào được ghi nhận.</p>
         @if (assessment()?.status === 'LOCKED' || assessment()?.status === 'SCORE_ENTERED') {
           <a nz-button nzType="primary" [routerLink]="urlConst.ASSESSMENT_SCORE_IMPORT(id())">
-            <i class="fa-solid fa-file-import mr-1.5" aria-hidden="true"></i>Nhập điểm từ CSV
+            <i class="fa-solid fa-file-import mr-1.5" aria-hidden="true"></i>Import điểm
           </a>
         }
       </div>

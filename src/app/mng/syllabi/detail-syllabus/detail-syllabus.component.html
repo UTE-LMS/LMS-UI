@@ -15,7 +15,7 @@
   <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-5 mb-6 border-b border-slate-200">
     <div>
       <div class="text-xs font-semibold uppercase tracking-wider text-blue-600 mb-1">
-        Chi tiết Đề cương Học phần & Chuẩn đầu ra (US-10, US-11)
+        Chi tiết Đề cương Học phần &amp; Chuẩn đầu ra
       </div>
       <h1 class="text-2xl font-bold text-slate-900 m-0">
         {{ course()?.code ?? '—' }} — {{ course()?.name ?? 'Đang tải học phần...' }}
@@ -34,7 +34,7 @@
           @if (isActiveOrConfirmed()) {
           <app-status-chip label="Đang áp dụng" tone="success" icon="fa-circle-check" />
           } @else {
-          <app-status-chip label="Lưu trữ (ARCHIVED)" tone="neutral" icon="fa-box-archive" />
+          <app-status-chip label="Lưu trữ" tone="neutral" icon="fa-box-archive" />
           }
         </span>
         }
@@ -57,7 +57,7 @@
         class="rounded-lg font-medium"
         (click)="confirmLockSyllabus()"
       >
-        <i class="fa-solid fa-lock mr-1.5"></i>Khóa đề cương (ARCHIVED)
+        <i class="fa-solid fa-lock mr-1.5"></i>Khóa đề cương
       </button>
       }
     </div>
@@ -66,7 +66,7 @@
   @if (syllabus()?.status === 'ARCHIVED') {
   <div class="mb-4 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-xs text-amber-900" role="status">
     <i class="fa-solid fa-lock mr-1.5" aria-hidden="true"></i>
-    Đề cương đã khóa lưu trữ (ARCHIVED — TD-27): mọi dữ liệu CLO và liên kết CLO–PI chỉ xem, không thể chỉnh sửa hoặc import đè.
+    Đề cương đã khóa lưu trữ: mọi dữ liệu CLO và liên kết CLO–PI chỉ xem, không thể chỉnh sửa hoặc import đè.
   </div>
   }
 
@@ -116,7 +116,7 @@
             @if (clo.contentOriginal) {
             <div class="text-slate-800 text-sm leading-relaxed">{{ clo.contentOriginal }}</div>
             } @else {
-            <span class="text-slate-400 text-xs italic">— (Chưa nhập nội dung nguyên văn - Q02)</span>
+            <span class="text-slate-400 text-xs italic">— (Chưa nhập nội dung nguyên văn)</span>
             }
           </td>
           <td nzAlign="center">

@@ -13,7 +13,7 @@
     }
     @if (canCreate()) {
     <button nz-button type="button" (click)="isSectionImportVisible.set(true)">
-      <i class="fa-solid fa-file-csv mr-1.5" aria-hidden="true"></i>Import CSV lớp
+      <i class="fa-solid fa-file-import mr-1.5" aria-hidden="true"></i>Import Lớp học phần
     </button>
     <button nz-button nzType="primary" type="button" (click)="isModalVisible.set(true)">
       <i class="fa-solid fa-plus mr-1.5" aria-hidden="true"></i>Thêm lớp
@@ -120,11 +120,12 @@
 
 <app-csv-import-modal
   [isVisible]="isSectionImportVisible()"
-  nzTitle="Import Lớp học phần (CSV)"
+  nzTitle="Import Lớp học phần"
   [guideText]="sectionImportGuideText()"
   templateFileName="sections-template.csv"
   keyColumnLabel="Mã lớp"
   entityLabel="lớp học phần"
+  [requiredColumns]="['code', 'courseCode', 'syllabusVersion', 'termCode']"
   [downloadTemplateFn]="downloadSectionTemplateFn"
   [importFileFn]="importSectionsFn"
   (isVisibleChange)="isSectionImportVisible.set($event)"
@@ -132,11 +133,12 @@
 
 <app-csv-import-modal
   [isVisible]="isBulkEnrollmentImportVisible()"
-  nzTitle="Import Ghi danh nhiều lớp (CSV)"
+  nzTitle="Import Ghi danh nhiều lớp"
   [guideText]="bulkEnrollmentGuideText"
   templateFileName="enrollments-bulk-template.csv"
   keyColumnLabel="Mã lớp / MSSV"
   entityLabel="lượt ghi danh"
+  [requiredColumns]="['sectionCode', 'studentCode']"
   [downloadTemplateFn]="downloadBulkEnrollmentTemplateFn"
   [importFileFn]="importBulkEnrollmentsFn"
   (isVisibleChange)="isBulkEnrollmentImportVisible.set($event)"

@@ -104,7 +104,7 @@ describe('ListCoursesComponent (F03 US-09/AC-1 & F05a US-18)', () => {
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.textContent).toContain('OOPR230279');
     expect(compiled.textContent).toContain('Thêm học phần mới');
-    expect(compiled.textContent).toContain('Nhập từ CSV');
+    expect(compiled.textContent).toContain('Import Học phần');
     // Học phần thứ 2 chưa có credits hiển thị dấu gạch — thay vì số 0
     expect(compiled.textContent).toContain('—');
   });
@@ -117,7 +117,7 @@ describe('ListCoursesComponent (F03 US-09/AC-1 & F05a US-18)', () => {
     expect(component.isProgramManager()).toBe(true);
     expect(component.canManageCourses()).toBe(true);
     expect(component.canManageTerms()).toBe(false);
-    expect((fixture.nativeElement as HTMLElement).textContent).toContain('Nhập từ CSV');
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('Import Học phần');
     expect((fixture.nativeElement as HTMLElement).textContent).toContain('Thêm học phần mới');
 
     const compiled = fixture.nativeElement as HTMLElement;
@@ -130,7 +130,7 @@ describe('ListCoursesComponent (F03 US-09/AC-1 & F05a US-18)', () => {
     expect(courseSvc.getCourses).toHaveBeenCalledWith(0, 10, '', 'fac_cntt_01');
   });
 
-  it('ẩn các nút Thêm/Sửa/Xóa học phần và Nhập từ CSV đối với vai trò không phải ADMIN và không phải PROGRAM_MANAGER', () => {
+  it('ẩn các nút Thêm/Sửa/Xóa học phần và Import Học phần đối với vai trò không phải ADMIN và không phải PROGRAM_MANAGER', () => {
     component.userRoles.set([SystemConstant.ROLE.LECTURER]);
     fixture.detectChanges();
 
@@ -139,7 +139,7 @@ describe('ListCoursesComponent (F03 US-09/AC-1 & F05a US-18)', () => {
     expect(component.canManageTerms()).toBe(false);
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.textContent).not.toContain('Thêm học phần mới');
-    expect(compiled.textContent).not.toContain('Nhập từ CSV');
+    expect(compiled.textContent).not.toContain('Import Học phần');
   });
 
   it('mở modal import CSV khi gọi openImportCourseModal và reload dữ liệu khi onCoursesImported', () => {

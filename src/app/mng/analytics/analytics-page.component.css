@@ -1,4 +1,162 @@
+/* Nền trang quản trị (.loms-main) dùng #eef2f6 chấm bi: mọi khối cần bề mặt trắng/pha sắc tách lớp rõ ràng. */
+.analytics-shell {
+  max-width: 1440px;
+}
+
+.analytics-header-card {
+  background: linear-gradient(135deg, #ffffff 0%, #f5f9ff 100%);
+  border: 1px solid #dbe4f0;
+  border-radius: 14px;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04);
+  padding: 20px 24px;
+}
+
+.analytics-card {
+  background-color: #ffffff;
+  border: 1px solid #dbe4f0;
+  border-radius: 14px;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04);
+  padding: 20px 24px;
+}
+
+.analytics-toolbar-card {
+  background-color: #ffffff;
+  border: 1px solid #dbe4f0;
+  border-radius: 12px;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.04);
+  padding: 12px 16px;
+}
+
+.analytics-state-card {
+  background-color: #ffffff;
+  border: 1.5px dashed #cbd5e1;
+  border-radius: 14px;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.03);
+  padding: 28px 24px;
+}
+
+.scope-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid transparent;
+}
+
+.scope-pill--sky {
+  background-color: #e8f3ff;
+  border-color: #bfdcfa;
+  color: #005a94;
+}
+
+.scope-pill--indigo {
+  background-color: #eef2ff;
+  border-color: #c7d2fe;
+  color: #3730a3;
+}
+
+.scope-pill--emerald {
+  background-color: #ecfdf5;
+  border-color: #a7f3d0;
+  color: #065f46;
+}
+
+.scope-pill--slate {
+  background-color: #f1f5f9;
+  border-color: #cbd5e1;
+  color: #334155;
+}
+
+.dim-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  border-radius: 12px;
+  border: 1px solid #dbe4f0;
+  background-color: #f8fafc;
+  padding: 12px 14px;
+  cursor: pointer;
+  transition: background-color 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease;
+}
+
+.dim-card:hover {
+  background-color: #f0f7ff;
+  border-color: #7ab3e0;
+}
+
+.dim-card-active {
+  background: linear-gradient(135deg, #eaf3ff 0%, #e1efff 100%);
+  border-color: #005a94;
+  box-shadow: 0 0 0 3px rgba(0, 90, 148, 0.12);
+}
+
+.dim-card-active:hover {
+  background: linear-gradient(135deg, #eaf3ff 0%, #dcebff 100%);
+  border-color: #005a94;
+}
+
+.dim-icon-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  flex-shrink: 0;
+  background-color: #ffffff;
+  border: 1px solid #dbe4f0;
+  color: #475569;
+  font-size: 14px;
+  transition: background-color 0.16s ease, border-color 0.16s ease, color 0.16s ease;
+}
+
+.dim-card-active .dim-icon-badge {
+  background-color: #005a94;
+  border-color: #005a94;
+  color: #ffffff;
+}
+
+.filter-tray {
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.chart-legend-strip {
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 10px 14px;
+}
+
+.chart-plot-frame {
+  background-color: #fafcff;
+  border: 1px solid #e5edf7;
+  border-radius: 10px;
+  padding: 14px 16px;
+}
+
+.chart-bar-track {
+  background-color: #eef2f7;
+  border-radius: 4px;
+}
+
 /* Ô "chưa có dữ liệu": gạch chéo để không bị đọc nhầm là thanh 0% (không chỉ dựa vào màu). */
 .chart-nodata {
   background: repeating-linear-gradient(135deg, #f7f9fb 0 6px, #dde2ea 6px 8px);
+}
+
+:host ::ng-deep .analytics-table .ant-table-thead > tr > th {
+  background-color: #f1f5f9;
+  color: #1e293b;
+  font-weight: 600;
+  border-bottom: 1px solid #dbe4f0;
+}
+
+:host ::ng-deep .analytics-table .ant-table-tbody > tr:hover > td {
+  background-color: #f8fbff;
 }

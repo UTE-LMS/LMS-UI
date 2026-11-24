@@ -1,5 +1,6 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { provideRouter } from '@angular/router';
 import { SystemConstant } from '@constants/system.constant';
 import { IPagedResults } from '@models/common/response-data.model';
@@ -8,6 +9,7 @@ import { IUser } from '@models/user/user.model';
 import { AuthService } from '@services/auth/auth.service';
 import { FacultyService } from '@services/faculty/faculty.service';
 import { UserService } from '@services/user/user.service';
+import { CsvImportModalComponent } from '@widget/csv-import-modal/csv-import-modal.component';
 import { NzModalService } from 'ng-zorro-antd/modal';
 import { ToastrService } from 'ngx-toastr';
 import { Observable, of, throwError } from 'rxjs';
@@ -110,6 +112,8 @@ describe('ListFacultiesComponent (M3: Admin Faculty Management & PM 1-1 Assignme
     assignProgramManager: vi.fn((): Observable<void> => of(undefined)),
     removeProgramManager: vi.fn((): Observable<void> => of(undefined)),
     transferProgramManager: vi.fn((): Observable<void> => of(undefined)),
+    downloadImportTemplate: vi.fn((): Observable<Blob> => of(new Blob(['code,name,description\n']))),
+    importFaculties: vi.fn(() => of({ totalRows: 1, successCount: 1, failureCount: 0, errors: [] })),
   };
 
   const userSvc = {
@@ -140,6 +144,8 @@ describe('ListFacultiesComponent (M3: Admin Faculty Management & PM 1-1 Assignme
     facultySvc.assignProgramManager.mockImplementation(() => of(undefined));
     facultySvc.removeProgramManager.mockImplementation(() => of(undefined));
     facultySvc.transferProgramManager.mockImplementation(() => of(undefined));
+    facultySvc.downloadImportTemplate.mockImplementation(() => of(new Blob(['code,name,description\n'])));
+    facultySvc.importFaculties.mockImplementation(() => of({ totalRows: 1, successCount: 1, failureCount: 0, errors: [] }));
     userSvc.filter.mockImplementation(() => of(pagedUsers()));
     authSvc.getRoles.mockReturnValue([SystemConstant.ROLE.ADMIN]);
 
@@ -409,6 +415,32 @@ describe('ListFacultiesComponent (M3: Admin Faculty Management & PM 1-1 Assignme
       });
       expect(alert.success).toHaveBeenCalledWith('Điều chuyển Program Manager thành công');
       expect(component.transferringPm()).toBeNull();
+    });
+  });
+
+  // ==========================================================================
+  // 5. Import Khoa (bỏ cột isActive, mặc định Hoạt động, hỗ trợ CSV/XLSX)
+  // ==========================================================================
+  describe('Import Khoa hàng loạt', () => {
+    it('hiển thị hướng dẫn chỉ gồm code, name, description (không có isActive) và nêu rõ trạng thái mặc định Hoạt động', () => {
+      const modalDebugEl = fixture.debugElement.query(By.directive(CsvImportModalComponent));
+      expect(modalDebugEl).not.toBeNull();
+      const modalCmp = modalDebugEl.componentInstance as CsvImportModalComponent;
+      const guide = modalCmp.guideText();
+
+      expect(guide).toContain('code');
+      expect(guide).toContain('name');
+      expect(guide).toContain('description');
+      expect(guide).toContain('Hoạt động');
+      expect(guide).not.toContain('isActive');
+    });
+
+    it('downloadFacultyTemplate ủy quyền xuống FacultyService với cả định dạng csv và xlsx', () => {
+      component.downloadFacultyTemplate('csv').subscribe();
+      expect(facultySvc.downloadImportTemplate).toHaveBeenCalledWith('csv');
+
+      component.downloadFacultyTemplate('xlsx').subscribe();
+      expect(facultySvc.downloadImportTemplate).toHaveBeenCalledWith('xlsx');
     });
   });
 });

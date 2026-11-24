@@ -48,7 +48,7 @@
             @for (role of p.roles; track role) {
               <tr class="border-t border-slate-200">
                 <td class="p-2 font-semibold">{{ roleLabel(role) }}</td>
-                <td class="p-2">{{ describeRoleScope(role, p) }}</td>
+                <td class="p-2">{{ describeRoleScope(role, p, facultyMap()) }}</td>
               </tr>
             }
           </tbody>

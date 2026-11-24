@@ -29,7 +29,7 @@
     <span class="block text-sm text-slate-600">Lần tính gần nhất</span>
     @if (latestRun(); as run) {
       <b class="block text-lg tabular-nums mt-1">{{ (run.finishedAt ?? run.startedAt) | date: 'dd/MM/yyyy HH:mm' }}</b>
-      <span class="block text-xs text-slate-600">{{ run.official ? 'Chính thức' : 'Không chính thức' }} · phạm vi {{ run.scope }}</span>
+      <span class="block text-xs text-slate-600">{{ run.official ? 'Chính thức' : 'Không chính thức' }} · phạm vi {{ scopeLabel[run.scope] || run.scope }}</span>
     } @else {
       <b class="block text-lg mt-1 text-slate-600">{{ placeholder.NONE }}</b>
     }

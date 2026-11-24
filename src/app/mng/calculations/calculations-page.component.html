@@ -1,9 +1,9 @@
 <div class="space-y-6">
   <div class="flex items-center justify-between">
     <div>
-      <h1 class="text-2xl font-bold text-slate-800 m-0">Đo lường chuẩn đầu ra 4 cấp độ (F06)</h1>
+      <h1 class="text-2xl font-bold text-slate-800 m-0">Đo lường chuẩn đầu ra 4 cấp độ</h1>
       <p class="text-sm text-slate-500 mt-1 mb-0">
-        Tính toán và lưu trữ kết quả từ bài đánh giá (ASSESSMENT_CLO) đến CLO, PI và PLO.
+        Tính toán và lưu trữ kết quả từ bài đánh giá đến CLO, PI và PLO.
       </p>
     </div>
   </div>
@@ -11,11 +11,11 @@
   <nz-card nzTitle="Khởi chạy lượt đo lường mới" class="rounded-xl shadow-sm">
     <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
       <div>
-        <label class="block text-xs font-medium text-slate-600 mb-1">Phạm vi (Scope)</label>
+        <label class="block text-xs font-medium text-slate-600 mb-1">Phạm vi</label>
         <nz-select [ngModel]="selectedScope()" (ngModelChange)="selectedScope.set($event)" class="w-full">
-          <nz-option nzValue="SECTION" nzLabel="Theo lớp học phần (SECTION)" />
-          <nz-option nzValue="COHORT" nzLabel="Theo khóa (COHORT)" />
-          <nz-option nzValue="PROGRAM" nzLabel="Theo toàn CTĐT (PROGRAM)" />
+          <nz-option nzValue="SECTION" nzLabel="Theo lớp học phần" />
+          <nz-option nzValue="COHORT" nzLabel="Theo khóa" />
+          <nz-option nzValue="PROGRAM" nzLabel="Theo toàn CTĐT" />
         </nz-select>
       </div>
 
@@ -28,7 +28,7 @@
           nzPlaceHolder="Chọn phiên bản CTĐT"
           class="w-full">
           @for (pv of programVersions(); track pv.id) {
-            <nz-option [nzValue]="pv.id" [nzLabel]="pv.version + ' (' + pv.status + ')'" />
+            <nz-option [nzValue]="pv.id" [nzLabel]="pv.version + ' (' + versionStatusLabel(pv.status) + ')'" />
           }
         </nz-select>
       </div>
@@ -72,7 +72,7 @@
             placeholder="Khóa (VD: K2023, K2024)" />
         </div>
         <label nz-checkbox [ngModel]="isOfficial()" (ngModelChange)="isOfficial.set($event)">
-          Lượt chạy chính thức (isOfficial)
+          Lượt chạy chính thức
         </label>
       </div>
       <button nz-button nzType="primary" [nzLoading]="running()" (click)="triggerRun()">
@@ -101,10 +101,10 @@
         <tbody>
           @for (r of runs(); track r.id) {
             <tr [class.bg-blue-50]="selectedRun()?.id === r.id">
-              <td><nz-tag>{{ r.scope }}</nz-tag></td>
+              <td><nz-tag>{{ scopeLabel[r.scope] || r.scope }}</nz-tag></td>
               <td>
                 <nz-tag [nzColor]="r.status === 'SUCCESS' ? 'green' : r.status === 'FAILED' ? 'red' : 'blue'">
-                  {{ r.status }}
+                  {{ statusLabel[r.status] || r.status }}
                 </nz-tag>
                 @if (r.stale) {
                   <nz-tag nzColor="orange">Cần tính lại</nz-tag>
@@ -140,7 +140,7 @@
         <span class="text-sm font-medium text-slate-600">Lọc cấp độ:</span>
         <nz-select [ngModel]="selectedLevel()" (ngModelChange)="onLevelFilterChange($event)" class="w-56">
           <nz-option nzValue="" nzLabel="Tất cả 4 cấp độ" />
-          <nz-option nzValue="ASSESSMENT_CLO" nzLabel="Cấp 1: ASSESSMENT_CLO" />
+          <nz-option nzValue="ASSESSMENT_CLO" nzLabel="Cấp 1: CLO theo bài đánh giá" />
           <nz-option nzValue="CLO" nzLabel="Cấp 2: CLO toàn học phần" />
           <nz-option nzValue="PI" nzLabel="Cấp 3: PI" />
           <nz-option nzValue="PLO" nzLabel="Cấp 4: PLO" />
@@ -148,7 +148,7 @@
       </div>
 
       <nz-tabs>
-        <nz-tab nzTitle="Tổng hợp (Aggregate Results)">
+        <nz-tab nzTitle="Kết quả tổng hợp">
           @if (aggregatesError(); as errMsg) {
             <nz-alert nzType="error" nzShowIcon [nzMessage]="errMsg" class="mb-3" />
             <button nz-button type="button" (click)="loadAggregateResults()">Thử lại</button>
@@ -171,7 +171,7 @@
               <tbody>
                 @for (agg of aggregateResults(); track agg.id) {
                   <tr>
-                    <td><nz-tag nzColor="blue">{{ agg.level }}</nz-tag></td>
+                    <td><nz-tag nzColor="blue">{{ levelLabel[agg.level] || agg.level }}</nz-tag></td>
                     <td class="font-semibold">{{ agg.subjectCode || agg.subjectId }}</td>
                     <td>{{ agg.counts?.enrolled ?? 0 }}</td>
                     <td>{{ agg.evaluated }}</td>
@@ -198,7 +198,7 @@
           </ng-template>
         </nz-tab>
 
-        <nz-tab nzTitle="Kết quả Sinh viên (Student Results)">
+        <nz-tab nzTitle="Kết quả theo sinh viên">
           <div class="mb-3 flex flex-wrap items-center gap-3">
             <nz-select
               class="w-60"
@@ -226,8 +226,8 @@
             <input
               nz-input
               class="w-56"
-              placeholder="ID sinh viên (studentId)"
-              aria-label="Tìm theo ID sinh viên"
+              placeholder="Mã định danh sinh viên"
+              aria-label="Tìm theo mã định danh sinh viên"
               [ngModel]="studentIdFilter()"
               (ngModelChange)="studentIdFilter.set($event)"
               (keyup.enter)="onStudentFilterChange()"
@@ -258,7 +258,7 @@
               <tbody>
                 @for (sr of studentResults(); track sr.id) {
                   <tr>
-                    <td><nz-tag>{{ sr.level }}</nz-tag></td>
+                    <td><nz-tag>{{ levelLabel[sr.level] || sr.level }}</nz-tag></td>
                     <td class="font-semibold">{{ sr.subjectCode || sr.subjectId }}</td>
                     <td>{{ sr.studentCode || sr.studentId }}</td>
                     <td>{{ sr.value !== undefined && sr.value !== null ? ((sr.value * 100) | number: '1.1-1') + '%' : '—' }}</td>

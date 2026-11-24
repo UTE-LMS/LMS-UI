@@ -28,6 +28,7 @@ import { ToastrService } from 'ngx-toastr';
 import { forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { ImportTemplateFormat, saveBlobAs, templateFileNameFor } from '@services/common/import-file.util';
+import { ImportFilePreviewComponent } from '@widget/import-file-preview/import-file-preview.component';
 
 @Component({
   selector: 'app-list-curriculum-versions',
@@ -45,6 +46,7 @@ import { ImportTemplateFormat, saveBlobAs, templateFileNameFor } from '@services
     NzStepsModule,
     StatusChipComponent,
     TablePaginateComponent,
+    ImportFilePreviewComponent,
   ],
 })
 export class ListCurriculumVersionsComponent implements OnInit {
@@ -432,7 +434,7 @@ export class ListCurriculumVersionsComponent implements OnInit {
     const pvId = this.createdProgramVersionId();
     const file = this.selectedCoursesFile();
     if (!pvId || !file) {
-      this.alert.warning('Vui lòng chọn tệp CSV khung học phần');
+      this.alert.warning('Vui lòng chọn tệp khung học phần (.csv hoặc .xlsx)');
       return;
     }
     this.isImportingCourses.set(true);
@@ -464,7 +466,7 @@ export class ListCurriculumVersionsComponent implements OnInit {
 
     this.modal.confirm({
       nzTitle: 'Khóa phiên bản chương trình đào tạo',
-      nzContent: `Bạn có chắc chắn muốn khóa phiên bản CTĐT [${version.version}]? Sau khi khóa, phiên bản sẽ chuyển sang trạng thái Đã lưu trữ (ARCHIVED), ngăn chặn hoàn toàn việc nhập điểm, sửa đổi đề cương và các cấu hình liên quan.`,
+      nzContent: `Bạn có chắc chắn muốn khóa phiên bản CTĐT [${version.version}]? Sau khi khóa, phiên bản sẽ chuyển sang trạng thái Đã lưu trữ, ngăn chặn hoàn toàn việc nhập điểm, sửa đổi đề cương và các cấu hình liên quan.`,
       nzOkText: 'Khóa phiên bản',
       nzOkType: 'primary',
       nzOkDanger: true,

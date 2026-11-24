@@ -495,4 +495,88 @@ describe('HomepageComponent — M2 Public Homepage (R1, Q22)', () => {
       expect(component.matrixData()?.clos.length).toBe(2);
     });
   });
+
+  describe('7. Component-based interactive cards (Programs, Versions, Syllabi)', () => {
+    it('filters active program cards by search query and navigates to VERSIONS/SYLLABI on card button click', () => {
+      const { fixture, component, compiled } = createComponent();
+
+      const searchInput = compiled.querySelector<HTMLInputElement>(
+        'input[aria-label="Tìm kiếm chương trình đào tạo"]',
+      );
+      expect(searchInput).not.toBeNull();
+      if (searchInput) {
+        searchInput.value = 'không tồn tại';
+        searchInput.dispatchEvent(new Event('input'));
+        fixture.detectChanges();
+      }
+      expect(compiled.querySelectorAll('.active-program-row').length).toBe(0);
+
+      if (searchInput) {
+        searchInput.value = 'Phần mềm';
+        searchInput.dispatchEvent(new Event('input'));
+        fixture.detectChanges();
+      }
+      expect(compiled.querySelectorAll('.active-program-row').length).toBe(1);
+
+      const openVersionsBtn = compiled.querySelector<HTMLButtonElement>('[data-testid="btn-open-versions"]');
+      expect(openVersionsBtn).not.toBeNull();
+      openVersionsBtn?.click();
+      fixture.detectChanges();
+      expect(component.viewMode()).toBe('VERSIONS');
+      expect(component.selectedProgramId()).toBe(programId1);
+
+      component.switchView('PROGRAMS');
+      fixture.detectChanges();
+      const openSyllabiBtn = compiled.querySelector<HTMLButtonElement>('[data-testid="btn-open-syllabi"]');
+      expect(openSyllabiBtn).not.toBeNull();
+      openSyllabiBtn?.click();
+      fixture.detectChanges();
+      expect(component.viewMode()).toBe('SYLLABI');
+      expect(component.selectedProgramId()).toBe(programId1);
+    });
+
+    it('renders clickable cohort pills and version cards in VERSIONS view', () => {
+      const { fixture, component, compiled } = createComponent();
+
+      component.onSelectFaculty(facultyId1);
+      component.onSelectProgram(programId1);
+      fixture.detectChanges();
+
+      const versionCards = compiled.querySelectorAll<HTMLButtonElement>('.version-select-card');
+      expect(versionCards.length).toBe(2);
+      expect(versionCards[0]?.getAttribute('aria-pressed')).toBe('true');
+
+      versionCards[1]?.click();
+      fixture.detectChanges();
+      expect(component.selectedVersionId()).toBe(versionId2);
+
+      const cohortPills = compiled.querySelectorAll<HTMLButtonElement>('.cohort-pill');
+      expect(cohortPills.length).toBe(3);
+      cohortPills[1]?.click();
+      fixture.detectChanges();
+      expect(component.selectedCohort()).toBe('K23');
+      expect(component.selectedVersionId()).toBe(versionId1);
+    });
+
+    it('renders clickable course cards and syllabus cards in SYLLABI view', () => {
+      const { fixture, component, compiled } = createComponent();
+
+      component.onSelectFaculty(facultyId1);
+      component.onSelectProgram(programId1);
+      component.switchTab('CLO_PI_MATRIX');
+      fixture.detectChanges();
+
+      const courseCards = compiled.querySelectorAll<HTMLButtonElement>('.course-select-card');
+      expect(courseCards.length).toBe(2);
+      expect(courseCards[0]?.getAttribute('aria-pressed')).toBe('true');
+
+      courseCards[1]?.click();
+      fixture.detectChanges();
+      expect(component.selectedCourseId()).toBe(courseId2);
+
+      const syllabusCards = compiled.querySelectorAll<HTMLButtonElement>('.syllabus-select-card');
+      expect(syllabusCards.length).toBe(1);
+      expect(syllabusCards[0]?.getAttribute('aria-pressed')).toBe('true');
+    });
+  });
 });

@@ -403,10 +403,15 @@ describe('ListSyllabiComponent (Server-side Course Search & ADR 0010)', () => {
       authSvcMock.getFacultyId.mockReturnValue('fac-other');
     });
 
-    it('chỉ PROGRAM_MANAGER mới có quyền canImportSyllabus (QA và ADMIN bị chặn)', async () => {
+    it('chỉ PROGRAM_MANAGER mới có quyền canImportSyllabus và nút tải mẫu chỉ nằm trong modal Import Đề cương', async () => {
       await createComponent();
       fixture.detectChanges();
       expect(component.canImportSyllabus()).toBe(true);
+
+      const headerText = (fixture.nativeElement as HTMLElement).textContent ?? '';
+      expect(headerText).toContain('Import Đề cương');
+      expect(headerText).not.toContain('Tải CSV mẫu');
+      expect(headerText).not.toContain('Tải Excel mẫu');
 
       component.userRoles.set([SystemConstant.ROLE.QA]);
       expect(component.canImportSyllabus()).toBe(false);

@@ -38,7 +38,7 @@
         </a>
         @if (a.status === 'LOCKED' || a.status === 'SCORE_ENTERED') {
           <a nz-button nzType="primary" class="bg-blue-600" [routerLink]="urlConst.ASSESSMENT_SCORE_IMPORT(a.id)">
-            <i class="fa-solid fa-file-import mr-1.5" aria-hidden="true"></i>Nhập điểm từ CSV
+            <i class="fa-solid fa-file-import mr-1.5" aria-hidden="true"></i>Import điểm
           </a>
         }
       }

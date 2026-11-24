@@ -3,6 +3,12 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, computed, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
+import {
+  CALCULATION_SCOPE_LABEL,
+  REPORT_TYPE_LABEL,
+  RESULT_LEVEL_LABEL,
+  RESULT_STATUS_LABEL,
+} from '@constants/analytics-display.constant';
 import { ISection } from '@models/course/section.model';
 import {
   CalculationRunResponse,
@@ -52,6 +58,11 @@ export class ReportsPageComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly toastr = inject(ToastrService);
+
+  protected readonly reportTypeLabel = REPORT_TYPE_LABEL;
+  protected readonly scopeLabel = CALCULATION_SCOPE_LABEL;
+  protected readonly levelLabel = RESULT_LEVEL_LABEL;
+  protected readonly resultStatusLabel = RESULT_STATUS_LABEL;
 
   readonly reports = signal<ReportResponse[]>([]);
   readonly loadingReports = signal<boolean>(false);
@@ -156,11 +167,11 @@ export class ReportsPageComponent implements OnInit {
     const runId = this.selectedRunId();
     const type = this.selectedType();
     if (!runId) {
-      this.toastr.warning('Vui lòng chọn một lượt tính toán đã hoàn tất (SUCCESS)');
+      this.toastr.warning('Vui lòng chọn một lượt tính toán đã hoàn tất');
       return;
     }
     if (type === 'SECTION_CLO' && !this.selectedSectionId()) {
-      this.toastr.warning('Báo cáo SECTION_CLO yêu cầu chọn lớp học phần');
+      this.toastr.warning('Báo cáo CLO theo lớp học phần yêu cầu chọn lớp học phần');
       return;
     }
 
@@ -205,6 +216,14 @@ export class ReportsPageComponent implements OnInit {
       },
       error: () => this.toastr.error('Không thể xuất tệp CSV'),
     });
+  }
+
+  getLevelLabel(level: string): string {
+    return (this.levelLabel as Record<string, string>)[level] ?? level;
+  }
+
+  getResultStatusLabel(status: string): string {
+    return (this.resultStatusLabel as Record<string, string>)[status] ?? status;
   }
 
   openTrace(studentResultId: string): void {

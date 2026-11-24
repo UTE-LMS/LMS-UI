@@ -203,14 +203,14 @@ export class DetailSyllabusComponent implements OnInit {
 
     this.modal?.confirm({
       nzTitle: 'Khóa phiên bản đề cương học phần',
-      nzContent: `Bạn có chắc chắn muốn khóa phiên bản đề cương [${syl.version}]? Sau khi khóa, đề cương sẽ chuyển sang trạng thái Lưu trữ (ARCHIVED), ngăn chặn hoàn toàn việc nhập điểm và không thể chỉnh sửa.`,
+      nzContent: `Bạn có chắc chắn muốn khóa phiên bản đề cương [${syl.version}]? Sau khi khóa, đề cương sẽ chuyển sang trạng thái Lưu trữ, ngăn chặn hoàn toàn việc nhập điểm và không thể chỉnh sửa.`,
       nzOkText: 'Khóa đề cương',
       nzOkDanger: true,
       nzOnOk: () => {
         this.syllabusSvc.lockSyllabus(syl.id).subscribe({
           next: updated => {
             this.syllabus.set(updated);
-            this.alert.success(`Phiên bản đề cương [${syl.version}] đã được khóa (ARCHIVED).`);
+            this.alert.success(`Phiên bản đề cương [${syl.version}] đã được khóa.`);
           },
           error: err => {
             const apiErr = toApiError(err);

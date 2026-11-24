@@ -111,4 +111,13 @@ describe('CsvImportModalComponent (nhập .csv và .xlsx, ADR 0015)', () => {
     expect(importFn).not.toHaveBeenCalled();
     expect(component.errorMessage()).toContain('.csv hoặc .xlsx');
   });
+
+  it('hiện khung xem trước dữ liệu khi đã chọn tệp hợp lệ', () => {
+    fixture.componentRef.setInput('isVisible', true);
+    fixture.componentRef.setInput('requiredColumns', ['code', 'name']);
+    pick(new File(['code,name\nFIT,Khoa CNTT\n'], 'faculties.csv', { type: 'text/csv' }));
+    fixture.detectChanges();
+
+    expect(document.body.textContent).toContain('Xem trước dữ liệu trước khi nhập');
+  });
 });

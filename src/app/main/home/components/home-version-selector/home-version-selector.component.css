@@ -1,0 +1,4 @@
+.version-select-card:hover:not([aria-pressed='true']) {
+  border-color: rgba(0, 90, 148, 0.55);
+  background-color: #f8fafc;
+}

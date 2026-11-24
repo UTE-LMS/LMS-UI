@@ -22,6 +22,7 @@ import { finalize } from 'rxjs';
 import {
   ImportTemplateFormat, importFileNameError, isXlsxFileName, saveBlobAs, templateFileNameFor,
 } from '@services/common/import-file.util';
+import { ImportFilePreviewComponent } from '@widget/import-file-preview/import-file-preview.component';
 
 export type ScoreImportStep = 'UPLOAD' | 'PREVIEW';
 
@@ -36,6 +37,7 @@ export type ScoreImportStep = 'UPLOAD' | 'PREVIEW';
     NzButtonModule,
     NzSelectModule,
     NzTableModule,
+    ImportFilePreviewComponent,
   ],
 })
 export class ScoreImportComponent implements OnInit {

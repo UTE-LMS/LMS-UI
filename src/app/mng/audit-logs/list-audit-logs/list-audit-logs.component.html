@@ -15,10 +15,10 @@
     </nz-select>
   </div>
   <div>
-    <label class="font-medium text-sm" for="a-entity">Thực thể (collection)</label>
-    <nz-select id="a-entity" class="w-full" nzAllowClear nzPlaceHolder="Mọi thực thể" [(ngModel)]="manager.filter.entity">
-      @for (e of entityOptions; track e) {
-        <nz-option [nzLabel]="e" [nzValue]="e" />
+    <label class="font-medium text-sm" for="a-entity">Đối tượng</label>
+    <nz-select id="a-entity" class="w-full" nzAllowClear nzPlaceHolder="Mọi đối tượng" [(ngModel)]="manager.filter.entity">
+      @for (o of entityOptions; track o.value) {
+        <nz-option [nzLabel]="o.label" [nzValue]="o.value" />
       }
     </nz-select>
   </div>
@@ -93,7 +93,7 @@
             <td>{{ actionLabel[log.action] || log.action }}</td>
             <td>
               @if (log.entity) {
-                <span class="font-mono text-xs">{{ log.entity.collection }}</span>
+                <span class="text-xs font-medium">{{ entityLabel[log.entity.collection] || log.entity.collection }}</span>
                 <span class="text-slate-600 font-mono text-xs"> · {{ log.entity.id }}</span>
               } @else { <span class="text-slate-600">—</span> }
             </td>

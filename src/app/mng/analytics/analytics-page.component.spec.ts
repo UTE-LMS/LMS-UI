@@ -1,6 +1,8 @@
 import { HttpErrorResponse, HttpHeaders, HttpResponse } from '@angular/common/http';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ANALYTICS_DIMENSION_DISPLAY } from '@constants/analytics-display.constant';
 import { IAnalyticsMatrix } from '@models/measurement/analytics.model';
+import { AuthService } from '@services/auth/auth.service';
 import { CourseService } from '@services/course/course.service';
 import { SectionService } from '@services/course/section.service';
 import { TermService } from '@services/course/term.service';
@@ -10,7 +12,7 @@ import { ProgramVersionService } from '@services/program/program-version.service
 import { ToastrService } from 'ngx-toastr';
 import { of, throwError } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { AnalyticsPageComponent, headerLabel, MAX_CHART_SERIES } from './analytics-page.component';
+import { AnalyticsPageComponent, headerLabel, LECTURER_DIMENSIONS, MAX_CHART_SERIES } from './analytics-page.component';
 
 const emptyPage = { content: [], page: 0, size: 100, totalElements: 0, totalPages: 0, last: true };
 
@@ -39,30 +41,47 @@ const matrix: IAnalyticsMatrix = {
   ],
 };
 
-describe('AnalyticsPageComponent (F07/US-36)', () => {
+function createAuthMock(roles: readonly string[]) {
+  return {
+    getRoles: () => [...roles],
+    hasAnyRole: (allowed: readonly string[]) => allowed.some(r => roles.includes(r)),
+  };
+}
+
+describe('AnalyticsPageComponent', () => {
   let fixture: ComponentFixture<AnalyticsPageComponent>;
   let component: AnalyticsPageComponent;
   let analyticsSvc: { getMatrix: ReturnType<typeof vi.fn>; exportCsv: ReturnType<typeof vi.fn>; };
+  let programVersionSvc: { getProgramVersions: ReturnType<typeof vi.fn>; };
   let toastr: { success: ReturnType<typeof vi.fn>; error: ReturnType<typeof vi.fn>; };
 
-  beforeEach(async () => {
+  async function setupWithRoles(roles: readonly string[] = ['ADMIN']): Promise<void> {
+    TestBed.resetTestingModule();
     analyticsSvc = { getMatrix: vi.fn(() => of(matrix)), exportCsv: vi.fn() };
+    programVersionSvc = { getProgramVersions: vi.fn(() => of(emptyPage)) };
     toastr = { success: vi.fn(), error: vi.fn() };
+
     await TestBed.configureTestingModule({
       imports: [AnalyticsPageComponent],
       providers: [
+        { provide: AuthService, useValue: createAuthMock(roles) },
         { provide: AnalyticsService, useValue: analyticsSvc },
-        { provide: ProgramVersionService, useValue: { getProgramVersions: () => of(emptyPage) } },
+        { provide: ProgramVersionService, useValue: programVersionSvc },
         { provide: CourseService, useValue: { getCourses: () => of(emptyPage) } },
         { provide: TermService, useValue: { getTerms: () => of([]) } },
         { provide: SectionService, useValue: { getSections: () => of([]) } },
-        { provide: CalculationService, useValue: { getCalculationRuns: () => of({ content: [], page: 0, size: 100, totalElements: 0, totalPages: 0, last: true }) } },
+        { provide: CalculationService, useValue: { getCalculationRuns: () => of(emptyPage) } },
         { provide: ToastrService, useValue: toastr },
       ],
     }).compileComponents();
+
     fixture = TestBed.createComponent(AnalyticsPageComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
+  }
+
+  beforeEach(async () => {
+    await setupWithRoles(['ADMIN']);
   });
 
   it('AC-1: chỉ gửi tham số của chiều đang chọn (khóa chỉ gửi ở chiều COHORT)', () => {
@@ -154,5 +173,82 @@ describe('AnalyticsPageComponent (F07/US-36)', () => {
     fixture.detectChanges();
     const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
     expect(text).toContain('ngưỡng 60%');
+  });
+
+  it('LECTURER thuần túy chỉ thấy 4 chiều trong phạm vi lớp học phần và ẩn bộ lọc cấp CTĐT', () => {
+    return setupWithRoles(['LECTURER']).then(() => {
+      const el = fixture.nativeElement as HTMLElement;
+      const text = el.textContent ?? '';
+
+      expect(component.canAccessAnalytics).toBe(true);
+      expect(component.canAnalyzeProgramScope).toBe(false);
+      expect(programVersionSvc.getProgramVersions).not.toHaveBeenCalled();
+      expect(el.querySelector('#f-pv')).toBeNull();
+      expect(text).toContain('Phạm vi: Lớp học phần phụ trách');
+
+      for (const dim of LECTURER_DIMENSIONS) {
+        expect(text).toContain(ANALYTICS_DIMENSION_DISPLAY[dim].label);
+      }
+      expect(text).not.toContain(ANALYTICS_DIMENSION_DISPLAY.COHORT.label);
+      expect(text).not.toContain(ANALYTICS_DIMENSION_DISPLAY.CURRICULUM_CLASSIFICATION.label);
+      expect(text).not.toContain(ANALYTICS_DIMENSION_DISPLAY.COURSE_LECTURER.label);
+
+      component.selectDimension('COHORT');
+      component.selectDimension('COURSE_LECTURER');
+      expect(component.dimension()).toBe('COURSE_SECTIONS');
+
+      component.programVersionId.set('pv-1');
+      component.level.set('PLO');
+      const query = component.buildQuery();
+      expect(query.programVersionId).toBeUndefined();
+      expect(query.level).toBeUndefined();
+    });
+  });
+
+  it('PROGRAM_MANAGER thấy đủ 7 chiều, có bộ lọc Phiên bản CTĐT và nhãn phạm vi Khoa', () => {
+    return setupWithRoles(['PROGRAM_MANAGER']).then(() => {
+      const el = fixture.nativeElement as HTMLElement;
+      expect(component.canAnalyzeProgramScope).toBe(true);
+      expect(programVersionSvc.getProgramVersions).toHaveBeenCalled();
+      expect(el.querySelector('#f-pv')).not.toBeNull();
+      expect(el.textContent).toContain('Phạm vi: Khoa phụ trách');
+      expect(el.textContent).toContain(ANALYTICS_DIMENSION_DISPLAY.COHORT.label);
+      expect(el.textContent).toContain(ANALYTICS_DIMENSION_DISPLAY.COURSE_LECTURER.label);
+    });
+  });
+
+  it('QA thấy đủ 7 chiều và nhãn phạm vi Toàn hệ thống', () => {
+    return setupWithRoles(['QA']).then(() => {
+      const el = fixture.nativeElement as HTMLElement;
+      expect(component.canAnalyzeProgramScope).toBe(true);
+      expect(el.textContent).toContain('Phạm vi: Toàn hệ thống');
+      expect(el.textContent).toContain(ANALYTICS_DIMENSION_DISPLAY.CURRICULUM_CLASSIFICATION.label);
+    });
+  });
+
+  it('resetFilters() xóa sạch bộ lọc nhưng giữ nguyên chiều phân tích đang chọn', () => {
+    component.selectDimension('STUDENT');
+    component.programVersionId.set('pv1');
+    component.courseId.set('c1');
+    component.termIds.set(['t1']);
+    component.sectionIds.set(['s1']);
+    component.level.set('CLO');
+    component.runId.set('r1');
+    component.studentIdsText.set('SV01');
+    component.subjectIdsText.set('CLO1');
+    component.passedFilter.set('true');
+
+    component.resetFilters();
+
+    expect(component.dimension()).toBe('STUDENT');
+    expect(component.programVersionId()).toBeNull();
+    expect(component.courseId()).toBeNull();
+    expect(component.termIds()).toEqual([]);
+    expect(component.sectionIds()).toEqual([]);
+    expect(component.level()).toBeNull();
+    expect(component.runId()).toBeNull();
+    expect(component.studentIdsText()).toBe('');
+    expect(component.subjectIdsText()).toBe('');
+    expect(component.passedFilter()).toBe('ALL');
   });
 });

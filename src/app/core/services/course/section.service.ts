@@ -10,7 +10,8 @@ import {
   ISectionStatusUpdateRequest,
   ISectionUpdateRequest,
 } from '@models/course/section.model';
-import { Observable } from 'rxjs';
+import { IUser } from '@models/user/user.model';
+import { map, Observable } from 'rxjs';
 import { ImportTemplateFormat, templateRequestParams } from '@services/common/import-file.util';
 
 /**
@@ -36,6 +37,18 @@ export class SectionService {
 
   getSection(id: string): Observable<ISection> {
     return this.http.get<ISection>(UrlConstant.API.SECTION_DETAIL(id), { context: this.inlineErrors() });
+  }
+
+  /** Danh sách giảng viên phục vụ hiển thị tên & chọn giảng viên mở lớp; có thể lọc theo Khoa qua `facultyId`. */
+  getLecturers(facultyId?: string): Observable<IUser[]> {
+    let params = new HttpParams();
+    const trimmed = facultyId?.trim();
+    if (trimmed) {
+      params = params.set('facultyId', trimmed);
+    }
+    return this.http
+      .get<IUser[] | { content?: IUser[]; }>(UrlConstant.API.SECTION_LECTURERS, { params, context: this.inlineErrors() })
+      .pipe(map(res => (Array.isArray(res) ? res : (res?.content ?? []))));
   }
 
   createSection(model: ISectionRequest): Observable<ISection> {

@@ -75,7 +75,7 @@ describe('UserService (API-CONTRACT.md §5.3)', () => {
     const tplReq = http.expectOne(UrlConstant.API.USER_IMPORT_TEMPLATE);
     expect(tplReq.request.method).toBe('GET');
     expect(tplReq.request.responseType).toBe('blob');
-    tplReq.flush(new Blob(['username,email,password,fullName,roles,facultyCode,status\n'], { type: 'text/csv' }));
+    tplReq.flush(new Blob(['username,email,password,fullName,roles,facultyCode\n'], { type: 'text/csv' }));
 
     const file = new File(['username,email\nuser1,u1@hcmute.edu.vn'], 'users.csv', { type: 'text/csv' });
     service.importUsers(file).subscribe(res => {

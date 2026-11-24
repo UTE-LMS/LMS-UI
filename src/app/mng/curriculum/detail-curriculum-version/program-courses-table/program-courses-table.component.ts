@@ -14,7 +14,10 @@ import { NzModalModule } from 'ng-zorro-antd/modal';
 import { NzSelectModule } from 'ng-zorro-antd/select';
 import { NzTableModule } from 'ng-zorro-antd/table';
 import { ToastrService } from 'ngx-toastr';
-import { ImportTemplateFormat, saveBlobAs, templateFileNameFor } from '@services/common/import-file.util';
+import {
+  ImportTemplateFormat, importFileNameError, saveBlobAs, templateFileNameFor,
+} from '@services/common/import-file.util';
+import { ImportFilePreviewComponent } from '@widget/import-file-preview/import-file-preview.component';
 
 @Component({
   selector: 'app-program-courses-table',
@@ -26,6 +29,7 @@ import { ImportTemplateFormat, saveBlobAs, templateFileNameFor } from '@services
     NzButtonModule,
     NzSelectModule,
     NzModalModule,
+    ImportFilePreviewComponent,
   ],
 })
 export class ProgramCoursesTableComponent implements OnInit {
@@ -108,8 +112,19 @@ export class ProgramCoursesTableComponent implements OnInit {
   onFileSelected(event: Event): void {
     const inputEl = event.target as HTMLInputElement;
     const file = inputEl.files?.[0] ?? null;
-    this.selectedFile.set(file);
     this.importResult.set(null);
+    if (!file) {
+      this.selectedFile.set(null);
+      this.importErrorMsg.set(null);
+      return;
+    }
+    const nameError = importFileNameError(file.name);
+    if (nameError) {
+      this.selectedFile.set(null);
+      this.importErrorMsg.set(nameError);
+      return;
+    }
+    this.selectedFile.set(file);
     this.importErrorMsg.set(null);
   }
 

@@ -1,6 +1,6 @@
 <div class="space-y-6">
   <div>
-    <h1 class="text-2xl font-bold text-slate-800 m-0">Báo cáo QA & Truy vết ngược (F07)</h1>
+    <h1 class="text-2xl font-bold text-slate-800 m-0">Báo cáo QA & Truy vết ngược</h1>
     <p class="text-sm text-slate-500 mt-1 mb-0">
       Sinh báo cáo từ kết quả đã tính, hiển thị mẫu số và giới hạn dữ liệu, hỗ trợ xuất CSV và truy vết về dòng tệp điểm gốc.
     </p>
@@ -11,28 +11,28 @@
       <div>
         <label class="block text-xs font-medium text-slate-600 mb-1">Loại báo cáo</label>
         <nz-select [ngModel]="selectedType()" (ngModelChange)="selectedType.set($event)" class="w-full">
-          <nz-option nzValue="SECTION_CLO" nzLabel="CLO theo lớp học phần (SECTION_CLO)" />
-          <nz-option nzValue="COURSE_PI" nzLabel="PI theo học phần/khóa (COURSE_PI)" />
-          <nz-option nzValue="PROGRAM_PLO" nzLabel="PLO theo CTĐT (PROGRAM_PLO)" />
-          <nz-option nzValue="DATA_COMPLETENESS" nzLabel="Độ đầy đủ dữ liệu (DATA_COMPLETENESS)" />
+          <nz-option nzValue="SECTION_CLO" nzLabel="CLO theo lớp học phần" />
+          <nz-option nzValue="COURSE_PI" nzLabel="PI theo học phần/khóa" />
+          <nz-option nzValue="PROGRAM_PLO" nzLabel="PLO theo CTĐT" />
+          <nz-option nzValue="DATA_COMPLETENESS" nzLabel="Độ đầy đủ dữ liệu" />
         </nz-select>
       </div>
 
       <div>
-        <label class="block text-xs font-medium text-slate-600 mb-1">Lượt tính toán (SUCCESS)</label>
+        <label class="block text-xs font-medium text-slate-600 mb-1">Lượt tính toán hoàn tất</label>
         <nz-select
           [ngModel]="selectedRunId()"
           (ngModelChange)="selectedRunId.set($event)"
           nzPlaceHolder="Chọn lượt tính"
           class="w-full">
           @for (r of successRuns(); track r.id) {
-            <nz-option [nzValue]="r.id" [nzLabel]="r.scope + ' - ' + (r.startedAt | date: 'dd/MM HH:mm')" />
+            <nz-option [nzValue]="r.id" [nzLabel]="(scopeLabel[r.scope] || r.scope) + ' - ' + (r.startedAt | date: 'dd/MM HH:mm')" />
           }
         </nz-select>
       </div>
 
       <div>
-        <label class="block text-xs font-medium text-slate-600 mb-1">Lớp học phần (cho SECTION_CLO)</label>
+        <label class="block text-xs font-medium text-slate-600 mb-1">Lớp học phần (cho báo cáo CLO theo lớp)</label>
         <nz-select
           [ngModel]="selectedSectionId()"
           (ngModelChange)="selectedSectionId.set($event)"
@@ -80,7 +80,7 @@
         <tbody>
           @for (rep of reports(); track rep.id) {
             <tr [class.bg-blue-50]="activeReport()?.id === rep.id">
-              <td><nz-tag nzColor="geekblue">{{ rep.type }}</nz-tag></td>
+              <td><nz-tag nzColor="geekblue">{{ reportTypeLabel[rep.type] || rep.type }}</nz-tag></td>
               <td class="font-medium">{{ rep.title }}</td>
               <td class="text-xs text-amber-700">{{ rep.limitations || 'Đầy đủ' }}</td>
               <td class="text-xs text-slate-500">{{ rep.createdAt | date: 'dd/MM/yyyy HH:mm' }}</td>
@@ -138,8 +138,8 @@
             @for (entry of missingTable.data; track entry.studentResultId) {
               <tr>
                 <td class="font-medium">{{ entry.studentCode }}</td>
-                <td><nz-tag>{{ entry.level }}</nz-tag></td>
-                <td><nz-tag nzColor="orange">{{ entry.status }}</nz-tag></td>
+                <td><nz-tag>{{ getLevelLabel(entry.level) }}</nz-tag></td>
+                <td><nz-tag nzColor="orange">{{ getResultStatusLabel(entry.status) }}</nz-tag></td>
                 <td>{{ entry.reason }}</td>
                 <td>
                   <button nz-button nzType="link" nzSize="small" (click)="openTrace(entry.studentResultId)">
@@ -169,7 +169,7 @@
           <tbody>
             @for (row of itemsTable.data; track row.subjectId + '-' + (row.assessmentId || '')) {
               <tr>
-                <td><nz-tag nzColor="blue">{{ row.level }}</nz-tag></td>
+                <td><nz-tag nzColor="blue">{{ levelLabel[row.level] || row.level }}</nz-tag></td>
                 <td class="font-semibold">{{ row.subjectCode }}</td>
                 <td>{{ row.enrolled }}</td>
                 <td>{{ row.evaluated }}</td>

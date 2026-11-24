@@ -31,9 +31,9 @@ import { NzModalModule } from 'ng-zorro-antd/modal';
 import { NzSelectModule } from 'ng-zorro-antd/select';
 import { NzTableModule } from 'ng-zorro-antd/table';
 import { ToastrService } from 'ngx-toastr';
-import { catchError, of } from 'rxjs';
+import { catchError, forkJoin, map, of } from 'rxjs';
 import { SectionModalComponent } from '../section-modal/section-modal.component';
-import { lecturerLabel } from '../sections.util';
+import { sectionLecturersText, userDisplayName } from '../sections.util';
 
 type RosterFilter = 'ALL' | EnrollmentStatus;
 
@@ -76,6 +76,7 @@ export class DetailSectionComponent implements OnInit {
 
   readonly roles = signal<string[]>([]);
   readonly currentUserId = signal('');
+  readonly currentUserName = signal('');
   readonly section = signal<ISection | null>(null);
   readonly term = signal<ITerm | null>(null);
   readonly course = signal<ICourse | null>(null);
@@ -141,24 +142,32 @@ export class DetailSectionComponent implements OnInit {
   });
 
   readonly lecturerNames = computed<ReadonlyMap<string, string>>(
-    () => new Map(this.users().map(user => [user.id, user.username])),
+    () => new Map(this.users().map(user => [user.id, userDisplayName(user)])),
   );
 
   readonly lecturerOptions = computed(() => this.users().filter(user => user.status === 'ACTIVE' && user.roles.includes(SystemConstant.ROLE.LECTURER)));
 
-  readonly lecturerListAvailable = computed(() => this.isAdmin() && this.users().length > 0);
+  readonly lecturerListAvailable = computed(() => this.canManage() && this.users().length > 0);
 
-  readonly lecturersText = computed(() => (this.section()?.lecturerIds ?? [])
-    .map(id => lecturerLabel(id, this.lecturerNames(), this.currentUserId())).join(', '));
+  readonly lecturersText = computed(() => sectionLecturersText(
+    this.section(),
+    this.lecturerNames(),
+    this.currentUserId(),
+    this.currentUserName(),
+  ));
 
   readonly needsReason = computed(() => this.section()?.status === 'LOCKED' && this.targetStatus() !== 'LOCKED');
 
   ngOnInit(): void {
     this.roles.set(this.authSvc.getRoles());
     this.currentUserId.set(this.authSvc.getUserId());
+    this.currentUserName.set(this.authSvc.getNameOfLogin?.() ?? '');
     if (this.isAdmin()) {
       this.userSvc.filter(0, 100).pipe(catchError(() => of(null)))
-        .subscribe(page => this.users.set(page?.content ?? []));
+        .subscribe(page => this.mergeUsers(page?.content ?? []));
+    } else if (typeof this.sectionSvc.getLecturers === 'function') {
+      this.sectionSvc.getLecturers().pipe(catchError(() => of([] as IUser[])))
+        .subscribe(list => this.mergeUsers(list));
     }
     this.load();
   }
@@ -185,6 +194,28 @@ export class DetailSectionComponent implements OnInit {
     this.termSvc.getTermById(section.termId).pipe(catchError(() => of(null))).subscribe(t => this.term.set(t));
     this.courseSvc.getCourseById(section.courseId).pipe(catchError(() => of(null))).subscribe(c => this.course.set(c));
     this.syllabusSvc.getSyllabusById(section.syllabusId).pipe(catchError(() => of(null))).subscribe(s => this.syllabus.set(s));
+    if (this.isAdmin() && typeof this.userSvc.getById === 'function') {
+      const knownIds = new Set(this.users().map(u => u.id));
+      const missingIds = section.lecturerIds.filter(id => !knownIds.has(id));
+      if (missingIds.length > 0) {
+        forkJoin(missingIds.map(id => this.userSvc.getById(id).pipe(catchError(() => of(null)))))
+          .pipe(map(items => items.filter((u): u is IUser => u !== null)))
+          .subscribe(found => this.mergeUsers(found));
+      }
+    }
+  }
+
+  private mergeUsers(incoming: IUser[]): void {
+    if (incoming.length === 0) {
+      return;
+    }
+    this.users.update(current => {
+      const merged = new Map(current.map(u => [u.id, u] as const));
+      for (const user of incoming) {
+        merged.set(user.id, user);
+      }
+      return [...merged.values()];
+    });
   }
 
   private loadRoster(): void {

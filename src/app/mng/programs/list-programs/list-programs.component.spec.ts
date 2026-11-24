@@ -233,7 +233,7 @@ describe('ListProgramsComponent (F02 US-05, M4 PM Decentralization & 422 Lock)',
 
     expect(modalSvc.warning).toHaveBeenCalledWith(
       expect.objectContaining({
-        nzTitle: 'Thao tác bị từ chối (422 Locked)',
+        nzTitle: 'Không thể chỉnh sửa chương trình đào tạo',
         nzContent: 'Chương trình đào tạo đã có phiên bản ban hành (ACTIVE/ARCHIVED). Không được chỉnh sửa.',
         nzOkText: 'Đã hiểu',
       }),

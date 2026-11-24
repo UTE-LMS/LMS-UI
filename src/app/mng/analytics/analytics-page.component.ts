@@ -7,6 +7,7 @@ import {
 } from '@constants/analytics-display.constant';
 import { ASSESSMENT_TYPE_LABEL, toOptions } from '@constants/assessment-display.constant';
 import { PLACEHOLDER } from '@constants/measurement-display.constant';
+import { SystemConstant } from '@constants/system.constant';
 import { AssessmentType } from '@models/assessment/assessment.model';
 import { IUserError } from '@models/common/user-error.model';
 import { ICourse } from '@models/course/course.model';
@@ -17,6 +18,7 @@ import {
 } from '@models/measurement/analytics.model';
 import { CalculationRunResponse, ResultLevel } from '@models/measurement/measurement.model';
 import { IProgramVersion } from '@models/program/program-version.model';
+import { AuthService } from '@services/auth/auth.service';
 import { toUserError } from '@services/common/api-error.util';
 import { CourseService } from '@services/course/course.service';
 import { SectionService } from '@services/course/section.service';
@@ -48,6 +50,24 @@ export const SERIES_COLORS = ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87b
 
 /** Biểu đồ chỉ vẽ tối đa 8 chuỗi (hàng); nhiều hơn thì đọc ở bảng để không rối mắt và không lặp màu. */
 export const MAX_CHART_SERIES = 8;
+
+/** Các chiều phân tích trong phạm vi lớp học phần dành cho tài khoản Giảng viên thuần túy. */
+export const LECTURER_DIMENSIONS: readonly AnalyticsDimension[] = [
+  'COURSE_SECTIONS',
+  'TIME_TERM',
+  'ASSESSMENT_COMPONENT',
+  'STUDENT',
+];
+
+export const ANALYTICS_DIMENSION_ICON: Record<AnalyticsDimension, string> = {
+  TIME_TERM: 'fa-calendar-days',
+  COURSE_SECTIONS: 'fa-users-rectangle',
+  COHORT: 'fa-graduation-cap',
+  ASSESSMENT_COMPONENT: 'fa-clipboard-check',
+  CURRICULUM_CLASSIFICATION: 'fa-layer-group',
+  COURSE_LECTURER: 'fa-chalkboard-user',
+  STUDENT: 'fa-user-graduate',
+};
 
 export interface IChartBar {
   seriesIndex: number;
@@ -89,6 +109,7 @@ function fileNameFrom(header: string | null): string | null {
 })
 export class AnalyticsPageComponent implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
+  private readonly authSvc = inject(AuthService);
   private readonly analyticsSvc = inject(AnalyticsService);
   private readonly programVersionSvc = inject(ProgramVersionService);
   private readonly courseSvc = inject(CourseService);
@@ -97,9 +118,31 @@ export class AnalyticsPageComponent implements OnInit {
   private readonly calcSvc = inject(CalculationService);
   private readonly toastr = inject(ToastrService);
 
+  private readonly role = SystemConstant.MNG_ROLE;
+  readonly isAdminOrQa = this.authSvc.hasAnyRole([this.role.ADMIN, this.role.QA]);
+  readonly isProgramManager = this.authSvc.hasAnyRole([this.role.PROGRAM_MANAGER]);
+  readonly isLecturer = this.authSvc.hasAnyRole([this.role.LECTURER]);
+  readonly canAnalyzeProgramScope = this.isAdminOrQa || this.isProgramManager;
+  readonly canAccessAnalytics = this.canAnalyzeProgramScope || this.isLecturer;
+
   protected readonly dimensionDisplay = ANALYTICS_DIMENSION_DISPLAY;
-  protected readonly dimensions = Object.keys(ANALYTICS_DIMENSION_DISPLAY) as AnalyticsDimension[];
-  protected readonly levelOptions = toOptions(RESULT_LEVEL_LABEL);
+  protected readonly dimensionIcons = ANALYTICS_DIMENSION_ICON;
+  protected readonly availableDimensions: readonly AnalyticsDimension[] = this.canAnalyzeProgramScope
+    ? (Object.keys(ANALYTICS_DIMENSION_DISPLAY) as AnalyticsDimension[])
+    : this.isLecturer
+      ? LECTURER_DIMENSIONS
+      : [];
+  protected readonly availableLevelOptions = this.canAnalyzeProgramScope
+    ? toOptions(RESULT_LEVEL_LABEL)
+    : toOptions(RESULT_LEVEL_LABEL).filter(o => o.value !== 'PLO');
+  protected readonly roleScopeBadge: { label: string; icon: string; tone: 'sky' | 'indigo' | 'emerald' | 'slate'; } =
+    this.isAdminOrQa
+      ? { label: 'Phạm vi: Toàn hệ thống', icon: 'fa-globe', tone: 'sky' }
+      : this.isProgramManager
+        ? { label: 'Phạm vi: Khoa phụ trách', icon: 'fa-building-columns', tone: 'indigo' }
+        : this.isLecturer
+          ? { label: 'Phạm vi: Lớp học phần phụ trách', icon: 'fa-chalkboard-user', tone: 'emerald' }
+          : { label: 'Chưa được cấp quyền phân tích', icon: 'fa-lock', tone: 'slate' };
   protected readonly classificationOptions = toOptions(CLASSIFICATION_TYPE_LABEL);
   protected readonly assessmentTypeOptions = toOptions(ASSESSMENT_TYPE_LABEL);
   protected readonly metricOptions = toOptions(METRIC_LABEL);
@@ -115,7 +158,11 @@ export class AnalyticsPageComponent implements OnInit {
   readonly runs = signal<CalculationRunResponse[]>([]);
 
   // Tham số truy vấn
-  readonly dimension = signal<AnalyticsDimension>('COURSE_SECTIONS');
+  readonly dimension = signal<AnalyticsDimension>(
+    this.availableDimensions.includes('COURSE_SECTIONS')
+      ? 'COURSE_SECTIONS'
+      : (this.availableDimensions[0] ?? 'COURSE_SECTIONS'),
+  );
   readonly programVersionId = signal<string | null>(null);
   readonly courseId = signal<string | null>(null);
   readonly termIds = signal<string[]>([]);
@@ -180,7 +227,14 @@ export class AnalyticsPageComponent implements OnInit {
   }
 
   private loadLookups(): void {
-    this.programVersionSvc.getProgramVersions(0, 100).pipe(map(page => page.content), catchError(() => of([])), takeUntilDestroyed(this.destroyRef)).subscribe(list => this.programVersions.set(list));
+    if (!this.canAccessAnalytics) {
+      return;
+    }
+    if (this.canAnalyzeProgramScope) {
+      this.programVersionSvc.getProgramVersions(0, 100)
+        .pipe(map(page => page.content), catchError(() => of([])), takeUntilDestroyed(this.destroyRef))
+        .subscribe(list => this.programVersions.set(list));
+    }
     // Backend giới hạn size <= 100 (@Max ở CourseController); quá giới hạn sẽ trả 400.
     this.courseSvc.getCourses(0, 100).pipe(map(page => page.content), catchError(() => of([])), takeUntilDestroyed(this.destroyRef)).subscribe(list => this.courses.set(list));
     this.termSvc.getTerms().pipe(catchError(() => of([])), takeUntilDestroyed(this.destroyRef))
@@ -195,30 +249,52 @@ export class AnalyticsPageComponent implements OnInit {
   }
 
   selectDimension(dimension: AnalyticsDimension): void {
+    if (!this.availableDimensions.includes(dimension)) {
+      return;
+    }
     this.dimension.set(dimension);
     this.result.set(null);
     this.error.set(null);
   }
 
-  /** Gom tham số đang chọn. Trường chỉ dùng cho một chiều thì chỉ gửi khi đang ở chiều đó. */
+  resetFilters(): void {
+    this.programVersionId.set(null);
+    this.courseId.set(null);
+    this.termIds.set([]);
+    this.sectionIds.set([]);
+    this.level.set(null);
+    this.runId.set(null);
+    this.cohortsText.set('');
+    this.assessmentTypes.set([]);
+    this.classificationType.set('PLO_CATEGORY');
+    this.lecturerIdsText.set('');
+    this.studentIdsText.set('');
+    this.subjectIdsText.set('');
+    this.passedFilter.set('ALL');
+    this.error.set(null);
+  }
+
+  /** Gom tham số đang chọn. Trường chỉ dùng cho một chiều hoặc phạm vi cấp CTĐT thì chỉ gửi khi hợp lệ. */
   buildQuery(): IAnalyticsQuery {
     const dimension = this.dimension();
+    const rawLevel = this.level();
+    const allowedLevel = rawLevel && this.availableLevelOptions.some(o => o.value === rawLevel) ? rawLevel : undefined;
     const query: IAnalyticsQuery = {
       dimension,
-      programVersionId: this.programVersionId() ?? undefined,
+      programVersionId: this.canAnalyzeProgramScope ? (this.programVersionId() ?? undefined) : undefined,
       courseId: this.courseId() ?? undefined,
       termIds: this.termIds(),
       sectionIds: this.sectionIds(),
-      level: this.level() ?? undefined,
+      level: allowedLevel,
       runId: this.runId() ?? undefined,
     };
-    if (dimension === 'COHORT') {
+    if (dimension === 'COHORT' && this.canAnalyzeProgramScope) {
       query.cohorts = splitList(this.cohortsText());
     }
     if (dimension === 'ASSESSMENT_COMPONENT') {
       query.assessmentTypes = this.assessmentTypes();
     }
-    if (dimension === 'CURRICULUM_CLASSIFICATION') {
+    if (dimension === 'CURRICULUM_CLASSIFICATION' && this.canAnalyzeProgramScope) {
       query.classificationType = this.classificationType();
     } else {
       const subjectIds = splitList(this.subjectIdsText());
@@ -226,7 +302,7 @@ export class AnalyticsPageComponent implements OnInit {
         query.subjectIds = subjectIds;
       }
     }
-    if (dimension === 'COURSE_LECTURER') {
+    if (dimension === 'COURSE_LECTURER' && this.canAnalyzeProgramScope) {
       query.lecturerIds = splitList(this.lecturerIdsText());
     }
     if (dimension === 'STUDENT') {
@@ -240,7 +316,7 @@ export class AnalyticsPageComponent implements OnInit {
   }
 
   analyze(): void {
-    if (this.loading()) {
+    if (this.loading() || !this.canAccessAnalytics || !this.availableDimensions.includes(this.dimension())) {
       return;
     }
     this.loading.set(true);
@@ -258,7 +334,7 @@ export class AnalyticsPageComponent implements OnInit {
   }
 
   exportCsv(): void {
-    if (this.exporting()) {
+    if (this.exporting() || !this.canAccessAnalytics || !this.availableDimensions.includes(this.dimension())) {
       return;
     }
     this.exporting.set(true);

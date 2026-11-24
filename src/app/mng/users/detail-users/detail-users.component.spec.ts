@@ -4,6 +4,7 @@ import { provideRouter, Router } from '@angular/router';
 import { SystemConstant } from '@constants/system.constant';
 import { UrlConstant } from '@constants/url.constant';
 import { IUser } from '@models/user/user.model';
+import { FacultyService } from '@services/faculty/faculty.service';
 import { UserService } from '@services/user/user.service';
 import { ToastrService } from 'ngx-toastr';
 import { Observable, of, throwError } from 'rxjs';
@@ -31,6 +32,7 @@ describe('DetailUsersComponent (trang thêm/sửa người dùng)', () => {
       providers: [
         provideRouter([]),
         { provide: UserService, useValue: userSvc },
+        { provide: FacultyService, useValue: { getFacultyById: vi.fn(() => of(null)) } },
         { provide: ToastrService, useValue: { success: vi.fn(), error: vi.fn(), warning: vi.fn() } },
       ],
     });

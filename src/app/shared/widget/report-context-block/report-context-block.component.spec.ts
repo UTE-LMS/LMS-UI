@@ -48,7 +48,8 @@ describe('ReportContextBlockComponent - phạm vi, quy tắc, phiên bản, limi
     render(CONTEXT);
     const text = norm(host().textContent);
     expect(text).toContain('Không chính thức');
-    expect(text).toContain('bản nháp (DRAFT)');
+    expect(text).toContain('bản nháp.');
+    expect(text).not.toContain('(DRAFT)');
   });
 
   it('US-31/AC-2: lần chạy isStale hiện cảnh báo "Điểm đã thay đổi sau lần tính" kèm lý do', () => {

@@ -1,10 +1,13 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { provideRouter } from '@angular/router';
 import { IPagedResults } from '@models/common/response-data.model';
 import { IUser, Role } from '@models/user/user.model';
 import { AuthService } from '@services/auth/auth.service';
+import { FacultyService } from '@services/faculty/faculty.service';
 import { UserService } from '@services/user/user.service';
+import { CsvImportModalComponent } from '@widget/csv-import-modal/csv-import-modal.component';
 import { NzModalService } from 'ng-zorro-antd/modal';
 import { ToastrService } from 'ngx-toastr';
 import { Observable, of, throwError } from 'rxjs';
@@ -36,6 +39,18 @@ describe('ListUsersComponent (F01 US-02)', () => {
   const userSvc = {
     filter: vi.fn((): Observable<IPagedResults<IUser>> => of(page([ME, OTHER, LOCKED]))),
     updateStatus: vi.fn((): Observable<unknown> => of({})),
+    downloadImportTemplate: vi.fn((): Observable<Blob> => of(new Blob(['username,email,password,fullName,roles,facultyCode\n']))),
+    importUsers: vi.fn(() => of({ totalRows: 1, successCount: 1, failureCount: 0, errors: [] })),
+  };
+  const facultySvc = {
+    getFaculties: vi.fn(() => of({
+      content: [{ id: 'fac_fit_01', code: 'FIT', name: 'Khoa Công nghệ Thông tin', isActive: true }],
+      page: 0,
+      size: 100,
+      totalElements: 1,
+      totalPages: 1,
+      last: true,
+    })),
   };
   const alert = { success: vi.fn(), error: vi.fn(), warning: vi.fn() };
   let confirmSpy: ReturnType<typeof vi.fn>;
@@ -55,6 +70,7 @@ describe('ListUsersComponent (F01 US-02)', () => {
       providers: [
         provideRouter([]),
         { provide: UserService, useValue: userSvc },
+        { provide: FacultyService, useValue: facultySvc },
         { provide: AuthService, useValue: { getUserId: () => 'me' } },
         { provide: ToastrService, useValue: alert },
       ],
@@ -74,6 +90,16 @@ describe('ListUsersComponent (F01 US-02)', () => {
     vi.clearAllMocks();
     userSvc.filter.mockImplementation(() => of(page([ME, OTHER, LOCKED])));
     userSvc.updateStatus.mockImplementation(() => of({}));
+    userSvc.downloadImportTemplate.mockImplementation(() => of(new Blob(['username,email,password,fullName,roles,facultyCode\n'])));
+    userSvc.importUsers.mockImplementation(() => of({ totalRows: 1, successCount: 1, failureCount: 0, errors: [] }));
+    facultySvc.getFaculties.mockImplementation(() => of({
+      content: [{ id: 'fac_fit_01', code: 'FIT', name: 'Khoa Công nghệ Thông tin', isActive: true }],
+      page: 0,
+      size: 100,
+      totalElements: 1,
+      totalPages: 1,
+      last: true,
+    }));
   });
 
   it('gọi API với page zero-indexed (UI trang 1 → page 0) và size mặc định', async () => {
@@ -106,6 +132,20 @@ describe('ListUsersComponent (F01 US-02)', () => {
     const content = text();
     expect(content).toContain('FIT - Khoa Công nghệ Thông tin');
     expect(content).toContain('Chưa gán Khoa');
+  });
+
+  it('vẫn hiển thị tên Khoa khi API người dùng chỉ trả về facultyId mà không trả facultyCode/facultyName', async () => {
+    const pmWithIdOnly: IUser = {
+      ...makeUser('pm3', 'pm.idonly', 'ACTIVE', 'PROGRAM_MANAGER'),
+      facultyId: 'fac_fit_01',
+    };
+    userSvc.filter.mockImplementation(() => of(page([pmWithIdOnly])));
+
+    await setup();
+    const content = text();
+    expect(facultySvc.getFaculties).toHaveBeenCalledWith(0, 100);
+    expect(content).toContain('FIT - Khoa Công nghệ Thông tin');
+    expect(content).not.toContain('Chưa gán Khoa');
   });
 
   it('trạng thái rỗng: có hướng dẫn việc kế tiếp', async () => {
@@ -193,6 +233,31 @@ describe('ListUsersComponent (F01 US-02)', () => {
       await flush();
       expect(alert.warning).toHaveBeenCalledWith('Không tìm thấy người dùng này nữa.');
       expect(userSvc.filter).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe('import người dùng hàng loạt', () => {
+    it('hiển thị hướng dẫn không còn cột status và nêu rõ trạng thái mặc định Hoạt động + bắt buộc đổi mật khẩu', async () => {
+      await setup();
+      const modalDebugEl = fixture.debugElement.query(By.directive(CsvImportModalComponent));
+      expect(modalDebugEl).not.toBeNull();
+      const modalCmp = modalDebugEl.componentInstance as CsvImportModalComponent;
+      const guide = modalCmp.guideText();
+
+      expect(guide).toContain('username, email, password, fullName, roles');
+      expect(guide).toContain('facultyCode');
+      expect(guide).toContain('Hoạt động');
+      expect(guide).toContain('đổi mật khẩu');
+      expect(guide).not.toContain('status');
+    });
+
+    it('downloadUserTemplate ủy quyền xuống UserService với cả định dạng csv và xlsx', async () => {
+      await setup();
+      component.downloadUserTemplate('csv').subscribe();
+      expect(userSvc.downloadImportTemplate).toHaveBeenCalledWith('csv');
+
+      component.downloadUserTemplate('xlsx').subscribe();
+      expect(userSvc.downloadImportTemplate).toHaveBeenCalledWith('xlsx');
     });
   });
 });

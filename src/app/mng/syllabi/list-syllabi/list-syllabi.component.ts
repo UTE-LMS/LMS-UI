@@ -37,6 +37,7 @@ import {
   switchMap,
 } from 'rxjs';
 import { ImportTemplateFormat, saveBlobAs, templateFileNameFor } from '@services/common/import-file.util';
+import { ImportFilePreviewComponent } from '@widget/import-file-preview/import-file-preview.component';
 
 @Component({
   selector: 'app-list-syllabi',
@@ -52,6 +53,7 @@ import { ImportTemplateFormat, saveBlobAs, templateFileNameFor } from '@services
     NzModalModule,
     NzInputModule,
     StatusChipComponent,
+    ImportFilePreviewComponent,
   ],
 })
 export class ListSyllabiComponent implements OnInit {
@@ -165,13 +167,13 @@ export class ListSyllabiComponent implements OnInit {
     }
     this.modal?.confirm({
       nzTitle: 'Khóa phiên bản đề cương học phần',
-      nzContent: `Bạn có chắc chắn muốn khóa phiên bản đề cương [${s.version}]? Sau khi khóa, đề cương sẽ chuyển sang trạng thái Lưu trữ (ARCHIVED), ngăn chặn hoàn toàn việc nhập điểm và không thể chỉnh sửa.`,
+      nzContent: `Bạn có chắc chắn muốn khóa phiên bản đề cương [${s.version}]? Sau khi khóa, đề cương sẽ chuyển sang trạng thái Lưu trữ, ngăn chặn hoàn toàn việc nhập điểm và không thể chỉnh sửa.`,
       nzOkText: 'Khóa đề cương',
       nzOkDanger: true,
       nzOnOk: () => {
         this.syllabusSvc.lockSyllabus(s.id).subscribe({
           next: () => {
-            this.alert.success(`Phiên bản đề cương [${s.version}] đã được khóa (ARCHIVED).`);
+            this.alert.success(`Phiên bản đề cương [${s.version}] đã được khóa.`);
             this.loadSyllabi(this.selectedCourseId());
           },
           error: err => {
@@ -460,7 +462,7 @@ export class ListSyllabiComponent implements OnInit {
     const pvId = this.importProgramVersionId();
     const file = this.selectedFile();
     if (!courseId || !version || !pvId || !file) {
-      this.alert.warning('Vui lòng chọn Phiên bản CTĐT, nhập mã phiên bản đề cương và chọn tệp CSV');
+      this.alert.warning('Vui lòng chọn Phiên bản CTĐT, nhập mã phiên bản đề cương và chọn tệp (.csv hoặc .xlsx)');
       return;
     }
 
