@@ -51,7 +51,7 @@ describe('DashboardComponent (Tổng quan)', () => {
       ]))),
       getAggregateResults: vi.fn(() => of(paged([]))),
     };
-    sectionSvc = { getSections: vi.fn(() => of([{ id: 's1' }])) };
+    sectionSvc = { getSections: vi.fn(() => of(paged([{ id: 's1' }]))) };
   });
 
   it('chọn lần tính xong gần nhất, bỏ qua lần lỗi', () => {
@@ -59,9 +59,13 @@ describe('DashboardComponent (Tổng quan)', () => {
     expect(latestSuccessfulRun([])).toBeNull();
   });
 
-  it('nạp kết quả PI và PLO của lần tính gần nhất', async () => {
+  it('nạp kết quả PI và PLO của lần tính gần nhất và lấy tổng số lớp học phần qua totalElements', async () => {
+    sectionSvc.getSections.mockReturnValue(of({ content: [{ id: 's1' }], page: 0, size: 1, totalElements: 42, totalPages: 42, last: false }));
     await setup(['LECTURER']);
     expect(component.latestRun()?.id).toBe('r2');
+    expect(component.sectionsTotal()).toBe(42);
+    expect(sectionSvc.getSections).toHaveBeenCalledWith(undefined, undefined, undefined, 0, 1);
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('42');
     expect(calcSvc.getAggregateResults).toHaveBeenCalledWith('r2', 'PI', undefined, 0, 100);
     expect(calcSvc.getAggregateResults).toHaveBeenCalledWith('r2', 'PLO', undefined, 0, 100);
   });

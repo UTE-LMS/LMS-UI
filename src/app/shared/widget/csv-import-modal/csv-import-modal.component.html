@@ -146,7 +146,7 @@
         </div>
       </div>
 
-      @if (result.failureCount > 0) {
+      @if (result.failureCount > 0 || result.errors.length > 0) {
       <div class="border border-amber-200 bg-amber-50/60 rounded-lg p-3 text-xs text-amber-900">
         <div class="font-semibold mb-2 flex items-center gap-1.5 text-amber-950">
           <i class="fa-solid fa-triangle-exclamation text-amber-600"></i>

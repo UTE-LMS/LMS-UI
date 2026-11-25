@@ -61,6 +61,7 @@ describe('ManagementHeaderComponent (Header Admin Layout)', () => {
     expect(titles).toContain('Tổng quan');
     expect(titles).toContain('Khoa');
     expect(titles).toContain('Người dùng');
+    expect(titles).toContain('Sinh viên');
     expect(titles).toContain('Danh mục CTĐT');
     expect(titles).toContain('Khung CTĐT & Chuẩn đầu ra');
     expect(titles).toContain('Học phần & Học kỳ');
@@ -78,6 +79,7 @@ describe('ManagementHeaderComponent (Header Admin Layout)', () => {
     const titles = component.visibleNavItems().map(i => i.title);
     expect(titles).not.toContain('Khoa');
     expect(titles).not.toContain('Người dùng');
+    expect(titles).not.toContain('Sinh viên');
     expect(titles).not.toContain('Danh mục CTĐT');
     expect(titles).toContain('Tổng quan');
     expect(titles).toContain('Khung CTĐT & Chuẩn đầu ra');

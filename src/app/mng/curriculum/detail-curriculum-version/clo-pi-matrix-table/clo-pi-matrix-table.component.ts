@@ -9,15 +9,19 @@ import {
   untracked,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { createPaginatedSelect } from '@builder/paginated-select.builder';
 import { ICloPiLinkCell, ICloPiMatrix } from '@models/course/clo.model';
 import { IProgramCourse } from '@models/course/course.model';
 import { ISyllabus } from '@models/course/syllabus.model';
 import { CloService } from '@services/course/clo.service';
+import { CourseService } from '@services/course/course.service';
 import { SyllabusService } from '@services/course/syllabus.service';
 import { BloomLevelLabelComponent } from '@widget/level-label/bloom-level-label.component';
 import { StatusChipComponent } from '@widget/status-chip/status-chip.component';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzSelectModule } from 'ng-zorro-antd/select';
+import { NzSpinModule } from 'ng-zorro-antd/spin';
+import { EMPTY, of } from 'rxjs';
 
 @Component({
   selector: 'app-clo-pi-matrix-table',
@@ -26,6 +30,7 @@ import { NzSelectModule } from 'ng-zorro-antd/select';
   imports: [
     FormsModule,
     NzSelectModule,
+    NzSpinModule,
     NzButtonModule,
     StatusChipComponent,
     BloomLevelLabelComponent,
@@ -34,11 +39,41 @@ import { NzSelectModule } from 'ng-zorro-antd/select';
 export class CloPiMatrixTableComponent {
   private readonly syllabusSvc = inject(SyllabusService);
   private readonly cloSvc = inject(CloService);
+  private readonly courseSvc = inject(CourseService, { optional: true });
 
   readonly versionId = input.required<string>();
   readonly programCourses = input<IProgramCourse[]>([]);
   readonly initialCourseId = input<string | null>(null);
   readonly canManageLinks = input<boolean>(false);
+
+  readonly hasCourseService = Boolean(this.courseSvc);
+
+  readonly courseSelect = createPaginatedSelect<IProgramCourse>({
+    fetchPage: ({ page, size, search }) => (this.courseSvc && this.versionId()
+      ? this.courseSvc.getProgramCourses(this.versionId(), undefined, undefined, undefined, search, page, size)
+      : of({
+        content: this.programCourses(),
+        page: 0,
+        size: 20,
+        totalElements: this.programCourses().length,
+        totalPages: 1,
+        last: true,
+      })),
+    getId: pc => pc.courseId,
+    fetchById: courseId => (this.courseSvc && this.versionId() && typeof this.courseSvc.getProgramCourse === 'function'
+      ? this.courseSvc.getProgramCourse(this.versionId(), courseId)
+      : EMPTY),
+  });
+
+  readonly courseOptions = computed(() => {
+    if (this.courseSvc && this.courseSelect.options().length > 0) {
+      return this.courseSelect.options();
+    }
+    if (this.courseSelect.initialized() && this.courseSelect.search() && !this.courseSelect.error()) {
+      return this.courseSelect.options();
+    }
+    return this.programCourses();
+  });
 
   readonly selectedCourseId = signal<string>('');
   readonly syllabi = signal<ISyllabus[]>([]);
@@ -57,10 +92,18 @@ export class CloPiMatrixTableComponent {
 
   constructor() {
     effect(() => {
-      const pcs = this.programCourses();
+      const vId = this.versionId();
+      if (vId && this.courseSvc) {
+        untracked(() => this.courseSelect.reload(true));
+      }
+    });
+
+    effect(() => {
+      const pcs = this.courseOptions();
       const preferred = this.initialCourseId();
       untracked(() => {
-        if (preferred && pcs.some(p => p.courseId === preferred)) {
+        if (preferred) {
+          this.courseSelect.syncSelected(preferred);
           if (this.selectedCourseId() !== preferred) {
             this.onSelectCourse(preferred);
           }
@@ -73,6 +116,7 @@ export class CloPiMatrixTableComponent {
 
   onSelectCourse(courseId: string): void {
     this.selectedCourseId.set(courseId);
+    this.courseSelect.syncSelected(courseId);
     this.selectedSyllabusId.set('');
     this.matrix.set(null);
     if (!courseId) {

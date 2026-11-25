@@ -17,17 +17,30 @@
         id="matrixCourseSelect"
         class="w-full"
         nzShowSearch
+        [nzServerSearch]="hasCourseService"
+        [nzLoading]="courseSelect.loading()"
+        [nzDropdownRender]="courseFooterTpl"
         nzPlaceHolder="Chọn học phần trong CTĐT..."
         [ngModel]="selectedCourseId()"
+        (nzOpenChange)="hasCourseService && courseSelect.onOpenChange($event)"
+        (nzOnSearch)="hasCourseService && courseSelect.onSearch($event)"
+        (nzScrollToBottom)="hasCourseService && courseSelect.loadMore()"
         (ngModelChange)="onSelectCourse($event)"
       >
-        @for (pc of programCourses(); track pc.id) {
+        @for (pc of courseOptions(); track pc.courseId) {
         <nz-option
           [nzValue]="pc.courseId"
           [nzLabel]="(pc.course?.code ?? pc.courseId) + ' — ' + (pc.course?.name ?? '')"
         />
         }
       </nz-select>
+      <ng-template #courseFooterTpl>
+        @if (courseSelect.loadingMore()) {
+          <div class="px-3 py-2 text-center text-xs text-slate-500">
+            <nz-spin nzSimple nzSize="small" class="mr-1.5" />Đang tải thêm...
+          </div>
+        }
+      </ng-template>
     </div>
 
     <div>

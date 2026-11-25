@@ -89,40 +89,118 @@
         @if (canAnalyzeProgramScope) {
           <div>
             <label class="font-medium text-sm text-slate-800 block mb-1" for="f-pv">Phiên bản CTĐT</label>
-            <nz-select id="f-pv" class="w-full" nzAllowClear nzShowSearch nzPlaceHolder="Tất cả trong phạm vi"
-              [ngModel]="programVersionId()" (ngModelChange)="programVersionId.set($event)">
-              @for (pv of programVersions(); track pv.id) {
+            <nz-select
+              id="f-pv"
+              class="w-full"
+              nzAllowClear
+              nzShowSearch
+              [nzServerSearch]="true"
+              [nzLoading]="pvSelect.loading()"
+              [nzDropdownRender]="pvFooterTpl"
+              nzPlaceHolder="Tất cả trong phạm vi"
+              [ngModel]="programVersionId()"
+              (nzOpenChange)="pvSelect.onOpenChange($event)"
+              (nzOnSearch)="pvSelect.onSearch($event)"
+              (nzScrollToBottom)="pvSelect.loadMore()"
+              (ngModelChange)="onProgramVersionChange($event)">
+              @for (pv of pvSelect.options(); track pv.id) {
                 <nz-option [nzLabel]="pv.version" [nzValue]="pv.id" />
               }
             </nz-select>
+            <ng-template #pvFooterTpl>
+              @if (pvSelect.loadingMore()) {
+                <div class="px-3 py-2 text-center text-xs text-slate-500">
+                  <nz-spin nzSimple nzSize="small" class="mr-1.5" />Đang tải thêm...
+                </div>
+              }
+            </ng-template>
           </div>
         }
         <div>
           <label class="font-medium text-sm text-slate-800 block mb-1" for="f-course">Học phần</label>
-          <nz-select id="f-course" class="w-full" nzAllowClear nzShowSearch nzPlaceHolder="Chọn học phần"
-            [ngModel]="courseId()" (ngModelChange)="courseId.set($event); sectionIds.set([])">
-            @for (c of courses(); track c.id) {
+          <nz-select
+            id="f-course"
+            class="w-full"
+            nzAllowClear
+            nzShowSearch
+            [nzServerSearch]="true"
+            [nzLoading]="courseSelect.loading()"
+            [nzDropdownRender]="courseFooterTpl"
+            nzPlaceHolder="Chọn học phần"
+            [ngModel]="courseId()"
+            (nzOpenChange)="courseSelect.onOpenChange($event)"
+            (nzOnSearch)="courseSelect.onSearch($event)"
+            (nzScrollToBottom)="courseSelect.loadMore()"
+            (ngModelChange)="onCourseChange($event)">
+            @for (c of courseSelect.options(); track c.id) {
               <nz-option [nzLabel]="c.code + ' · ' + c.name" [nzValue]="c.id" />
             }
           </nz-select>
+          <ng-template #courseFooterTpl>
+            @if (courseSelect.loadingMore()) {
+              <div class="px-3 py-2 text-center text-xs text-slate-500">
+                <nz-spin nzSimple nzSize="small" class="mr-1.5" />Đang tải thêm...
+              </div>
+            }
+          </ng-template>
         </div>
         <div>
           <label class="font-medium text-sm text-slate-800 block mb-1" for="f-term">Học kỳ</label>
-          <nz-select id="f-term" class="w-full" nzMode="multiple" nzAllowClear nzPlaceHolder="Tất cả học kỳ"
-            [ngModel]="termIds()" (ngModelChange)="termIds.set($event)">
-            @for (t of terms(); track t.id) {
+          <nz-select
+            id="f-term"
+            class="w-full"
+            nzMode="multiple"
+            nzAllowClear
+            nzShowSearch
+            [nzServerSearch]="true"
+            [nzLoading]="termSelect.loading()"
+            [nzDropdownRender]="termFooterTpl"
+            nzPlaceHolder="Tất cả học kỳ"
+            [ngModel]="termIds()"
+            (nzOpenChange)="termSelect.onOpenChange($event)"
+            (nzOnSearch)="termSelect.onSearch($event)"
+            (nzScrollToBottom)="termSelect.loadMore()"
+            (ngModelChange)="onTermIdsChange($event)">
+            @for (t of termSelect.options(); track t.id) {
               <nz-option [nzLabel]="t.code" [nzValue]="t.id" />
             }
           </nz-select>
+          <ng-template #termFooterTpl>
+            @if (termSelect.loadingMore()) {
+              <div class="px-3 py-2 text-center text-xs text-slate-500">
+                <nz-spin nzSimple nzSize="small" class="mr-1.5" />Đang tải thêm...
+              </div>
+            }
+          </ng-template>
         </div>
         <div>
           <label class="font-medium text-sm text-slate-800 block mb-1" for="f-section">Lớp học phần</label>
-          <nz-select id="f-section" class="w-full" nzMode="multiple" nzAllowClear nzPlaceHolder="Tất cả lớp"
-            [ngModel]="sectionIds()" (ngModelChange)="sectionIds.set($event)">
-            @for (s of sectionsOfCourse(); track s.id) {
+          <nz-select
+            id="f-section"
+            class="w-full"
+            nzMode="multiple"
+            nzAllowClear
+            nzShowSearch
+            [nzServerSearch]="true"
+            [nzLoading]="sectionSelect.loading()"
+            [nzDropdownRender]="sectionFooterTpl"
+            nzPlaceHolder="Tất cả lớp"
+            [ngModel]="sectionIds()"
+            (nzOpenChange)="sectionSelect.onOpenChange($event)"
+            (nzOnSearch)="sectionSelect.onSearch($event)"
+            (nzScrollToBottom)="sectionSelect.loadMore()"
+            (ngModelChange)="onSectionIdsChange($event)">
+            @for (s of sectionSelect.options(); track s.id) {
               <nz-option [nzLabel]="s.code" [nzValue]="s.id" />
             }
           </nz-select>
+          <ng-template #sectionFooterTpl>
+            @if (sectionSelect.loadingMore()) {
+              <div class="px-3 py-2 text-center text-xs text-slate-500">
+                <nz-spin nzSimple nzSize="small" class="mr-1.5" />Đang tải thêm...
+              </div>
+            }
+          </ng-template>
         </div>
         <div>
           <label class="font-medium text-sm text-slate-800 block mb-1" for="f-level">Cấp kết quả</label>
@@ -190,9 +268,14 @@
           }
           @case ('STUDENT') {
             <div>
-              <label class="font-medium text-sm text-slate-800 block mb-1" for="f-student">Mã sinh viên</label>
+              <label class="font-medium text-sm text-slate-800 block mb-1" for="f-student-search">Tìm sinh viên (MSSV / Họ tên)</label>
+              <input id="f-student-search" nz-input type="search" class="ant-input w-full" placeholder="Tìm nhanh theo MSSV hoặc tên..."
+                [ngModel]="studentSearch()" (ngModelChange)="onStudentSearchChange($event)" />
+            </div>
+            <div>
+              <label class="font-medium text-sm text-slate-800 block mb-1" for="f-student">Danh sách mã sinh viên (tùy chọn)</label>
               <input id="f-student" nz-input class="ant-input w-full" placeholder="Ví dụ: SV-0001, SV-0002"
-                [ngModel]="studentIdsText()" (ngModelChange)="studentIdsText.set($event)" />
+                [ngModel]="studentIdsText()" (ngModelChange)="studentIdsText.set($event); studentPage.set(0)" />
             </div>
           }
         }
@@ -271,7 +354,13 @@
         <div class="analytics-card">
           <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
             <h2 class="text-base font-semibold text-slate-900 m-0">Biểu đồ so sánh</h2>
-            <span class="text-xs font-medium text-slate-600">{{ res.columns.length }} chuẩn · {{ res.rows.length }} nhóm so sánh</span>
+            <span class="text-xs font-medium text-slate-600">
+              @if (res.dimension === 'STUDENT' && res.totalElements !== undefined) {
+                {{ res.columns.length }} / {{ res.totalElements }} sinh viên · {{ res.rows.length }} nhóm so sánh
+              } @else {
+                {{ res.columns.length }} chuẩn · {{ res.rows.length }} nhóm so sánh
+              }
+            </span>
           </div>
 
           <ul class="chart-legend-strip flex flex-wrap gap-4 text-sm mb-4" aria-label="Chú giải">
@@ -364,6 +453,23 @@
               }
             </tbody>
           </nz-table>
+
+          @if (res.dimension === 'STUDENT' && (res.totalElements ?? res.columns.length) > 0) {
+            <div class="mt-4 flex flex-wrap items-center justify-between gap-3">
+              <span class="text-xs text-slate-600">
+                Hiển thị {{ res.columns.length }} / {{ res.totalElements ?? res.columns.length }} sinh viên (xuất CSV bao gồm toàn bộ sinh viên).
+              </span>
+              <nz-pagination
+                [nzTotal]="res.totalElements ?? res.columns.length"
+                [nzPageIndex]="(res.page ?? studentPage()) + 1"
+                [nzPageSize]="res.size ?? studentSize()"
+                [nzShowSizeChanger]="true"
+                [nzPageSizeOptions]="[10, 20, 50, 100]"
+                (nzPageIndexChange)="onStudentPageChange($event)"
+                (nzPageSizeChange)="onStudentSizeChange($event)"
+              />
+            </div>
+          }
         </div>
       }
     </section>

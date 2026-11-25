@@ -2,6 +2,7 @@ import { DecimalPipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, DestroyRef, inject, OnInit, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
+import { createPaginatedSelect } from '@builder/paginated-select.builder';
 import {
   ANALYTICS_DIMENSION_DISPLAY, CLASSIFICATION_TYPE_LABEL, RESULT_LEVEL_LABEL,
 } from '@constants/analytics-display.constant';
@@ -30,11 +31,14 @@ import { ErrorStateComponent } from '@widget/error-state/error-state.component';
 import { StaleWarningComponent } from '@widget/stale-warning/stale-warning.component';
 import { UnofficialLabelComponent } from '@widget/unofficial-label/unofficial-label.component';
 import { NzButtonModule } from 'ng-zorro-antd/button';
+import { NzInputModule } from 'ng-zorro-antd/input';
+import { NzPaginationModule } from 'ng-zorro-antd/pagination';
 import { NzRadioModule } from 'ng-zorro-antd/radio';
 import { NzSelectModule } from 'ng-zorro-antd/select';
+import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzTableModule } from 'ng-zorro-antd/table';
 import { ToastrService } from 'ngx-toastr';
-import { catchError, finalize, map, of } from 'rxjs';
+import { catchError, debounceTime, distinctUntilChanged, EMPTY, finalize, map, of, Subject } from 'rxjs';
 
 /** Chỉ số người dùng chọn để vẽ. Đều là tỷ lệ 0–1 do backend tính sẵn trong từng ô. */
 export type AnalyticsMetric = 'mean' | 'passRate' | 'passRateOfEnrolled';
@@ -100,7 +104,8 @@ function fileNameFrom(header: string | null): string | null {
 @Component({
   selector: 'app-analytics-page',
   imports: [
-    FormsModule, DecimalPipe, NzButtonModule, NzRadioModule, NzSelectModule, NzTableModule,
+    FormsModule, DecimalPipe, NzButtonModule, NzInputModule, NzPaginationModule,
+    NzRadioModule, NzSelectModule, NzSpinModule, NzTableModule,
     ErrorStateComponent, StaleWarningComponent, UnofficialLabelComponent,
   ],
   templateUrl: './analytics-page.component.html',
@@ -150,11 +155,7 @@ export class AnalyticsPageComponent implements OnInit {
   protected readonly maxSeries = MAX_CHART_SERIES;
   protected readonly headerLabel = headerLabel;
 
-  // Danh mục cho bộ lọc
-  readonly programVersions = signal<IProgramVersion[]>([]);
-  readonly courses = signal<ICourse[]>([]);
-  readonly terms = signal<ITerm[]>([]);
-  readonly sections = signal<ISection[]>([]);
+  // Danh mục cho bộ lọc (paginated select infinite scroll + runs)
   readonly runs = signal<CalculationRunResponse[]>([]);
 
   // Tham số truy vấn
@@ -174,8 +175,41 @@ export class AnalyticsPageComponent implements OnInit {
   readonly classificationType = signal<CurriculumClassificationType>('PLO_CATEGORY');
   readonly lecturerIdsText = signal('');
   readonly studentIdsText = signal('');
+  readonly studentSearch = signal('');
+  readonly studentPage = signal(0);
+  readonly studentSize = signal(20);
   readonly subjectIdsText = signal('');
   readonly passedFilter = signal<'ALL' | 'true' | 'false'>('ALL');
+
+  readonly pvSelect = createPaginatedSelect<IProgramVersion>({
+    fetchPage: ({ page, size, search }) => this.programVersionSvc.getProgramVersions(page, size, undefined, undefined, undefined, undefined, search),
+    getId: pv => pv.id,
+    fetchById: id => this.programVersionSvc.getProgramVersionById(id),
+  });
+
+  readonly courseSelect = createPaginatedSelect<ICourse>({
+    fetchPage: ({ page, size, search }) => this.courseSvc.getCourses(page, size, search),
+    getId: c => c.id,
+    fetchById: id => this.courseSvc.getCourseById(id),
+  });
+
+  readonly termSelect = createPaginatedSelect<ITerm>({
+    fetchPage: ({ page, size, search }) => this.termSvc.getTerms(search, undefined, page, size),
+    getId: t => t.id,
+    fetchById: id => (this.termSvc.getTermById ? this.termSvc.getTermById(id) : EMPTY),
+  });
+
+  readonly sectionSelect = createPaginatedSelect<ISection>({
+    fetchPage: ({ page, size, search }) => {
+      const selectedTerms = this.termIds();
+      const singleTermId = selectedTerms.length === 1 ? selectedTerms[0] : undefined;
+      return this.sectionSvc.getSections(singleTermId, this.courseId() ?? undefined, search, page, size);
+    },
+    getId: s => s.id,
+    fetchById: id => (this.sectionSvc.getSection ? this.sectionSvc.getSection(id) : EMPTY),
+  });
+
+  private readonly studentSearchSubject$ = new Subject<string>();
 
   // Kết quả
   readonly metric = signal<AnalyticsMetric>('mean');
@@ -183,11 +217,6 @@ export class AnalyticsPageComponent implements OnInit {
   readonly exporting = signal(false);
   readonly error = signal<IUserError | null>(null);
   readonly result = signal<IAnalyticsMatrix | null>(null);
-
-  readonly sectionsOfCourse = computed(() => {
-    const courseId = this.courseId();
-    return courseId ? this.sections().filter(s => s.courseId === courseId) : this.sections();
-  });
 
   readonly isEmpty = computed(() => {
     const res = this.result();
@@ -223,6 +252,20 @@ export class AnalyticsPageComponent implements OnInit {
   })));
 
   ngOnInit(): void {
+    this.studentSearchSubject$
+      .pipe(
+        map(q => q.trim()),
+        debounceTime(300),
+        distinctUntilChanged(),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe(() => {
+        this.studentPage.set(0);
+        if (this.dimension() === 'STUDENT') {
+          this.analyze();
+        }
+      });
+
     this.loadLookups();
   }
 
@@ -231,21 +274,63 @@ export class AnalyticsPageComponent implements OnInit {
       return;
     }
     if (this.canAnalyzeProgramScope) {
-      this.programVersionSvc.getProgramVersions(0, 100)
-        .pipe(map(page => page.content), catchError(() => of([])), takeUntilDestroyed(this.destroyRef))
-        .subscribe(list => this.programVersions.set(list));
+      this.pvSelect.loadInitial();
     }
-    // Backend giới hạn size <= 100 (@Max ở CourseController); quá giới hạn sẽ trả 400.
-    this.courseSvc.getCourses(0, 100).pipe(map(page => page.content), catchError(() => of([])), takeUntilDestroyed(this.destroyRef)).subscribe(list => this.courses.set(list));
-    this.termSvc.getTerms().pipe(catchError(() => of([])), takeUntilDestroyed(this.destroyRef))
-      .subscribe(list => this.terms.set(list));
-    this.sectionSvc.getSections().pipe(catchError(() => of([])), takeUntilDestroyed(this.destroyRef))
-      .subscribe(list => this.sections.set(list));
-    this.calcSvc.getCalculationRuns(undefined, 0, 100).pipe(
+    this.courseSelect.loadInitial();
+    this.termSelect.loadInitial();
+    this.sectionSelect.loadInitial();
+    this.calcSvc.getCalculationRuns(undefined, 0, 20).pipe(
       map(res => res.content.filter(r => r.status === 'SUCCESS')),
       catchError(() => of([])),
       takeUntilDestroyed(this.destroyRef),
     ).subscribe(list => this.runs.set(list));
+  }
+
+  onProgramVersionChange(pvId: string | null): void {
+    this.programVersionId.set(pvId);
+    this.pvSelect.syncSelected(pvId);
+    this.studentPage.set(0);
+  }
+
+  onCourseChange(courseId: string | null): void {
+    this.courseId.set(courseId);
+    this.courseSelect.syncSelected(courseId);
+    this.sectionIds.set([]);
+    this.sectionSelect.syncSelected([]);
+    this.sectionSelect.reload(true);
+    this.studentPage.set(0);
+  }
+
+  onTermIdsChange(termIds: string[]): void {
+    const ids = termIds ?? [];
+    this.termIds.set(ids);
+    this.termSelect.syncSelected(ids);
+    this.sectionSelect.reload(true);
+    this.sectionSelect.syncSelected(this.sectionIds());
+    this.studentPage.set(0);
+  }
+
+  onSectionIdsChange(sectionIds: string[]): void {
+    const ids = sectionIds ?? [];
+    this.sectionIds.set(ids);
+    this.sectionSelect.syncSelected(ids);
+    this.studentPage.set(0);
+  }
+
+  onStudentSearchChange(keyword: string): void {
+    this.studentSearch.set(keyword);
+    this.studentSearchSubject$.next(keyword);
+  }
+
+  onStudentPageChange(page1Indexed: number): void {
+    this.studentPage.set(Math.max(0, page1Indexed - 1));
+    this.analyze();
+  }
+
+  onStudentSizeChange(newSize: number): void {
+    this.studentSize.set(newSize);
+    this.studentPage.set(0);
+    this.analyze();
   }
 
   selectDimension(dimension: AnalyticsDimension): void {
@@ -253,15 +338,21 @@ export class AnalyticsPageComponent implements OnInit {
       return;
     }
     this.dimension.set(dimension);
+    this.studentPage.set(0);
     this.result.set(null);
     this.error.set(null);
   }
 
   resetFilters(): void {
     this.programVersionId.set(null);
+    this.pvSelect.syncSelected(null);
     this.courseId.set(null);
+    this.courseSelect.syncSelected(null);
     this.termIds.set([]);
+    this.termSelect.syncSelected([]);
     this.sectionIds.set([]);
+    this.sectionSelect.syncSelected([]);
+    this.sectionSelect.reload(true);
     this.level.set(null);
     this.runId.set(null);
     this.cohortsText.set('');
@@ -269,6 +360,8 @@ export class AnalyticsPageComponent implements OnInit {
     this.classificationType.set('PLO_CATEGORY');
     this.lecturerIdsText.set('');
     this.studentIdsText.set('');
+    this.studentSearch.set('');
+    this.studentPage.set(0);
     this.subjectIdsText.set('');
     this.passedFilter.set('ALL');
     this.error.set(null);
@@ -307,6 +400,12 @@ export class AnalyticsPageComponent implements OnInit {
     }
     if (dimension === 'STUDENT') {
       query.studentIds = splitList(this.studentIdsText());
+      query.page = this.studentPage();
+      query.size = this.studentSize();
+      const search = this.studentSearch().trim();
+      if (search) {
+        query.search = search;
+      }
     }
     const passedVal = this.passedFilter();
     if (passedVal === 'true' || passedVal === 'false') {
@@ -325,7 +424,17 @@ export class AnalyticsPageComponent implements OnInit {
       finalize(() => this.loading.set(false)),
       takeUntilDestroyed(this.destroyRef),
     ).subscribe({
-      next: res => this.result.set(res),
+      next: res => {
+        this.result.set(res);
+        if (res.dimension === 'STUDENT') {
+          if (res.page !== undefined) {
+            this.studentPage.set(res.page);
+          }
+          if (res.size !== undefined) {
+            this.studentSize.set(res.size);
+          }
+        }
+      },
       error: (err: unknown) => {
         this.result.set(null);
         this.error.set(toUserError(err));

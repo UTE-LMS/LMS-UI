@@ -1,7 +1,8 @@
-import { HttpClient, HttpContext } from '@angular/common/http';
+import { HttpClient, HttpContext, HttpParams, HttpResponse } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { UrlConstant } from '@constants/url.constant';
 import { INLINE_ERRORS } from '@interceptors/http-context.token';
+import { IPagedResults } from '@models/common/response-data.model';
 import {
   IAssessment,
   IAssessmentItemsRequest,
@@ -11,6 +12,8 @@ import {
   ICoverage,
 } from '@models/assessment/assessment.model';
 import { Observable } from 'rxjs';
+
+export type ScoreExportFormat = 'csv' | 'xlsx';
 
 /**
  * Bài đánh giá (F04 US-15, US-16, NEW-01, ADR 0014).
@@ -79,10 +82,70 @@ export class AssessmentService {
     return this.http.delete<void>(UrlConstant.API.ASSESSMENT_DETAIL(id), { context: this.inlineErrors() });
   }
 
-  getScores(id: string): Observable<IAssessmentScoreItem[]> {
-    return this.http.get<IAssessmentScoreItem[]>(UrlConstant.API.ASSESSMENT_SCORES(id), {
+  getScores(id: string, search?: string, page = 0, size = 20): Observable<IPagedResults<IAssessmentScoreItem>> {
+    return this.http.get<IPagedResults<IAssessmentScoreItem>>(UrlConstant.API.ASSESSMENT_SCORES(id), {
+      params: this.scorePageParams(search, page, size),
       context: this.inlineErrors(),
     });
+  }
+
+  getSectionAssessmentScores(
+    sectionId: string,
+    assessmentId: string,
+    search?: string,
+    page = 0,
+    size = 20,
+  ): Observable<IPagedResults<IAssessmentScoreItem>> {
+    return this.http.get<IPagedResults<IAssessmentScoreItem>>(
+      UrlConstant.API.SECTION_ASSESSMENT_SCORES(sectionId, assessmentId),
+      {
+        params: this.scorePageParams(search, page, size),
+        context: this.inlineErrors(),
+      },
+    );
+  }
+
+  exportScores(id: string, format: ScoreExportFormat = 'csv', search?: string): Observable<HttpResponse<Blob>> {
+    return this.http.get(UrlConstant.API.ASSESSMENT_SCORES_EXPORT(id), {
+      params: this.scoreExportParams(format, search),
+      observe: 'response',
+      responseType: 'blob',
+      context: this.inlineErrors(),
+    });
+  }
+
+  exportSectionAssessmentScores(
+    sectionId: string,
+    assessmentId: string,
+    format: ScoreExportFormat = 'csv',
+    search?: string,
+  ): Observable<HttpResponse<Blob>> {
+    return this.http.get(UrlConstant.API.SECTION_ASSESSMENT_SCORES_EXPORT(sectionId, assessmentId), {
+      params: this.scoreExportParams(format, search),
+      observe: 'response',
+      responseType: 'blob',
+      context: this.inlineErrors(),
+    });
+  }
+
+  private scorePageParams(search: string | undefined, page: number, size: number): HttpParams {
+    let params = new HttpParams()
+      .set('page', page.toString())
+      .set('size', size.toString());
+    const trimmed = search?.trim();
+    if (trimmed) {
+      params = params.set('search', trimmed);
+    }
+    return params;
+  }
+
+  private scoreExportParams(format: ScoreExportFormat, search?: string): HttpParams {
+    let params = new HttpParams().set('format', format);
+    const trimmed = search?.trim();
+    if (trimmed) {
+      params = params.set('search', trimmed);
+    }
+    return params;
   }
 
   private inlineErrors(): HttpContext {

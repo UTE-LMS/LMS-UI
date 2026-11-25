@@ -2,7 +2,7 @@ import { HttpClient, HttpContext, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { UrlConstant } from '@constants/url.constant';
 import { INLINE_ERRORS, REQUEST_TIMEOUT_MS } from '@interceptors/http-context.token';
-import { ICsvImportResultResponse } from '@models/common/response-data.model';
+import { ICsvImportResultResponse, IPagedResults } from '@models/common/response-data.model';
 import { IAssessmentAlignmentResponse } from '@models/assessment/assessment.model';
 import {
   ISection,
@@ -15,8 +15,8 @@ import { map, Observable } from 'rxjs';
 import { ImportTemplateFormat, templateRequestParams } from '@services/common/import-file.util';
 
 /**
- * Lớp học phần (F05a US-19). Backend: GET /sections không phân trang và chỉ trả lớp người gọi đọc/quản lý
- * được; mở/sửa/đổi trạng thái lớp do ADMIN hoặc PROGRAM_MANAGER đúng phạm vi CTĐT (ẩn nút ở UI chỉ để tiện dùng).
+ * Lớp học phần (F05a US-19). Backend: GET /sections phân trang (`page`, `size`) và chỉ trả lớp
+ * người gọi đọc/quản lý được; mở/sửa/đổi trạng thái lớp do ADMIN hoặc PROGRAM_MANAGER đúng phạm vi CTĐT.
  */
 @Injectable({
   providedIn: 'root',
@@ -24,15 +24,30 @@ import { ImportTemplateFormat, templateRequestParams } from '@services/common/im
 export class SectionService {
   private readonly http = inject(HttpClient);
 
-  getSections(termId?: string, courseId?: string): Observable<ISection[]> {
-    let params = new HttpParams();
+  getSections(
+    termId?: string,
+    courseId?: string,
+    search?: string,
+    page = 0,
+    size = 20,
+  ): Observable<IPagedResults<ISection>> {
+    let params = new HttpParams()
+      .set('page', page.toString())
+      .set('size', size.toString());
     if (termId) {
       params = params.set('termId', termId);
     }
     if (courseId) {
       params = params.set('courseId', courseId);
     }
-    return this.http.get<ISection[]>(UrlConstant.API.SECTIONS, { params, context: this.inlineErrors() });
+    const trimmed = search?.trim();
+    if (trimmed) {
+      params = params.set('search', trimmed);
+    }
+    return this.http.get<IPagedResults<ISection>>(UrlConstant.API.SECTIONS, {
+      params,
+      context: this.inlineErrors(),
+    });
   }
 
   getSection(id: string): Observable<ISection> {

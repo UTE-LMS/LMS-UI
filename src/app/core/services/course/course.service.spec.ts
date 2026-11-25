@@ -93,9 +93,11 @@ describe('CourseService (F03 US-09)', () => {
     req.flush({ totalRows: 1, successCount: 1, failureCount: 0, errors: [] });
   });
 
-  it('getProgramCourses gửi đúng query params semester, type, category, search (đã trim)', () => {
+  it('getProgramCourses gửi đúng query params semester, type, category, search (đã trim), page và size', () => {
     const pvId = 'pv_123';
-    service.getProgramCourses(pvId, 1, 'COMPULSORY', 'FOUNDATION', '  Toán  ').subscribe();
+    service.getProgramCourses(pvId, 1, 'COMPULSORY', 'FOUNDATION', '  Toán  ', 1, 20).subscribe(res => {
+      expect(res.page).toBe(1);
+    });
 
     const req = http.expectOne(r => r.url === UrlConstant.API.PROGRAM_COURSES(pvId));
     expect(req.request.method).toBe('GET');
@@ -103,7 +105,9 @@ describe('CourseService (F03 US-09)', () => {
     expect(req.request.params.get('type')).toBe('COMPULSORY');
     expect(req.request.params.get('category')).toBe('FOUNDATION');
     expect(req.request.params.get('search')).toBe('Toán');
-    req.flush([]);
+    expect(req.request.params.get('page')).toBe('1');
+    expect(req.request.params.get('size')).toBe('20');
+    req.flush({ content: [], page: 1, size: 20, totalElements: 0, totalPages: 0, last: true });
   });
 
   it('downloadProgramCoursesImportTemplate và importProgramCoursesCsv gọi đúng endpoint mới', () => {

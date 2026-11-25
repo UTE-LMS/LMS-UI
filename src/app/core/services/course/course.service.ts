@@ -111,8 +111,12 @@ export class CourseService {
     type?: string,
     category?: string,
     search?: string,
-  ): Observable<IProgramCourse[]> {
-    let params = new HttpParams();
+    page = 0,
+    size = 20,
+  ): Observable<IPagedResults<IProgramCourse>> {
+    let params = new HttpParams()
+      .set('page', page.toString())
+      .set('size', size.toString());
     if (semester !== undefined) {
       params = params.set('semester', semester.toString());
     }
@@ -126,7 +130,7 @@ export class CourseService {
     if (trimmed) {
       params = params.set('search', trimmed);
     }
-    return this.http.get<IProgramCourse[]>(UrlConstant.API.PROGRAM_COURSES(programVersionId), { params });
+    return this.http.get<IPagedResults<IProgramCourse>>(UrlConstant.API.PROGRAM_COURSES(programVersionId), { params });
   }
 
   getProgramCourse(programVersionId: string, courseId: string): Observable<IProgramCourse> {

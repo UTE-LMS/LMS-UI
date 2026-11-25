@@ -1,7 +1,8 @@
 import {
-  ChangeDetectionStrategy, Component, effect, inject, input, output, signal, untracked,
+  ChangeDetectionStrategy, Component, computed, effect, inject, input, output, signal, untracked,
 } from '@angular/core';
 import { FormsModule, NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { createPaginatedSelect } from '@builder/paginated-select.builder';
 import { SystemConstant } from '@constants/system.constant';
 import { ICourse } from '@models/course/course.model';
 import { ISection } from '@models/course/section.model';
@@ -9,14 +10,18 @@ import { ISyllabus } from '@models/course/syllabus.model';
 import { ITerm } from '@models/course/term.model';
 import { IUser } from '@models/user/user.model';
 import { toUserError } from '@services/common/api-error.util';
+import { CourseService } from '@services/course/course.service';
 import { SectionService } from '@services/course/section.service';
 import { SyllabusService } from '@services/course/syllabus.service';
+import { TermService } from '@services/course/term.service';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzFormModule } from 'ng-zorro-antd/form';
 import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzModalModule } from 'ng-zorro-antd/modal';
 import { NzSelectModule } from 'ng-zorro-antd/select';
+import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { ToastrService } from 'ngx-toastr';
+import { EMPTY, of } from 'rxjs';
 
 /**
  * Modal mở lớp học phần mới hoặc đổi giảng viên phụ trách (F05a US-19).
@@ -28,12 +33,14 @@ import { ToastrService } from 'ngx-toastr';
   selector: 'app-section-modal',
   templateUrl: './section-modal.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FormsModule, ReactiveFormsModule, NzModalModule, NzButtonModule, NzFormModule, NzInputModule, NzSelectModule],
+  imports: [FormsModule, ReactiveFormsModule, NzModalModule, NzButtonModule, NzFormModule, NzInputModule, NzSelectModule, NzSpinModule],
 })
 export class SectionModalComponent {
   private readonly fb = inject(NonNullableFormBuilder);
   private readonly sectionSvc = inject(SectionService);
   private readonly syllabusSvc = inject(SyllabusService);
+  private readonly termSvc = inject(TermService, { optional: true });
+  private readonly courseSvc = inject(CourseService, { optional: true });
   private readonly alert = inject(ToastrService);
 
   readonly isVisible = input(false);
@@ -52,6 +59,28 @@ export class SectionModalComponent {
   readonly submitError = signal<string | null>(null);
   readonly syllabi = signal<ISyllabus[]>([]);
   readonly isLoadingSyllabi = signal(false);
+
+  readonly hasTermService = Boolean(this.termSvc);
+  readonly hasCourseService = Boolean(this.courseSvc);
+
+  readonly termSelect = createPaginatedSelect<ITerm>({
+    fetchPage: ({ page, size, search }) => (this.termSvc
+      ? this.termSvc.getTerms(search, 'OPEN', page, size)
+      : of({ content: this.terms(), page: 0, size: 20, totalElements: this.terms().length, totalPages: 1, last: true })),
+    getId: t => t.id,
+    fetchById: id => (this.termSvc ? this.termSvc.getTermById(id) : EMPTY),
+  });
+
+  readonly courseSelect = createPaginatedSelect<ICourse>({
+    fetchPage: ({ page, size, search }) => (this.courseSvc
+      ? this.courseSvc.getCourses(page, size, search)
+      : of({ content: this.courses(), page: 0, size: 20, totalElements: this.courses().length, totalPages: 1, last: true })),
+    getId: c => c.id,
+    fetchById: id => (this.courseSvc ? this.courseSvc.getCourseById(id) : EMPTY),
+  });
+
+  readonly termOptions = computed(() => (this.termSvc ? this.termSelect.options() : this.terms()));
+  readonly courseOptions = computed(() => (this.courseSvc ? this.courseSelect.options() : this.courses()));
 
   readonly form = this.fb.group({
     code: ['', [Validators.required, Validators.pattern(/^[A-Za-z0-9._-]{2,40}$/)]],
@@ -74,7 +103,12 @@ export class SectionModalComponent {
     return this.section() !== null;
   }
 
+  onTermChange(termId: string): void {
+    this.termSelect.syncSelected(termId);
+  }
+
   onCourseChange(courseId: string): void {
+    this.courseSelect.syncSelected(courseId);
     this.form.controls.syllabusId.setValue('');
     this.syllabi.set([]);
     if (!courseId) {
@@ -152,6 +186,14 @@ export class SectionModalComponent {
   private resetForm(current: ISection | null): void {
     this.submitError.set(null);
     this.syllabi.set([]);
+    if (!current) {
+      if (this.termSvc) {
+        this.termSelect.loadInitial();
+      }
+      if (this.courseSvc) {
+        this.courseSelect.loadInitial();
+      }
+    }
     this.form.reset({
       code: current?.code ?? '',
       termId: current?.termId ?? '',

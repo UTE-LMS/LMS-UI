@@ -23,14 +23,28 @@
         <label class="block text-xs font-medium text-slate-600 mb-1">Phiên bản CTĐT (để tính PI/PLO)</label>
         <nz-select
           [ngModel]="selectedProgramVersionId()"
-          (ngModelChange)="selectedProgramVersionId.set($event)"
+          (ngModelChange)="onProgramVersionChange($event)"
           nzAllowClear
+          nzShowSearch
+          [nzServerSearch]="true"
+          [nzLoading]="pvSelect.loading()"
+          [nzDropdownRender]="pvFooterTpl"
+          (nzOpenChange)="pvSelect.onOpenChange($event)"
+          (nzOnSearch)="pvSelect.onSearch($event)"
+          (nzScrollToBottom)="pvSelect.loadMore()"
           nzPlaceHolder="Chọn phiên bản CTĐT"
           class="w-full">
-          @for (pv of programVersions(); track pv.id) {
+          @for (pv of pvSelect.options(); track pv.id) {
             <nz-option [nzValue]="pv.id" [nzLabel]="pv.version + ' (' + versionStatusLabel(pv.status) + ')'" />
           }
         </nz-select>
+        <ng-template #pvFooterTpl>
+          @if (pvSelect.loadingMore()) {
+            <div class="px-3 py-2 text-center text-xs text-slate-500">
+              <nz-spin nzSimple nzSize="small" class="mr-1.5" />Đang tải thêm...
+            </div>
+          }
+        </ng-template>
       </div>
 
       <div>
@@ -38,27 +52,55 @@
         <nz-select
           nzMode="multiple"
           [ngModel]="selectedSectionIds()"
-          (ngModelChange)="selectedSectionIds.set($event)"
+          (ngModelChange)="onSectionIdsChange($event)"
+          nzShowSearch
+          [nzServerSearch]="true"
+          [nzLoading]="sectionSelect.loading()"
+          [nzDropdownRender]="sectionFooterTpl"
+          (nzOpenChange)="sectionSelect.onOpenChange($event)"
+          (nzOnSearch)="sectionSelect.onSearch($event)"
+          (nzScrollToBottom)="sectionSelect.loadMore()"
           nzPlaceHolder="Chọn lớp học phần"
           class="w-full">
-          @for (sec of sections(); track sec.id) {
+          @for (sec of sectionSelect.options(); track sec.id) {
             <nz-option [nzValue]="sec.id" [nzLabel]="sec.code" />
           }
         </nz-select>
+        <ng-template #sectionFooterTpl>
+          @if (sectionSelect.loadingMore()) {
+            <div class="px-3 py-2 text-center text-xs text-slate-500">
+              <nz-spin nzSimple nzSize="small" class="mr-1.5" />Đang tải thêm...
+            </div>
+          }
+        </ng-template>
       </div>
 
       <div>
         <label class="block text-xs font-medium text-slate-600 mb-1">Học kỳ (tùy chọn)</label>
         <nz-select
           [ngModel]="selectedTermId()"
-          (ngModelChange)="selectedTermId.set($event)"
+          (ngModelChange)="onTermChange($event)"
           nzAllowClear
+          nzShowSearch
+          [nzServerSearch]="true"
+          [nzLoading]="termSelect.loading()"
+          [nzDropdownRender]="termFooterTpl"
+          (nzOpenChange)="termSelect.onOpenChange($event)"
+          (nzOnSearch)="termSelect.onSearch($event)"
+          (nzScrollToBottom)="termSelect.loadMore()"
           nzPlaceHolder="Tất cả học kỳ"
           class="w-full">
-          @for (t of terms(); track t.id) {
+          @for (t of termSelect.options(); track t.id) {
             <nz-option [nzValue]="t.id" [nzLabel]="t.code" />
           }
         </nz-select>
+        <ng-template #termFooterTpl>
+          @if (termSelect.loadingMore()) {
+            <div class="px-3 py-2 text-center text-xs text-slate-500">
+              <nz-spin nzSimple nzSize="small" class="mr-1.5" />Đang tải thêm...
+            </div>
+          }
+        </ng-template>
       </div>
     </div>
 

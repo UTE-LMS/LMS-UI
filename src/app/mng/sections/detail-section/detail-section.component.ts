@@ -1,5 +1,6 @@
 import { DatePipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, inject, input, OnInit, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, DestroyRef, inject, input, OnInit, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import {
@@ -22,7 +23,6 @@ import { EnrollmentService } from '@services/course/enrollment.service';
 import { SectionService } from '@services/course/section.service';
 import { SyllabusService } from '@services/course/syllabus.service';
 import { TermService } from '@services/course/term.service';
-import { UserService } from '@services/user/user.service';
 import { DisplayChipComponent } from '@widget/display-chip/display-chip.component';
 import { ErrorStateComponent } from '@widget/error-state/error-state.component';
 import { TestDataFlagComponent } from '@widget/test-data-flag/test-data-flag.component';
@@ -31,9 +31,9 @@ import { NzModalModule } from 'ng-zorro-antd/modal';
 import { NzSelectModule } from 'ng-zorro-antd/select';
 import { NzTableModule } from 'ng-zorro-antd/table';
 import { ToastrService } from 'ngx-toastr';
-import { catchError, forkJoin, map, of } from 'rxjs';
+import { catchError, debounceTime, distinctUntilChanged, map, of, Subject } from 'rxjs';
 import { SectionModalComponent } from '../section-modal/section-modal.component';
-import { sectionLecturersText, userDisplayName } from '../sections.util';
+import { sectionLecturersText } from '../sections.util';
 
 type RosterFilter = 'ALL' | EnrollmentStatus;
 
@@ -51,12 +51,12 @@ type RosterFilter = 'ALL' | EnrollmentStatus;
   ],
 })
 export class DetailSectionComponent implements OnInit {
+  private readonly destroyRef = inject(DestroyRef);
   private readonly sectionSvc = inject(SectionService);
   private readonly enrollmentSvc = inject(EnrollmentService);
   private readonly termSvc = inject(TermService);
   private readonly courseSvc = inject(CourseService);
   private readonly syllabusSvc = inject(SyllabusService);
-  private readonly userSvc = inject(UserService);
   private readonly authSvc = inject(AuthService);
   private readonly alert = inject(ToastrService);
 
@@ -82,7 +82,8 @@ export class DetailSectionComponent implements OnInit {
   readonly course = signal<ICourse | null>(null);
   readonly syllabus = signal<ISyllabus | null>(null);
   readonly roster = signal<IEnrollmentList | null>(null);
-  readonly users = signal<IUser[]>([]);
+  readonly lecturers = signal<IUser[]>([]);
+  readonly lecturerListAvailable = signal(false);
 
   readonly isLoading = signal(true);
   readonly loadError = signal<IUserError | null>(null);
@@ -90,6 +91,12 @@ export class DetailSectionComponent implements OnInit {
   readonly busyEnrollmentId = signal<string | null>(null);
 
   readonly rosterFilter = signal<RosterFilter>('ALL');
+  readonly rosterSearch = signal('');
+  readonly rosterPage = signal(0);
+  readonly rosterSize = signal(20);
+  readonly rosterTotalElements = signal(0);
+  readonly isLoadingRoster = signal(false);
+  private readonly rosterSearchSubject$ = new Subject<string>();
 
   readonly isLecturersModalVisible = signal(false);
   readonly isStatusModalVisible = signal(false);
@@ -132,26 +139,23 @@ export class DetailSectionComponent implements OnInit {
     return null;
   });
 
-  /** Chưa có bản ghi ghi danh nào: khác với lớp có sinh viên nhưng tất cả đã rút. */
-  readonly hasNoRoster = computed(() => (this.roster()?.enrollments.length ?? 0) === 0);
-
-  readonly visibleEnrollments = computed<IEnrollment[]>(() => {
-    const filter = this.rosterFilter();
-    const all = this.roster()?.enrollments ?? [];
-    return filter === 'ALL' ? all : all.filter(e => e.status === filter);
+  /** Chưa có bản ghi ghi danh nào toàn lớp: dùng mẫu số (enrolled + withdrawn) để không phụ thuộc bộ lọc trang. */
+  readonly hasNoRoster = computed(() => {
+    const r = this.roster();
+    return !r || (r.enrolled + r.withdrawn) === 0;
   });
 
-  readonly lecturerNames = computed<ReadonlyMap<string, string>>(
-    () => new Map(this.users().map(user => [user.id, userDisplayName(user)])),
-  );
+  readonly totalSectionRosterCount = computed(() => {
+    const r = this.roster();
+    return r ? r.enrolled + r.withdrawn : 0;
+  });
 
-  readonly lecturerOptions = computed(() => this.users().filter(user => user.status === 'ACTIVE' && user.roles.includes(SystemConstant.ROLE.LECTURER)));
+  readonly visibleEnrollments = computed<IEnrollment[]>(() => this.roster()?.enrollments ?? []);
 
-  readonly lecturerListAvailable = computed(() => this.canManage() && this.users().length > 0);
+  readonly lecturerOptions = computed(() => this.lecturers().filter(user => user.status === 'ACTIVE' && user.roles.includes(SystemConstant.ROLE.LECTURER)));
 
   readonly lecturersText = computed(() => sectionLecturersText(
     this.section(),
-    this.lecturerNames(),
     this.currentUserId(),
     this.currentUserName(),
   ));
@@ -162,12 +166,24 @@ export class DetailSectionComponent implements OnInit {
     this.roles.set(this.authSvc.getRoles());
     this.currentUserId.set(this.authSvc.getUserId());
     this.currentUserName.set(this.authSvc.getNameOfLogin?.() ?? '');
-    if (this.isAdmin()) {
-      this.userSvc.filter(0, 100).pipe(catchError(() => of(null)))
-        .subscribe(page => this.mergeUsers(page?.content ?? []));
-    } else if (typeof this.sectionSvc.getLecturers === 'function') {
-      this.sectionSvc.getLecturers().pipe(catchError(() => of([] as IUser[])))
-        .subscribe(list => this.mergeUsers(list));
+
+    this.rosterSearchSubject$
+      .pipe(
+        map(q => q.trim()),
+        debounceTime(300),
+        distinctUntilChanged(),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe(() => {
+        this.rosterPage.set(0);
+        this.loadRoster();
+      });
+
+    if (this.canManage() && typeof this.sectionSvc.getLecturers === 'function') {
+      this.sectionSvc.getLecturers().pipe(catchError(() => of(null))).subscribe(list => {
+        this.lecturers.set(list ?? []);
+        this.lecturerListAvailable.set(list !== null);
+      });
     }
     this.load();
   }
@@ -194,41 +210,56 @@ export class DetailSectionComponent implements OnInit {
     this.termSvc.getTermById(section.termId).pipe(catchError(() => of(null))).subscribe(t => this.term.set(t));
     this.courseSvc.getCourseById(section.courseId).pipe(catchError(() => of(null))).subscribe(c => this.course.set(c));
     this.syllabusSvc.getSyllabusById(section.syllabusId).pipe(catchError(() => of(null))).subscribe(s => this.syllabus.set(s));
-    if (this.isAdmin() && typeof this.userSvc.getById === 'function') {
-      const knownIds = new Set(this.users().map(u => u.id));
-      const missingIds = section.lecturerIds.filter(id => !knownIds.has(id));
-      if (missingIds.length > 0) {
-        forkJoin(missingIds.map(id => this.userSvc.getById(id).pipe(catchError(() => of(null)))))
-          .pipe(map(items => items.filter((u): u is IUser => u !== null)))
-          .subscribe(found => this.mergeUsers(found));
-      }
-    }
-  }
-
-  private mergeUsers(incoming: IUser[]): void {
-    if (incoming.length === 0) {
-      return;
-    }
-    this.users.update(current => {
-      const merged = new Map(current.map(u => [u.id, u] as const));
-      for (const user of incoming) {
-        merged.set(user.id, user);
-      }
-      return [...merged.values()];
-    });
   }
 
   private loadRoster(): void {
-    this.enrollmentSvc.getEnrollments(this.sectionId()).subscribe({
+    this.isLoadingRoster.set(true);
+    const filter = this.rosterFilter();
+    const status = filter === 'ALL' ? undefined : filter;
+    const search = this.rosterSearch().trim() || undefined;
+    this.enrollmentSvc.getEnrollments(
+      this.sectionId(),
+      status,
+      search,
+      this.rosterPage(),
+      this.rosterSize(),
+    ).subscribe({
       next: list => {
         this.roster.set(list);
+        this.rosterTotalElements.set(list.totalElements ?? list.enrollments.length);
+        this.rosterPage.set(list.page ?? this.rosterPage());
+        this.rosterSize.set(list.size ?? this.rosterSize());
+        this.isLoadingRoster.set(false);
         this.isLoading.set(false);
       },
       error: err => {
+        this.isLoadingRoster.set(false);
         this.isLoading.set(false);
         this.loadError.set(toUserError(err));
       },
     });
+  }
+
+  onRosterFilterChange(filter: RosterFilter): void {
+    this.rosterFilter.set(filter);
+    this.rosterPage.set(0);
+    this.loadRoster();
+  }
+
+  onRosterSearchChange(keyword: string): void {
+    this.rosterSearch.set(keyword);
+    this.rosterSearchSubject$.next(keyword);
+  }
+
+  onRosterPageIndexChange(page1Indexed: number): void {
+    this.rosterPage.set(Math.max(0, page1Indexed - 1));
+    this.loadRoster();
+  }
+
+  onRosterPageSizeChange(newSize: number): void {
+    this.rosterSize.set(newSize);
+    this.rosterPage.set(0);
+    this.loadRoster();
   }
 
   /** Rút khỏi lớp hoặc ghi danh lại một sinh viên (US-20/AC-4). Số đếm lấy lại từ API, UI không tự cộng trừ. */
@@ -244,7 +275,9 @@ export class DetailSectionComponent implements OnInit {
       },
       error: err => {
         this.busyEnrollmentId.set(null);
-        this.actionError.set(toUserError(err).message);
+        const message = toUserError(err).message;
+        this.actionError.set(message);
+        this.alert.error(message);
       },
     });
   }

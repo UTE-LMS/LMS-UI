@@ -217,14 +217,27 @@
         <nz-select
           class="w-full"
           nzShowSearch
+          [nzServerSearch]="true"
+          [nzLoading]="pvSelect.loading()"
+          [nzDropdownRender]="pvFooterTpl"
+          (nzOpenChange)="pvSelect.onOpenChange($event)"
+          (nzOnSearch)="pvSelect.onSearch($event)"
+          (nzScrollToBottom)="pvSelect.loadMore()"
           nzPlaceHolder="Chọn phiên bản CTĐT để ánh xạ PI..."
           [ngModel]="importProgramVersionId()"
-          (ngModelChange)="importProgramVersionId.set($event)"
+          (ngModelChange)="onImportPvChange($event)"
         >
-          @for (pv of programVersions(); track pv.id) {
+          @for (pv of pvSelect.options(); track pv.id) {
           <nz-option [nzValue]="pv.id" [nzLabel]="pv.version + ' (' + (pv.status === 'ACTIVE' ? 'Đang áp dụng' : 'Lưu trữ') + ')'" />
           }
         </nz-select>
+        <ng-template #pvFooterTpl>
+          @if (pvSelect.loadingMore()) {
+            <div class="px-3 py-2 text-center text-xs text-slate-500">
+              <nz-spin nzSimple nzSize="small" class="mr-1.5" />Đang tải thêm...
+            </div>
+          }
+        </ng-template>
       </div>
 
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -242,14 +255,28 @@
           <nz-select
             class="w-full"
             nzAllowClear
+            nzShowSearch
+            [nzServerSearch]="true"
+            [nzLoading]="termSelect.loading()"
+            [nzDropdownRender]="termFooterTpl"
+            (nzOpenChange)="termSelect.onOpenChange($event)"
+            (nzOnSearch)="termSelect.onSearch($event)"
+            (nzScrollToBottom)="termSelect.loadMore()"
             nzPlaceHolder="Chọn học kỳ..."
             [ngModel]="importEffectiveFromTermId()"
-            (ngModelChange)="importEffectiveFromTermId.set($event)"
+            (ngModelChange)="onImportTermChange($event)"
           >
-            @for (t of terms(); track t.id) {
+            @for (t of termSelect.options(); track t.id) {
             <nz-option [nzValue]="t.id" [nzLabel]="t.code + (t.academicYear ? ' (' + t.academicYear + ')' : '')" />
             }
           </nz-select>
+          <ng-template #termFooterTpl>
+            @if (termSelect.loadingMore()) {
+              <div class="px-3 py-2 text-center text-xs text-slate-500">
+                <nz-spin nzSimple nzSize="small" class="mr-1.5" />Đang tải thêm...
+              </div>
+            }
+          </ng-template>
         </div>
       </div>
 

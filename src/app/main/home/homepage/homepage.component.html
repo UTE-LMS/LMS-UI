@@ -323,7 +323,7 @@
       </div>
       }
 
-      <!-- TAB 2: DANH MỤC HỌC PHẦN DẠNG THẺ -->
+      <!-- TAB 2: DANH MỤC HỌC PHẦN GOM NHÓM THEO HỌC KỲ -->
       @if (activeTab() === 'COURSES') {
       <div class="space-y-4" data-testid="tab-panel-courses">
         <div class="bg-white rounded-2xl border border-slate-200 p-4 space-y-3 shadow-xs">
@@ -332,8 +332,8 @@
               <h3 class="text-base font-bold text-slate-800 m-0">Kế hoạch Đào tạo &amp; Học phần theo Học kỳ</h3>
               <p class="text-xs text-slate-600 mt-0.5 m-0">
                 Tổng số tín chỉ toàn khóa: <strong class="text-slate-800" data-testid="total-course-credits">{{ totalCourseCredits() }} TC</strong>
-                @if (filterSemester() !== null || filterCategory() !== null || courseSearchQuery()) {
-                <span> · Đang lọc: <strong>{{ filteredCourseCredits() }} TC</strong></span>
+                @if (hasActiveCourseFilters()) {
+                <span> · Đang lọc: <strong>{{ filteredCourses().length }} môn ({{ filteredCourseCredits() }} TC)</strong></span>
                 }
               </p>
             </div>
@@ -348,7 +348,7 @@
                 [ngModel]="filterSemester()"
                 (ngModelChange)="filterSemester.set($event)"
               >
-                @for (sem of semesterOptions; track sem) {
+                @for (sem of availableSemesterOptions(); track sem) {
                 <nz-option [nzValue]="sem" [nzLabel]="'Học kỳ ' + sem" />
                 }
               </nz-select>
@@ -375,13 +375,25 @@
                 [ngModel]="courseSearchQuery()"
                 (ngModelChange)="courseSearchQuery.set($event)"
               />
+
+              @if (hasActiveCourseFilters()) {
+              <button
+                type="button"
+                data-testid="btn-reset-course-filters"
+                (click)="resetCourseFilters()"
+                class="px-3 py-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold cursor-pointer transition-colors"
+              >
+                Đặt lại
+              </button>
+              }
             </div>
           </div>
 
           @if (semesterSummaries().length > 0) {
-          <div class="flex flex-wrap gap-2 pt-2 border-t border-slate-100">
+          <div class="flex flex-wrap gap-2 pt-2 border-t border-slate-100" role="group" aria-label="Lọc nhanh theo học kỳ">
             <button
               type="button"
+              data-testid="semester-filter-pill"
               [attr.aria-pressed]="filterSemester() === null"
               (click)="toggleSemesterFilter(null)"
               class="text-xs px-2.5 py-1 rounded-full border cursor-pointer transition-colors font-medium"
@@ -397,10 +409,11 @@
             @for (sum of semesterSummaries(); track sum.semesterLabel) {
             <button
               type="button"
+              data-testid="semester-filter-pill"
               [attr.aria-pressed]="sum.semesterNumber !== null && filterSemester() === sum.semesterNumber"
               [disabled]="sum.semesterNumber === null"
               (click)="toggleSemesterFilter(sum.semesterNumber)"
-              class="text-xs px-2.5 py-1 rounded-full border cursor-pointer transition-colors"
+              class="text-xs px-2.5 py-1 rounded-full border cursor-pointer transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
               [class.bg-[#005a94]]="sum.semesterNumber !== null && filterSemester() === sum.semesterNumber"
               [class.text-white]="sum.semesterNumber !== null && filterSemester() === sum.semesterNumber"
               [class.border-[#005a94]]="sum.semesterNumber !== null && filterSemester() === sum.semesterNumber"
@@ -416,86 +429,155 @@
         </div>
 
         @if (isLoadingDetails()) {
-        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3.5" aria-busy="true">
-          @for (item of [1, 2, 3, 4, 5, 6]; track item) {
-          <div class="rounded-xl border border-slate-200 bg-white p-4 space-y-2 animate-pulse">
-            <div class="h-4 w-28 rounded bg-slate-200"></div>
-            <div class="h-4 w-48 rounded bg-slate-100"></div>
+        <div class="space-y-4" aria-busy="true">
+          @for (groupSkeleton of [1, 2]; track groupSkeleton) {
+          <div class="rounded-2xl border border-slate-200 bg-white overflow-hidden animate-pulse">
+            <div class="bg-slate-50 border-b border-slate-200 px-4 py-3 flex items-center justify-between">
+              <div class="h-5 w-40 rounded bg-slate-200"></div>
+              <div class="h-5 w-24 rounded bg-slate-100"></div>
+            </div>
+            <div class="p-4 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3.5">
+              @for (item of [1, 2, 3]; track item) {
+              <div class="rounded-xl border border-slate-200 bg-white p-4 space-y-2">
+                <div class="h-4 w-28 rounded bg-slate-200"></div>
+                <div class="h-4 w-48 rounded bg-slate-100"></div>
+              </div>
+              }
+            </div>
           </div>
           }
         </div>
         } @else {
-        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3.5">
-          @for (pc of filteredCourses(); track pc.id) {
-          <article class="course-row rounded-xl border border-slate-200 bg-white shadow-xs hover:border-[#005a94]/50 transition-all p-4 flex flex-col gap-3">
-            <div class="flex items-start justify-between gap-2">
-              <span class="font-mono text-xs font-bold px-2.5 py-0.5 rounded-md bg-[#edf4ff] text-[#003b64] border border-[#c7ddf7]">
-                {{ pc.course?.code ?? pc.courseId }}
-              </span>
-              <div class="flex items-center gap-1.5 text-[11px]">
-                <span class="px-2 py-0.5 rounded bg-slate-100 text-slate-700 font-semibold">
-                  {{ pc.semester ? 'HK ' + pc.semester : 'Chưa xếp kỳ' }}
+        <div class="space-y-4" data-testid="semester-groups-list">
+          @for (group of groupedCoursesBySemester(); track group.semesterKey) {
+          <section
+            class="semester-group rounded-2xl border border-slate-200 bg-white shadow-xs overflow-hidden"
+            [attr.data-testid]="'semester-group-' + group.semesterKey"
+          >
+            <header class="bg-[#f4faff] border-b border-slate-200 px-4 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div class="flex flex-wrap items-center gap-2.5">
+                <span
+                  class="px-2.5 py-1 rounded-lg text-xs font-bold inline-flex items-center gap-1.5 text-white"
+                  [class.bg-[#005a94]]="group.semesterNumber !== null"
+                  [class.bg-slate-600]="group.semesterNumber === null"
+                >
+                  <i class="fa-solid fa-calendar-days" aria-hidden="true"></i>
+                  <span>{{ group.semesterLabel }}</span>
                 </span>
-                <span class="px-2 py-0.5 rounded bg-blue-50 text-blue-900 border border-blue-200 font-bold">
-                  {{ pc.credits ?? pc.course?.credits ?? '—' }} TC
+                <span class="text-xs text-slate-600 font-medium">
+                  {{ group.courseCount }} học phần · {{ group.totalCredits }} tín chỉ
                 </span>
               </div>
-            </div>
 
-            <h4 class="text-sm font-bold text-slate-900 leading-snug m-0">
-              {{ pc.course?.name ?? '—' }}
-            </h4>
-
-            <div class="flex flex-wrap items-center gap-1.5 text-[11px]">
-              @if (pc.type === 'COMPULSORY') {
-              <span class="px-2 py-0.5 rounded bg-blue-50 text-blue-800 border border-blue-200 font-medium">Bắt buộc</span>
-              } @else if (pc.type === 'ELECTIVE') {
-              <span class="px-2 py-0.5 rounded bg-amber-50 text-amber-800 border border-amber-200 font-medium">Tự chọn</span>
-              }
-              @if (pc.category) {
-              <span class="px-2 py-0.5 rounded bg-slate-100 text-slate-700 font-medium">{{ getCategoryLabel(pc.category) }}</span>
-              }
-            </div>
-
-            <div class="space-y-1.5 text-xs pt-2 border-t border-slate-100">
-              <div class="flex flex-wrap items-center gap-1">
-                <span class="text-slate-500 font-medium">Tiên quyết:</span>
-                @for (reqId of pc.prerequisiteCourseIds ?? []; track reqId) {
-                <span class="px-2 py-0.5 rounded bg-rose-50 text-rose-800 border border-rose-200 font-medium text-[11px]">
-                  {{ getCourseCodeById(reqId) }}
+              <div class="flex flex-wrap items-center gap-2">
+                <span class="px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-900 border border-blue-200 text-xs font-bold">
+                  {{ group.totalCredits }} TC
                 </span>
-                } @empty {
-                <span class="text-slate-500">—</span>
+                @if (group.semesterNumber !== null) {
+                <button
+                  type="button"
+                  data-testid="btn-focus-semester"
+                  (click)="toggleSemesterFilter(group.semesterNumber)"
+                  class="px-2.5 py-1 rounded-lg text-xs font-semibold border cursor-pointer transition-colors"
+                  [class.bg-[#005a94]]="filterSemester() === group.semesterNumber"
+                  [class.text-white]="filterSemester() === group.semesterNumber"
+                  [class.border-[#005a94]]="filterSemester() === group.semesterNumber"
+                  [class.bg-white]="filterSemester() !== group.semesterNumber"
+                  [class.text-[#005a94]]="filterSemester() !== group.semesterNumber"
+                  [class.border-[#c7ddf7]]="filterSemester() !== group.semesterNumber"
+                >
+                  {{ filterSemester() === group.semesterNumber ? 'Xem tất cả học kỳ' : 'Chỉ xem kỳ này' }}
+                </button>
                 }
               </div>
+            </header>
 
-              <div class="flex flex-wrap items-center gap-1">
-                <span class="text-slate-500 font-medium">Học trước:</span>
-                @for (prevId of pc.previousCourseIds ?? []; track prevId) {
-                <span class="px-2 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200 font-medium text-[11px]">
-                  {{ getCourseCodeById(prevId) }}
-                </span>
-                } @empty {
-                <span class="text-slate-500">—</span>
-                }
-              </div>
-            </div>
+            <div class="p-4 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3.5">
+              @for (pc of group.courses; track pc.id) {
+              <article class="course-row rounded-xl border border-slate-200 bg-white shadow-xs hover:border-[#005a94]/50 transition-all p-4 flex flex-col gap-3">
+                <div class="flex items-start justify-between gap-2">
+                  <span class="font-mono text-xs font-bold px-2.5 py-0.5 rounded-md bg-[#edf4ff] text-[#003b64] border border-[#c7ddf7]">
+                    {{ pc.course?.code ?? pc.courseId }}
+                  </span>
+                  <div class="flex items-center gap-1.5 text-[11px]">
+                    <span class="px-2 py-0.5 rounded bg-slate-100 text-slate-700 font-semibold">
+                      {{ pc.semester && pc.semester > 0 ? 'HK ' + pc.semester : 'Chưa xếp kỳ' }}
+                    </span>
+                    <span class="px-2 py-0.5 rounded bg-blue-50 text-blue-900 border border-blue-200 font-bold">
+                      {{ pc.credits ?? pc.course?.credits ?? '—' }} TC
+                    </span>
+                  </div>
+                </div>
 
-            <div class="mt-auto pt-2 flex justify-end">
-              <button
-                type="button"
-                (click)="inspectCourseMatrix(pc.courseId)"
-                class="w-full sm:w-auto px-3 py-1.5 rounded-lg bg-[#15803d] hover:bg-[#166534] text-white text-xs font-semibold border-0 cursor-pointer transition-colors inline-flex items-center justify-center gap-1.5"
-                title="Xem đề cương & ma trận CLO x PI của môn này"
-              >
-                <i class="fa-solid fa-file-lines" aria-hidden="true"></i>
-                <span>Xem đề cương</span>
-              </button>
+                <h4 class="text-sm font-bold text-slate-900 leading-snug m-0">
+                  {{ pc.course?.name ?? '—' }}
+                </h4>
+
+                <div class="flex flex-wrap items-center gap-1.5 text-[11px]">
+                  @if (pc.type === 'COMPULSORY') {
+                  <span class="px-2 py-0.5 rounded bg-blue-50 text-blue-800 border border-blue-200 font-medium">Bắt buộc</span>
+                  } @else if (pc.type === 'ELECTIVE') {
+                  <span class="px-2 py-0.5 rounded bg-amber-50 text-amber-800 border border-amber-200 font-medium">Tự chọn</span>
+                  }
+                  @if (pc.category) {
+                  <span class="px-2 py-0.5 rounded bg-slate-100 text-slate-700 font-medium">{{ getCategoryLabel(pc.category) }}</span>
+                  }
+                </div>
+
+                <div class="space-y-1.5 text-xs pt-2 border-t border-slate-100">
+                  <div class="flex flex-wrap items-center gap-1">
+                    <span class="text-slate-500 font-medium">Tiên quyết:</span>
+                    @for (reqId of pc.prerequisiteCourseIds ?? []; track reqId) {
+                    <span class="px-2 py-0.5 rounded bg-rose-50 text-rose-800 border border-rose-200 font-medium text-[11px]">
+                      {{ getCourseCodeById(reqId) }}
+                    </span>
+                    } @empty {
+                    <span class="text-slate-500">—</span>
+                    }
+                  </div>
+
+                  <div class="flex flex-wrap items-center gap-1">
+                    <span class="text-slate-500 font-medium">Học trước:</span>
+                    @for (prevId of pc.previousCourseIds ?? []; track prevId) {
+                    <span class="px-2 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200 font-medium text-[11px]">
+                      {{ getCourseCodeById(prevId) }}
+                    </span>
+                    } @empty {
+                    <span class="text-slate-500">—</span>
+                    }
+                  </div>
+                </div>
+
+                <div class="mt-auto pt-2 flex justify-end">
+                  <button
+                    type="button"
+                    (click)="inspectCourseMatrix(pc.courseId)"
+                    class="w-full sm:w-auto px-3 py-1.5 rounded-lg bg-[#15803d] hover:bg-[#166534] text-white text-xs font-semibold border-0 cursor-pointer transition-colors inline-flex items-center justify-center gap-1.5"
+                    title="Xem đề cương & ma trận CLO x PI của môn này"
+                  >
+                    <i class="fa-solid fa-file-lines" aria-hidden="true"></i>
+                    <span>Xem đề cương</span>
+                  </button>
+                </div>
+              </article>
+              }
             </div>
-          </article>
+          </section>
           } @empty {
-          <div class="col-span-full rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center text-xs text-slate-600">
-            Không tìm thấy học phần nào phù hợp bộ lọc.
+          <div class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center text-xs text-slate-600 space-y-2">
+            @if (hasActiveCourseFilters()) {
+            <p class="m-0">Không tìm thấy học phần nào phù hợp bộ lọc.</p>
+            <button
+              type="button"
+              data-testid="btn-empty-reset-course-filters"
+              (click)="resetCourseFilters()"
+              class="px-3 py-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-100 text-slate-700 text-xs font-semibold cursor-pointer transition-colors"
+            >
+              Xóa bộ lọc
+            </button>
+            } @else {
+            <p class="m-0">Phiên bản chương trình đào tạo này chưa có dữ liệu học phần.</p>
+            }
           </div>
           }
         </div>

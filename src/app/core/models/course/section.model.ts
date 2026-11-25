@@ -8,8 +8,8 @@ export type EnrollmentStatus = 'ENROLLED' | 'WITHDRAWN';
 
 export interface ISectionLecturerSummary {
   id: string;
-  fullName?: string | null;
-  username?: string | null;
+  username: string;
+  fullName: string;
 }
 
 export interface ISection {
@@ -20,7 +20,6 @@ export interface ISection {
   termId: string;
   lecturerIds: string[];
   lecturers?: ISectionLecturerSummary[];
-  lecturerNames?: string[];
   /**
    * Sĩ số (số ENROLLED), là mẫu số của tỷ lệ đạt, do backend tính lại sau mỗi lần nhập/rút/ghi danh lại.
    * Backend mặc định 0 cho lớp mới mở nên 0 và "chưa nhập danh sách" không phân biệt được ở đây; UI hiển thị
@@ -68,6 +67,11 @@ export interface IEnrollmentList {
   /** Số WITHDRAWN: không thuộc mẫu số nhưng vẫn giữ bản ghi. */
   withdrawn: number;
   enrollments: IEnrollment[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+  last: boolean;
 }
 
 export interface IEnrollmentStatusUpdateRequest {

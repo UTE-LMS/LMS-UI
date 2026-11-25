@@ -82,7 +82,7 @@
         {{ plos().length }} PLO · {{ pis().length }} PI
       </div>
       <div class="text-xs text-slate-500 mt-1">
-        {{ courses().length }} học phần thuộc khung CTĐT
+        {{ coursesTotal() }} học phần thuộc khung CTĐT
       </div>
     </div>
   </div>
@@ -111,7 +111,7 @@
       [class.bg-transparent]="activeTab() !== 'PROGRAM_COURSES'"
       (click)="switchTab('PROGRAM_COURSES')"
     >
-      <i class="fa-solid fa-layer-group mr-1.5"></i>2. Kế hoạch Học phần trong CTĐT ({{ courses().length }})
+      <i class="fa-solid fa-layer-group mr-1.5"></i>2. Kế hoạch Học phần trong CTĐT ({{ coursesTotal() }})
     </button>
     <button
       type="button"
@@ -245,6 +245,7 @@
     [canManage]="false"
     [canImportCourses]="canImportProgramCourses()"
     (changed)="loadData()"
+    (totalChange)="coursesTotal.set($event)"
     (openCloPiMatrix)="openCloPiMatrixForCourse($event)"
   />
   } @else {

@@ -125,4 +125,33 @@ describe('AssessmentItemModalComponent (F04 US-15, US-16, ADR 0014)', () => {
     component.removeMapping(0);
     expect(component.mappings.length).toBe(1);
   });
+
+  it('hiển thị nhãn và gợi ý tổng % CLO toàn lớp khi có sectionCloTotals', () => {
+    expect(component.cloTotalHint('clo1')).toBeNull();
+    expect(component.cloOptionLabel(clos[0])).not.toContain('Toàn lớp');
+
+    fixture.componentRef.setInput('sectionCloTotals', new Map([
+      ['clo1', 0.55],
+      ['clo2', 1],
+      ['clo3', 1.15],
+    ]));
+    fixture.detectChanges();
+
+    expect(component.cloOptionLabel(clos[0])).toContain('Toàn lớp: 55%');
+    expect(component.cloOptionLabel(clos[2])).toContain('Toàn lớp: 115% - vượt 100%');
+
+    const hint1 = component.cloTotalHint('clo1');
+    expect(hint1?.tone).toBe('under');
+    expect(hint1?.text).toContain('55%');
+    expect(hint1?.text).toContain('45%');
+
+    const hint2 = component.cloTotalHint('clo2');
+    expect(hint2?.tone).toBe('exact');
+    expect(hint2?.text).toContain('100%');
+
+    const hint3 = component.cloTotalHint('clo3');
+    expect(hint3?.tone).toBe('over');
+    expect(hint3?.text).toContain('115%');
+    expect(hint3?.text).toContain('15%');
+  });
 });

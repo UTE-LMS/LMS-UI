@@ -53,8 +53,17 @@ describe('ListCoursesComponent (F03 US-09/AC-1 & F05a US-18)', () => {
     updateCourse: vi.fn(),
   };
 
+  const pagedTerms = (content: ITerm[], totalElements = content.length, page = 0, size = 20) => ({
+    content,
+    page,
+    size,
+    totalElements,
+    totalPages: Math.max(1, Math.ceil(totalElements / size)),
+    last: (page + 1) * size >= totalElements,
+  });
+
   const termSvc = {
-    getTerms: vi.fn(() => of(mockTerms)),
+    getTerms: vi.fn(() => of(pagedTerms(mockTerms))),
     updateTermStatus: vi.fn(() => of(mockTerms[0])),
     deleteTerm: vi.fn(() => of(undefined)),
     createTerm: vi.fn(),
@@ -174,6 +183,24 @@ describe('ListCoursesComponent (F03 US-09/AC-1 & F05a US-18)', () => {
       reason: 'Mở sổ điểm bổ sung phúc khảo',
     });
   });
+
+  it('tab Học kỳ hỗ trợ tìm kiếm (debounce 300ms), lọc status và phân trang server-side', async () => {
+    vi.useFakeTimers();
+    try {
+      termSvc.getTerms.mockClear();
+      component.onTermStatusFilterChange('OPEN');
+      expect(termSvc.getTerms).toHaveBeenLastCalledWith(undefined, 'OPEN', 0, 20);
+
+      component.onTermSearchChange('2026');
+      await vi.advanceTimersByTimeAsync(350);
+      expect(termSvc.getTerms).toHaveBeenLastCalledWith('2026', 'OPEN', 0, 20);
+
+      component.onTermPageIndexChange(2);
+      expect(termSvc.getTerms).toHaveBeenLastCalledWith('2026', 'OPEN', 1, 20);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });
 
 describe('ListCoursesComponent mở thẳng tab Học kỳ (F05a: liên kết từ màn Lớp học phần)', () => {
@@ -187,7 +214,7 @@ describe('ListCoursesComponent mở thẳng tab Học kỳ (F05a: liên kết t�
           provide: CourseService,
           useValue: { getCourses: vi.fn(() => of({ content: [], page: 0, size: 10, totalElements: 0, totalPages: 0, last: true })) },
         },
-        { provide: TermService, useValue: { getTerms: vi.fn(() => of([])) } },
+        { provide: TermService, useValue: { getTerms: vi.fn(() => of({ content: [], page: 0, size: 20, totalElements: 0, totalPages: 0, last: true })) } },
         { provide: AuthService, useValue: { getRoles: vi.fn(() => [SystemConstant.ROLE.ADMIN]) } },
         { provide: ToastrService, useValue: { success: vi.fn(), error: vi.fn() } },
         { provide: NzModalService, useValue: { confirm: vi.fn() } },

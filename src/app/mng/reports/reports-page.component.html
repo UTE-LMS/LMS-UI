@@ -35,14 +35,28 @@
         <label class="block text-xs font-medium text-slate-600 mb-1">Lớp học phần (cho báo cáo CLO theo lớp)</label>
         <nz-select
           [ngModel]="selectedSectionId()"
-          (ngModelChange)="selectedSectionId.set($event)"
+          (ngModelChange)="onSectionChange($event)"
           nzAllowClear
+          nzShowSearch
+          [nzServerSearch]="true"
+          [nzLoading]="sectionSelect.loading()"
+          [nzDropdownRender]="sectionFooterTpl"
+          (nzOpenChange)="sectionSelect.onOpenChange($event)"
+          (nzOnSearch)="sectionSelect.onSearch($event)"
+          (nzScrollToBottom)="sectionSelect.loadMore()"
           nzPlaceHolder="Chọn lớp học phần"
           class="w-full">
-          @for (sec of sections(); track sec.id) {
+          @for (sec of sectionSelect.options(); track sec.id) {
             <nz-option [nzValue]="sec.id" [nzLabel]="sec.code" />
           }
         </nz-select>
+        <ng-template #sectionFooterTpl>
+          @if (sectionSelect.loadingMore()) {
+            <div class="px-3 py-2 text-center text-xs text-slate-500">
+              <nz-spin nzSimple nzSize="small" class="mr-1.5" />Đang tải thêm...
+            </div>
+          }
+        </ng-template>
       </div>
 
       <div>

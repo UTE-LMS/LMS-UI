@@ -31,6 +31,13 @@ export const mngRoutes: Routes = [
         loadChildren: () => import('./users/users.routes').then(m => m.usersRoutes),
       },
       {
+        path: 'students',
+        canActivate: [canActiveGuard],
+        data: { listRoles: [SystemConstant.MNG_ROLE.ADMIN], rolesRelation: 'OR' },
+        loadChildren: () => import('./students/students.routes').then(m => m.studentsRoutes),
+        title: `Quản lý Sinh viên | ${SystemConstant.WEB_NAME}`,
+      },
+      {
         path: 'faculties',
         canActivate: [canActiveGuard],
         data: { listRoles: [SystemConstant.MNG_ROLE.ADMIN], rolesRelation: 'OR' },

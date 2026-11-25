@@ -15,6 +15,7 @@ import { calculationsMngMenu } from '@mng/calculations/calculations.menu';
 import { reportsMngMenu } from '@mng/reports/reports.menu';
 import { analyticsMngMenu } from '@mng/analytics/analytics.menu';
 import { auditLogsMngMenu } from '@mng/audit-logs/audit-logs.menu';
+import { studentsMngMenu } from '@mng/students/students.menu';
 import { usersMngMenu } from '@mng/users/users.menu';
 import { AuthService } from '@services/auth/auth.service';
 import { NzButtonModule } from 'ng-zorro-antd/button';
@@ -77,6 +78,7 @@ export class ManagementHeaderComponent implements OnInit {
     ...facultiesMngMenu,
     ...programsMngMenu,
     ...usersMngMenu,
+    ...studentsMngMenu,
     ...auditLogsMngMenu,
   ];
 
@@ -112,6 +114,7 @@ export class ManagementHeaderComponent implements OnInit {
       ...byRoute(UrlConstant.ROUTE.MANAGEMENT.FACULTIES),
       ...byRoute(UrlConstant.ROUTE.MANAGEMENT.PROGRAMS),
       ...byRoute(UrlConstant.ROUTE.MANAGEMENT.USERS),
+      ...byRoute(UrlConstant.ROUTE.MANAGEMENT.STUDENTS),
       ...byRoute(UrlConstant.ROUTE.MANAGEMENT.AUDIT_LOGS),
     ];
 

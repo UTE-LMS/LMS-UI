@@ -3,6 +3,7 @@ import { ICloPiMatrix } from '@models/course/clo.model';
 import { IProgramCourse } from '@models/course/course.model';
 import { ISyllabus } from '@models/course/syllabus.model';
 import { CloService } from '@services/course/clo.service';
+import { CourseService } from '@services/course/course.service';
 import { SyllabusService } from '@services/course/syllabus.service';
 import { of } from 'rxjs';
 import { CloPiMatrixTableComponent } from './clo-pi-matrix-table.component';
@@ -62,6 +63,18 @@ describe('CloPiMatrixTableComponent (F03 US-12, TD-27, TD-28, Q22)', () => {
     getCloPiMatrix: vi.fn(() => of(mockMatrix)),
   };
 
+  const courseSvc = {
+    getProgramCourses: vi.fn(() => of({
+      content: mockProgramCourses,
+      page: 0,
+      size: 20,
+      totalElements: mockProgramCourses.length,
+      totalPages: 1,
+      last: true,
+    })),
+    getProgramCourse: vi.fn(() => of(mockProgramCourses[0])),
+  };
+
   beforeEach(async () => {
     vi.clearAllMocks();
     await TestBed.configureTestingModule({
@@ -69,6 +82,7 @@ describe('CloPiMatrixTableComponent (F03 US-12, TD-27, TD-28, Q22)', () => {
       providers: [
         { provide: SyllabusService, useValue: syllabusSvc },
         { provide: CloService, useValue: cloSvc },
+        { provide: CourseService, useValue: courseSvc },
       ],
     }).compileComponents();
 

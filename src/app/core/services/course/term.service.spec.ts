@@ -22,11 +22,23 @@ describe('TermService (F05a US-18)', () => {
 
   afterEach(() => http.verify());
 
-  it('getTerms gọi GET /api/v1/terms', () => {
+  it('getTerms mặc định gọi GET /api/v1/terms kèm page=0, size=20 và hỗ trợ search/status', () => {
     service.getTerms().subscribe();
-    const req = http.expectOne(base);
-    expect(req.request.method).toBe('GET');
-    req.flush([]);
+    const req1 = http.expectOne(r => r.url === base);
+    expect(req1.request.method).toBe('GET');
+    expect(req1.request.params.get('page')).toBe('0');
+    expect(req1.request.params.get('size')).toBe('20');
+    expect(req1.request.params.has('search')).toBe(false);
+    expect(req1.request.params.has('status')).toBe(false);
+    req1.flush({ content: [], page: 0, size: 20, totalElements: 0, totalPages: 0, last: true });
+
+    service.getTerms('  HK1 ', 'OPEN', 1, 20).subscribe();
+    const req2 = http.expectOne(r => r.url === base);
+    expect(req2.request.params.get('search')).toBe('HK1');
+    expect(req2.request.params.get('status')).toBe('OPEN');
+    expect(req2.request.params.get('page')).toBe('1');
+    expect(req2.request.params.get('size')).toBe('20');
+    req2.flush({ content: [], page: 1, size: 20, totalElements: 0, totalPages: 0, last: true });
   });
 
   it('getTermById gọi GET /api/v1/terms/{id} kèm INLINE_ERRORS', () => {

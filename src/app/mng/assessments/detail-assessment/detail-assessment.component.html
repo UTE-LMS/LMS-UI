@@ -108,18 +108,91 @@
 
     <!-- Trọng số CLO (cloWeights) -->
     <section class="mt-6 rounded border border-slate-200 bg-white p-5 shadow-sm" aria-labelledby="cloWeightTitle">
-      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+      <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3">
         <div>
           <h2 id="cloWeightTitle" class="m-0 text-lg font-semibold text-slate-800">Trọng số đóng góp cho Chuẩn đầu ra (CLO Weights)</h2>
           <p class="m-0 mt-1 text-xs text-slate-600">
-            Trọng số \(W_{{ '{p,j}' }}\) (trong khoảng (0, 1]) thể hiện mức độ đóng góp của bài kiểm tra này vào từng CLO của học phần.
+            Trọng số W<sub>p,j</sub> (trong khoảng (0, 1]) thể hiện mức độ đóng góp của bài kiểm tra này vào từng CLO của học phần.
+            @if (isSectionScope()) {
+              Tổng trọng số của cùng một CLO trên toàn bộ các bài đánh giá của lớp không nên vượt quá 100%.
+            }
           </p>
         </div>
-        <div class="text-right">
-          <span class="text-xs text-slate-500">Tổng trọng số:</span>
-          <span class="ml-1 text-sm font-bold text-blue-700">{{ formatNumber(totalCloWeight() * 100) }}%</span>
+        <div class="flex flex-wrap items-center gap-3">
+          <div class="text-right">
+            <span class="text-xs text-slate-500">Tổng trọng số bài này:</span>
+            <span class="ml-1 text-sm font-bold text-blue-700">{{ formatWeightPercent(totalCloWeight()) }}</span>
+          </div>
+          @if (isSectionScope() && a.sectionId) {
+            <a nz-button nzSize="small" nzType="default" [routerLink]="urlConst.SECTION_ASSESSMENT_ALIGNMENT(a.sectionId)">
+              <i class="fa-solid fa-table-columns mr-1" aria-hidden="true"></i>Đối chiếu toàn lớp
+            </a>
+          }
+          @if (editable()) {
+            <button nz-button nzSize="small" nzType="primary" type="button" (click)="saveInfo()" [nzLoading]="isSavingInfo()">
+              Lưu trọng số
+            </button>
+          }
         </div>
       </div>
+
+      @if (isSectionScope()) {
+        @if (isLoadingSectionAssessments()) {
+          <p class="mt-3 text-xs text-slate-600" role="status">
+            <i class="fa-solid fa-spinner fa-spin mr-1" aria-hidden="true"></i>Đang tải tổng trọng số CLO của lớp…
+          </p>
+        }
+        @if (sectionAssessmentsError()) {
+          <div class="mt-3 flex flex-wrap items-center justify-between gap-2 rounded border border-[#d6b46a] bg-[#fff8e6] px-3 py-2 text-xs text-[#5c3d00]" role="status">
+            <span><i class="fa-solid fa-circle-exclamation mr-1" aria-hidden="true"></i>Không tải được tổng trọng số CLO từ các bài khác trong lớp.</span>
+            <button nz-button nzSize="small" type="button" (click)="retrySectionAssessments()">Thử lại</button>
+          </div>
+        }
+        @if (overflowingClos().length > 0) {
+          <div class="mt-3 rounded border border-[#d9a0a6] bg-[#fdf2f3] p-3 text-xs text-[#8c2f39]" role="alert">
+            <p class="m-0 font-semibold">
+              <i class="fa-solid fa-triangle-exclamation mr-1.5" aria-hidden="true"></i>Cảnh báo vượt quá 100% tổng trọng số CLO toàn lớp:
+            </p>
+            <ul class="m-0 mt-1 list-disc pl-5">
+              @for (item of overflowingClos(); track item.cloId) {
+                <li>
+                  <strong>{{ item.cloCode }}</strong>: {{ formatWeightPercent(item.summary.totalWeight) }}
+                  (vượt {{ formatWeightPercent(item.summary.excessWeight) }})
+                </li>
+              }
+            </ul>
+          </div>
+        }
+        @if (sectionCloOverview().length > 0) {
+          <div class="mt-3 rounded border border-slate-200 bg-slate-50 p-3">
+            <p class="m-0 text-xs font-semibold text-slate-700">Tổng phân bổ CLO toàn lớp (gồm bài này):</p>
+            <div class="mt-2 flex flex-wrap gap-2">
+              @for (item of sectionCloOverview(); track item.cloId) {
+                <div class="inline-flex items-center gap-1.5 rounded border px-2 py-1 text-xs"
+                  [class.border-[#d9a0a6]]="item.summary.status === 'OVER'"
+                  [class.bg-[#fdf2f3]]="item.summary.status === 'OVER'"
+                  [class.text-[#8c2f39]]="item.summary.status === 'OVER'"
+                  [class.border-emerald-300]="item.summary.status === 'EXACT'"
+                  [class.bg-emerald-50]="item.summary.status === 'EXACT'"
+                  [class.text-emerald-800]="item.summary.status === 'EXACT'"
+                  [class.border-slate-300]="item.summary.status === 'UNDER'"
+                  [class.bg-white]="item.summary.status === 'UNDER'"
+                  [class.text-slate-700]="item.summary.status === 'UNDER'">
+                  <span class="font-semibold">{{ item.cloCode }}:</span>
+                  <span class="font-bold tabular-nums">{{ formatWeightPercent(item.summary.totalWeight) }}</span>
+                  @if (item.summary.status === 'OVER') {
+                    <span><i class="fa-solid fa-triangle-exclamation mr-0.5" aria-hidden="true"></i>Vượt {{ formatWeightPercent(item.summary.excessWeight) }}</span>
+                  } @else if (item.summary.status === 'EXACT') {
+                    <span><i class="fa-solid fa-circle-check mr-0.5" aria-hidden="true"></i>Đủ 100%</span>
+                  } @else {
+                    <span class="text-slate-600">(Còn {{ formatWeightPercent(item.summary.remainingWeight) }})</span>
+                  }
+                </div>
+              }
+            </div>
+          </div>
+        }
+      }
 
       <div class="mt-3 overflow-x-auto">
         <table class="w-full border-collapse text-sm">
@@ -127,28 +200,89 @@
             <tr class="border-b border-slate-200 bg-slate-50 text-left text-xs font-semibold text-slate-600">
               <th class="py-2 px-3">Mã CLO</th>
               <th class="py-2 px-3">Nội dung CLO</th>
-              <th class="py-2 px-3 text-right">Trọng số bài thi \(W_{{ '{p,j}' }}\) (0.01 - 1.0)</th>
-              <th class="py-2 px-3 text-right">Tỷ lệ %</th>
+              <th class="py-2 px-3 text-right">Trọng số bài này (W<sub>p,j</sub>)</th>
+              <th class="py-2 px-3 text-right">Tỷ lệ bài này</th>
+              @if (isSectionScope()) {
+                <th class="py-2 px-3">Các bài khác trong lớp</th>
+                <th class="min-w-52 py-2 px-3">Tổng toàn lớp (dự kiến)</th>
+              }
             </tr>
           </thead>
           <tbody>
             @for (w of cloWeights(); track w.cloId) {
+              @let cloCode = cloCodes().get(w.cloId) ?? w.cloId;
               <tr class="border-b border-slate-100 hover:bg-slate-50">
-                <td class="py-2 px-3 font-semibold text-slate-800">{{ cloCodes().get(w.cloId) ?? w.cloId }}</td>
+                <td class="py-2 px-3 font-semibold text-slate-800">{{ cloCode }}</td>
                 <td class="py-2 px-3 text-xs text-slate-600">{{ clos().find(c => c.id === w.cloId)?.contentOriginal ?? '—' }}</td>
                 <td class="py-2 px-3 text-right">
                   <input type="number" step="0.05" min="0.01" max="1" [disabled]="!editable()"
+                    [attr.aria-label]="'Trọng số bài này cho ' + cloCode"
                     class="h-7 w-24 rounded border border-slate-300 px-2 text-right text-xs disabled:bg-slate-100"
-                    [value]="w.weight" (change)="updateCloWeight(w.cloId, +$any($event.target).value)" />
+                    [value]="w.weight"
+                    (input)="updateCloWeight(w.cloId, +$any($event.target).value)"
+                    (change)="updateCloWeight(w.cloId, +$any($event.target).value)" />
                 </td>
-                <td class="py-2 px-3 text-right font-medium text-slate-700">
-                  {{ formatNumber(w.weight * 100) }}%
+                <td class="py-2 px-3 text-right font-medium text-slate-700 tabular-nums">
+                  {{ formatWeightPercent(w.weight) }}
                 </td>
+                @if (isSectionScope()) {
+                  @if (sectionCloWeightMap()?.get(w.cloId); as summary) {
+                    @let bar = stackedBarWidths(summary.otherWeight, summary.currentWeight);
+                    <td class="py-2 px-3 text-xs text-slate-700">
+                      <div class="font-semibold tabular-nums">{{ formatWeightPercent(summary.otherWeight) }}</div>
+                      @if (summary.otherAssessments.length > 0) {
+                        <div class="mt-0.5 flex flex-wrap gap-1 text-[11px] text-slate-600">
+                          @for (oa of summary.otherAssessments; track oa.assessmentId) {
+                            <span class="rounded bg-slate-100 px-1.5 py-0.5">
+                              {{ oa.assessmentCode }}: {{ formatWeightPercent(oa.weight) }}
+                            </span>
+                          }
+                        </div>
+                      } @else {
+                        <span class="text-[11px] text-slate-500">Chưa có bài khác</span>
+                      }
+                    </td>
+                    <td class="py-2 px-3 text-xs">
+                      <div class="flex items-center justify-between gap-2">
+                        <span class="font-bold tabular-nums"
+                          [class.text-[#8c2f39]]="summary.status === 'OVER'"
+                          [class.text-emerald-800]="summary.status === 'EXACT'"
+                          [class.text-slate-900]="summary.status === 'UNDER'">
+                          {{ formatWeightPercent(summary.totalWeight) }}
+                        </span>
+                        @if (summary.status === 'OVER') {
+                          <span class="inline-flex items-center gap-1 rounded border border-[#d9a0a6] bg-[#fdf2f3] px-1.5 py-0.5 font-medium text-[#8c2f39]">
+                            <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>Vượt {{ formatWeightPercent(summary.excessWeight) }}
+                          </span>
+                        } @else if (summary.status === 'EXACT') {
+                          <span class="inline-flex items-center gap-1 rounded border border-emerald-300 bg-emerald-50 px-1.5 py-0.5 font-medium text-emerald-800">
+                            <i class="fa-solid fa-circle-check" aria-hidden="true"></i>Đủ 100%
+                          </span>
+                        } @else {
+                          <span class="inline-flex items-center gap-1 rounded border border-slate-300 bg-slate-100 px-1.5 py-0.5 font-medium text-slate-700">
+                            Còn {{ formatWeightPercent(summary.remainingWeight) }}
+                          </span>
+                        }
+                      </div>
+                      <div class="mt-1.5 flex h-2 w-full overflow-hidden rounded bg-slate-200" aria-hidden="true">
+                        <div class="h-full bg-slate-500 transition-all" [style.width.%]="bar.otherPct"></div>
+                        <div class="h-full transition-all"
+                          [class.bg-red-600]="summary.status === 'OVER'"
+                          [class.bg-emerald-600]="summary.status === 'EXACT'"
+                          [class.bg-blue-600]="summary.status === 'UNDER'"
+                          [style.width.%]="bar.currentPct"></div>
+                      </div>
+                    </td>
+                  } @else {
+                    <td class="py-2 px-3 text-xs text-slate-500">—</td>
+                    <td class="py-2 px-3 text-xs text-slate-500">—</td>
+                  }
+                }
               </tr>
             }
             @if (cloWeights().length === 0) {
               <tr>
-                <td colspan="4" class="py-4 text-center text-xs text-slate-400">
+                <td [attr.colspan]="isSectionScope() ? 6 : 4" class="py-4 text-center text-xs text-slate-500">
                   Chưa có CLO nào được gán trong các câu hỏi.
                 </td>
               </tr>
@@ -257,6 +391,7 @@
       [item]="editingItem()"
       [clos]="clos()"
       [otherCodes]="otherCodes()"
+      [sectionCloTotals]="sectionCloTotalWeights()"
       [disabled]="!editable()"
       (visibleChange)="isItemModalVisible.set($event)"
       (saved)="onItemSaved($event)"

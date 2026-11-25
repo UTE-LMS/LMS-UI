@@ -742,7 +742,7 @@ Phản hồi `200`:
 
 - `GET/POST/PUT/DELETE /courses`, `POST /courses/import` — Kho học phần cấp trường (`ADMIN` độc quyền quản lý & nhập CSV danh mục).
 - `GET/POST /program-versions/{pvId}/courses`, `PUT/DELETE /program-courses/{id}` — Cấu trúc học phần trong CTĐT (`PROGRAM_MANAGER`, hỗ trợ `prerequisiteCourseIds` và `previousCourseIds`).
-- `GET /departments/lecturers`, `POST /departments/assign-course`, `POST /departments/unassign-course` — `PROGRAM_MANAGER` tra cứu giảng viên cùng ngành và phân công/gỡ môn học (`scope.courseIds`) cho `LECTURER`.
+- `GET /sections/lecturers?facultyId=` (thay cho `/departments/lecturers` đã bỏ — 404), `POST /departments/assign-course`, `POST /departments/unassign-course` — `ADMIN`/`PROGRAM_MANAGER` tra cứu giảng viên `ACTIVE` (xem §6.4) và phân công/gỡ môn học (`scope.courseIds`) cho `LECTURER`.
 - `GET /courses/{courseId}/syllabi`, `GET /syllabi/{id}` — Đọc đề cương.
 - `POST /courses/{courseId}/syllabi` — Tạo đề cương `DRAFT` (`LECTURER` hoặc `PROGRAM_MANAGER` có quyền ghi học phần).
 - `PUT /syllabi/{id}/status` — Chuyển trạng thái đề cương (`DRAFT -> CONFIRMED -> ARCHIVED`, quyền `PROGRAM_MANAGER`).
@@ -793,15 +793,39 @@ Phản hồi `200`:
 | PUT | `/terms/{id}/status` | `ADMIN`, `PROGRAM_MANAGER` | body `{ status: OPEN \| SCORE_LOCKED \| CLOSED, reason? }`; **mở lại `SCORE_LOCKED → OPEN` bắt buộc `reason`** (thiếu → 422) |
 | DELETE | `/terms/{id}` | `ADMIN` | 204 |
 | GET | `/sections?termId=&courseId=` | đã xác thực | **không phân trang**; chỉ trả lớp người gọi đọc/quản lý được (giảng viên: lớp mình) |
+| GET | `/sections/lecturers?facultyId=` | `ADMIN`, `PROGRAM_MANAGER` (`LECTURER`/`QA` → 403) | `UserResponse[]` gồm giảng viên `ACTIVE` phục vụ chọn giảng viên mở/sửa lớp |
 | GET | `/sections/{id}` | đọc được lớp hoặc quản lý được lớp | `SectionResponse` |
 | POST | `/sections` | `ADMIN`, hoặc `PROGRAM_MANAGER` mà học phần thuộc CTĐT trong `scope.programIds` | 201; body `{ code (^[A-Za-z0-9._-]{2,40}$), courseId, syllabusId, termId, lecturerIds[≥1] }` |
 | PUT | `/sections/{id}` | như POST | body `{ lecturerIds[≥1] }` (học phần/đề cương/học kỳ **bất biến**) |
 | PUT | `/sections/{id}/status` | như POST | body `{ status: OPEN \| CLOSED \| LOCKED, reason? }`; mở lại lớp `LOCKED` bắt buộc `reason` |
+| GET | `/sections/import-template?format=` | `ADMIN`, `PROGRAM_MANAGER` | Tải tệp mẫu `.csv` hoặc `.xlsx` mở lớp hàng loạt |
+| POST | `/sections/import` | `ADMIN`, `PROGRAM_MANAGER` | `multipart/form-data`, trường `file` (`.csv` hoặc `.xlsx`) → `CsvImportResultResponse` |
 | GET | `/sections/{id}/enrollments?status=` | đọc được lớp | `EnrollmentListResponse` |
-| POST | `/sections/{id}/enrollments/import` | `ADMIN` hoặc giảng viên của lớp (`canAccessSection` WRITE) | `multipart/form-data`, trường **`file`** (`.csv` hoặc `.xlsx`) → `EnrollmentImportResponse` |
-| PUT | `/enrollments/{id}/status` | `ADMIN` hoặc giảng viên của lớp | body `{ status: ENROLLED \| WITHDRAWN }` |
+| GET | `/sections/{id}/enrollments/import-template?format=` | `ADMIN` hoặc giảng viên của lớp | Tải tệp mẫu `.csv` hoặc `.xlsx` (`studentCode,cohort`) |
+| POST | `/sections/{id}/enrollments/import` | `ADMIN` hoặc giảng viên của lớp (`canAccessSection` WRITE) | `multipart/form-data`, trường **`file`** (`.csv` hoặc `.xlsx`) → `EnrollmentImportResponse`. **Không tự tạo sinh viên mới; chỉ ghi danh sinh viên đã có trong hệ thống và đang ở trạng thái `ACTIVE`** (chưa tồn tại hoặc `SUSPENDED`/`GRADUATED`/`DROPPED_OUT` → 422 kèm `fieldErrors[]` theo dòng, không ghi dòng nào). |
+| GET | `/enrollments/import-template?format=` | `ADMIN`, `PROGRAM_MANAGER`, `LECTURER` | Tải tệp mẫu `.csv` hoặc `.xlsx` ghi danh nhiều lớp (`sectionCode,studentCode,cohort`) |
+| POST | `/enrollments/import` | `ADMIN`, `PROGRAM_MANAGER`, `LECTURER` | `multipart/form-data`, trường `file` (`.csv` hoặc `.xlsx`) → `CsvImportResultResponse` (`totalRows`, `successCount`, `failureCount`, `errors[]`). Từ chối các dòng có `studentCode` chưa tồn tại hoặc trạng thái khác `ACTIVE`. |
+| PUT | `/enrollments/{id}/status` | `ADMIN` hoặc giảng viên của lớp | body `{ status: ENROLLED \| WITHDRAWN }`; ghi danh lại (`WITHDRAWN` → `ENROLLED`) trả 422 (`BUSINESS_RULE_VIOLATION`) nếu sinh viên không ở trạng thái `ACTIVE`. |
 
-**DTO:** `TermResponse { id, code, academicYear, startDate, endDate, status }`. `SectionResponse { id, code, courseId, syllabusId, termId, lecturerIds[], enrolledCount, status }`. `EnrollmentListResponse { sectionId, enrolled, withdrawn, enrollments[{ id, sectionId, studentId, studentRef, cohort, majorCode, status, enrolledAt }] }`. `EnrollmentImportResponse { sectionId, totalRows, newStudents, reusedStudents, sectionEnrolledCount, ignoredColumns[] }`.
+**DTO:** `TermResponse { id, code, academicYear, startDate, endDate, status }`. `SectionResponse { id, code, courseId, syllabusId, termId, lecturerIds[], lecturers[{ id, username, fullName }], enrolledCount, status }` (backend nạp sẵn `lecturers`, kể cả giảng viên đã bị `LOCKED` ở học kỳ cũ; không trả `email`/`roles`). `EnrollmentListResponse { sectionId, enrolled, withdrawn, enrollments[{ id, sectionId, studentId, studentCode, cohort, status, enrolledAt }] }`. `EnrollmentImportResponse { sectionId, totalRows, newStudents, reusedStudents, sectionEnrolledCount, ignoredColumns[] }` (`newStudents` luôn bằng `0` vì không tự tạo sinh viên khi ghi danh).
+
+---
+
+### 6.4a. Quản Lý Sinh Viên (`/api/v1/students`, chỉ `ADMIN`)
+
+> **Trạng thái:** đã hiện thực ở backend (`StudentController`). Toàn bộ endpoint yêu cầu vai trò `ADMIN` (vai trò khác → 403). Tiền tố `/api/v1`.
+
+| Phương thức | Đường dẫn | Ai gọi được | Ghi chú |
+|---|---|---|---|
+| GET | `/students?page=0&size=20&search=&cohort=&status=` | `ADMIN` | `PageResponse<StudentResponse>`; `status` tùy chọn thuộc `ACTIVE \| SUSPENDED \| GRADUATED \| DROPPED_OUT` |
+| GET | `/students/import-template?format=csv\|xlsx` | `ADMIN` | Tải tệp mẫu `students-template.csv`/`.xlsx` (3 cột bắt buộc `studentCode,fullName,cohort`, không có cột `status`) |
+| POST | `/students/import` | `ADMIN` | `multipart/form-data`, trường `file` (`.csv` hoặc `.xlsx`) → `CsvImportResultResponse`; mặc định `status = ACTIVE`. Thiếu 1 trong 3 cột bắt buộc trả `422 BUSINESS_RULE_VIOLATION`; dòng trống `fullName`/`cohort` báo trong `errors[]` |
+| PUT | `/students/{id}/status` | `ADMIN` | body `{ status: StudentStatus }` → `StudentResponse` |
+| PUT | `/students/status` | `ADMIN` | body `{ studentIds: string[], status: StudentStatus }` (tối đa 500 sinh viên/lần) → `StudentBatchStatusUpdateResponse` |
+| GET | `/students/status-import-template?format=csv\|xlsx` | `ADMIN` | Tải tệp mẫu `students-status-template.csv`/`.xlsx` (2 cột `studentCode,status`) |
+| POST | `/students/status-import` | `ADMIN` | `multipart/form-data`, trường `file` (`.csv` hoặc `.xlsx`) → `CsvImportResultResponse` |
+
+**DTO:** `StudentStatus = 'ACTIVE' | 'SUSPENDED' | 'GRADUATED' | 'DROPPED_OUT'`. `StudentResponse { id, studentCode, fullName, cohort, status, createdAt, updatedAt }`. `StudentBatchStatusUpdateResponse { requestedCount, updatedCount, status, students[] }`.
 
 ### 6.5. F05b: Xuất Tệp CSV Mẫu & Nhập Điểm Theo Lô 3 Bước (Score Import Batches)
 

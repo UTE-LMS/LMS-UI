@@ -184,9 +184,34 @@
 </ng-template>
 } @else {
 
-<div class="flex items-center justify-between mb-4">
-  <div class="text-sm text-slate-600">
-    Tổng số: <strong>{{ terms().length }}</strong> học kỳ
+<div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+  <div class="flex flex-wrap items-center gap-3">
+    <div class="search-box relative">
+      <i class="fa-solid fa-magnifying-glass search-icon"></i>
+      <input
+        nz-input
+        type="search"
+        class="search-input"
+        placeholder="Tìm mã học kỳ hoặc năm học..."
+        aria-label="Tìm mã học kỳ hoặc năm học"
+        [ngModel]="termSearch()"
+        (ngModelChange)="onTermSearchChange($event)"
+      />
+    </div>
+    <nz-select
+      class="w-44"
+      nzAllowClear
+      nzPlaceHolder="Tất cả trạng thái"
+      [ngModel]="termStatusFilter()"
+      (ngModelChange)="onTermStatusFilterChange($event)"
+    >
+      <nz-option nzValue="OPEN" nzLabel="Đang mở" />
+      <nz-option nzValue="SCORE_LOCKED" nzLabel="Khóa sổ điểm" />
+      <nz-option nzValue="CLOSED" nzLabel="Đã đóng" />
+    </nz-select>
+    <div class="text-sm text-slate-600">
+      Tổng số: <strong>{{ termTotalElements() }}</strong> học kỳ
+    </div>
   </div>
   @if (canManageTerms()) {
   <button nz-button nzType="primary" class="add-course-btn" (click)="openCreateTermModal()">
@@ -197,14 +222,22 @@
 
 <div class="table-card">
   <nz-table
+    #termTable
     class="custom-admin-table"
     nzSize="middle"
-    nzShowPagination="false"
     [nzFrontPagination]="false"
+    [nzShowPagination]="true"
+    [nzTotal]="termTotalElements()"
+    [nzPageIndex]="termPage() + 1"
+    [nzPageSize]="termSize()"
+    [nzShowSizeChanger]="true"
+    [nzPageSizeOptions]="[10, 20, 50, 100]"
     [nzData]="terms()"
     [nzLoading]="isTermsLoading()"
     [nzNoResult]="termEmptyTpl"
     [nzScroll]="{ x: '840px' }"
+    (nzPageIndexChange)="onTermPageIndexChange($event)"
+    (nzPageSizeChange)="onTermPageSizeChange($event)"
   >
     <thead>
       <tr>
@@ -219,7 +252,7 @@
       </tr>
     </thead>
     <tbody>
-      @for (term of terms(); track term.id) {
+      @for (term of termTable.data; track term.id) {
       <tr class="ui-pdf-row">
         <td>
           <span class="course-code-text">{{ term.code }}</span>

@@ -21,37 +21,86 @@
     }
   </div>
 
-  <nav class="mt-4 flex gap-1 border-b border-slate-300" aria-label="Lớp học">
-    <a class="border-b-2 border-blue-700 px-3 py-2 text-sm font-semibold text-blue-800" aria-current="page"
-      [routerLink]="urlConst.SECTIONS">Lớp học phần</a>
-    <a class="px-3 py-2 text-sm font-medium text-slate-700 hover:text-blue-800" [routerLink]="urlConst.COURSES"
-      [queryParams]="termsTabQuery">Học kỳ</a>
-  </nav>
-
   <div class="mt-5 flex flex-wrap items-center gap-3">
     <label class="sr-only" for="termFilter">Học kỳ</label>
-    <nz-select nzId="termFilter" class="w-52" nzAllowClear nzPlaceHolder="Tất cả học kỳ" [ngModel]="termFilter()"
-      (ngModelChange)="termFilter.set($event); applyFilters()">
-      @for (term of terms(); track term.id) {
+    <nz-select
+      nzId="termFilter"
+      class="w-52"
+      nzAllowClear
+      nzShowSearch
+      [nzServerSearch]="true"
+      [nzLoading]="termSelect.loading()"
+      [nzDropdownRender]="termFooterTpl"
+      nzPlaceHolder="Tất cả học kỳ"
+      [ngModel]="termFilter()"
+      (nzOpenChange)="termSelect.onOpenChange($event)"
+      (nzOnSearch)="termSelect.onSearch($event)"
+      (nzScrollToBottom)="termSelect.loadMore()"
+      (ngModelChange)="onTermFilterChange($event)">
+      @for (term of termSelect.options(); track term.id) {
       <nz-option [nzValue]="term.id" [nzLabel]="term.code" />
       }
     </nz-select>
+    <ng-template #termFooterTpl>
+      @if (termSelect.loadingMore()) {
+        <div class="px-3 py-2 text-center text-xs text-slate-500">
+          <nz-spin nzSimple nzSize="small" class="mr-1.5" />Đang tải thêm...
+        </div>
+      }
+    </ng-template>
+
     <label class="sr-only" for="courseFilter">Học phần</label>
-    <nz-select nzId="courseFilter" class="w-72" nzAllowClear nzShowSearch nzPlaceHolder="Tất cả học phần"
-      [ngModel]="courseFilter()" (ngModelChange)="courseFilter.set($event); applyFilters()">
-      @for (course of courses(); track course.id) {
+    <nz-select
+      nzId="courseFilter"
+      class="w-72"
+      nzAllowClear
+      nzShowSearch
+      [nzServerSearch]="true"
+      [nzLoading]="courseSelect.loading()"
+      [nzDropdownRender]="courseFooterTpl"
+      nzPlaceHolder="Tất cả học phần"
+      [ngModel]="courseFilter()"
+      (nzOpenChange)="courseSelect.onOpenChange($event)"
+      (nzOnSearch)="courseSelect.onSearch($event)"
+      (nzScrollToBottom)="courseSelect.loadMore()"
+      (ngModelChange)="onCourseFilterChange($event)">
+      @for (course of courseSelect.options(); track course.id) {
       <nz-option [nzValue]="course.id" [nzLabel]="course.code + ' · ' + course.name" />
       }
     </nz-select>
+    <ng-template #courseFooterTpl>
+      @if (courseSelect.loadingMore()) {
+        <div class="px-3 py-2 text-center text-xs text-slate-500">
+          <nz-spin nzSimple nzSize="small" class="mr-1.5" />Đang tải thêm...
+        </div>
+      }
+    </ng-template>
+
     <input class="h-8 w-56 rounded border border-slate-400 px-2 text-sm" type="search" placeholder="Tìm mã lớp"
-      aria-label="Tìm mã lớp" [ngModel]="codeSearch()" (ngModelChange)="codeSearch.set($event)" />
+      aria-label="Tìm mã lớp" [ngModel]="codeSearch()" (ngModelChange)="onCodeSearchChange($event)" />
   </div>
 
   @if (loadError(); as error) {
   <app-error-state [error]="error" [retrying]="isLoading()" (retry)="loadSections()" (reload)="loadSections()" />
   } @else {
-  <nz-table class="mt-4" nzSize="middle" [nzShowPagination]="false" [nzFrontPagination]="false"
-    [nzData]="visibleSections()" [nzLoading]="isLoading()" [nzNoResult]="emptyTpl" [nzScroll]="{ x: '960px' }">
+  <nz-table
+    #sectionsTable
+    class="mt-4"
+    nzSize="middle"
+    [nzFrontPagination]="false"
+    [nzShowPagination]="true"
+    [nzTotal]="totalElements()"
+    [nzPageIndex]="page() + 1"
+    [nzPageSize]="size()"
+    [nzShowSizeChanger]="true"
+    [nzPageSizeOptions]="[10, 20, 50, 100]"
+    [nzData]="sections()"
+    [nzLoading]="isLoading()"
+    [nzNoResult]="emptyTpl"
+    [nzScroll]="{ x: '960px' }"
+    (nzPageIndexChange)="onPageIndexChange($event)"
+    (nzPageSizeChange)="onPageSizeChange($event)"
+  >
     <thead>
       <tr>
         <th nzWidth="170px">Mã lớp</th>
@@ -64,7 +113,7 @@
       </tr>
     </thead>
     <tbody>
-      @for (section of visibleSections(); track section.id) {
+      @for (section of sectionsTable.data; track section.id) {
       <tr>
         <td><a class="font-semibold text-blue-800 hover:underline" [routerLink]="urlConst.SECTION_DETAIL(section.id)">{{ section.code }}</a></td>
         <td>
@@ -114,7 +163,7 @@
   </div>
 </ng-template>
 
-<app-section-modal [isVisible]="isModalVisible()" [terms]="terms()" [courses]="courses()"
+<app-section-modal [isVisible]="isModalVisible()" [terms]="termSelect.options()" [courses]="courseSelect.options()"
   [lecturerOptions]="lecturerOptions()" [lecturerListAvailable]="lecturerListAvailable()"
   (visibleChange)="isModalVisible.set($event)" (saved)="onSaved()" />
 

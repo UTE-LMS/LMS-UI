@@ -19,18 +19,24 @@ describe('EnrollmentService (F05a US-20)', () => {
 
   afterEach(() => http.verify());
 
-  it('getEnrollments không lọc: GET /sections/{id}/enrollments không có status', () => {
+  it('getEnrollments không lọc: GET /sections/{id}/enrollments gửi page=0, size=20 và không có status/search', () => {
     service.getEnrollments(sectionId).subscribe();
     const req = http.expectOne(r => r.url === UrlConstant.API.SECTION_ENROLLMENTS(sectionId));
     expect(req.request.method).toBe('GET');
+    expect(req.request.params.get('page')).toBe('0');
+    expect(req.request.params.get('size')).toBe('20');
     expect(req.request.params.has('status')).toBe(false);
-    req.flush({ sectionId, enrolled: 0, withdrawn: 0, enrollments: [] });
+    expect(req.request.params.has('search')).toBe(false);
+    req.flush({ sectionId, enrolled: 0, withdrawn: 0, enrollments: [], page: 0, size: 20, totalElements: 0, totalPages: 0, last: true });
   });
 
-  it('getEnrollments gửi status khi lọc', () => {
-    service.getEnrollments(sectionId, 'WITHDRAWN').subscribe();
+  it('getEnrollments gửi status, search (đã trim), page và size khi lọc', () => {
+    service.getEnrollments(sectionId, 'WITHDRAWN', '  SV01 ', 2, 50).subscribe();
     const req = http.expectOne(r => r.url === UrlConstant.API.SECTION_ENROLLMENTS(sectionId));
     expect(req.request.params.get('status')).toBe('WITHDRAWN');
+    expect(req.request.params.get('search')).toBe('SV01');
+    expect(req.request.params.get('page')).toBe('2');
+    expect(req.request.params.get('size')).toBe('50');
     req.flush({});
   });
 

@@ -1,0 +1,47 @@
+.title-underline {
+  width: 44px;
+  height: 3px;
+  background-color: #2563eb;
+  border-radius: 9999px;
+  margin-top: 8px;
+}
+
+.student-table-card {
+  background-color: #ffffff;
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  padding: 20px 24px;
+}
+
+:host ::ng-deep .custom-admin-table .ant-table {
+  background: transparent !important;
+  font-family: inherit;
+}
+
+:host ::ng-deep .custom-admin-table .ant-table-thead > tr > th {
+  background: transparent !important;
+  color: #0d4292 !important;
+  font-size: 13.5px !important;
+  font-weight: 600 !important;
+  padding: 12px 14px !important;
+  border: none !important;
+  border-bottom: 1.5px solid #bfdbfe !important;
+  white-space: nowrap;
+}
+
+:host ::ng-deep .custom-admin-table .ant-table-thead > tr > th::before {
+  display: none !important;
+}
+
+:host ::ng-deep .custom-admin-table .ant-table-tbody > tr > td {
+  padding: 14px !important;
+  border: none !important;
+  border-bottom: 1px solid #f1f5f9 !important;
+  font-size: 13.5px !important;
+  vertical-align: middle !important;
+}
+
+:host ::ng-deep .custom-admin-table .ant-table-tbody > tr.ui-pdf-row:hover > td {
+  background-color: #f8fafc !important;
+}

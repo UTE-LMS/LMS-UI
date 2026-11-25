@@ -38,6 +38,16 @@
       <code>studentCode</code> (bắt buộc), <code>cohort</code>. Cột khác (họ tên, email…)
       bị bỏ qua và được báo lại. Hệ thống dùng Mã số sinh viên (MSSV).
     </p>
+    <div class="mt-3 rounded border border-amber-300 bg-amber-50 p-3 text-xs leading-relaxed text-amber-950" role="note">
+      <p class="m-0 font-semibold">
+        <i class="fa-solid fa-circle-info mr-1.5 text-amber-700" aria-hidden="true"></i>Điều kiện ghi danh sinh viên
+      </p>
+      <p class="m-0 mt-1">
+        Sinh viên phải đã được <strong>ADMIN</strong> import vào hệ thống trước và đang ở trạng thái <strong>ACTIVE (Đang học)</strong>.
+        Hệ thống không tự động tạo sinh viên mới khi ghi danh; các dòng có <code>studentCode</code> chưa tồn tại hoặc ở trạng thái
+        <code>SUSPENDED</code> / <code>GRADUATED</code> / <code>DROPPED_OUT</code> sẽ bị báo lỗi và không có dòng nào được ghi danh.
+      </p>
+    </div>
     <div class="mt-4 flex flex-wrap items-center gap-3">
       <label class="inline-flex cursor-pointer items-center gap-2 rounded border border-slate-500 px-3 py-1.5 text-sm font-medium hover:bg-slate-50 focus-within:ring-2 focus-within:ring-blue-700"
         [class.opacity-50]="frozenReason()">
@@ -117,10 +127,7 @@
   }
   } @else if (result(); as res) {
   <section class="mt-8" aria-labelledby="resultTitle">
-    <h2 id="resultTitle" class="m-0 text-xl font-semibold">Đã ghi danh {{ res.totalRows }} dòng.</h2>
-    <p class="mt-1 text-sm text-slate-800">
-      {{ res.newStudents }} sinh viên mới, {{ res.reusedStudents }} đã có hồ sơ và được dùng lại.
-    </p>
+    <h2 id="resultTitle" class="m-0 text-xl font-semibold">Đã ghi danh thành công {{ res.totalRows }} sinh viên.</h2>
     <div class="mt-4 rounded border border-slate-300 p-4">
       <p class="m-0 text-3xl font-bold">{{ res.sectionEnrolledCount }}</p>
       <p class="m-0 text-sm text-slate-700">đang học sau khi nhập, là mẫu số của tỷ lệ đạt (do hệ thống tính)</p>
@@ -132,7 +139,7 @@
     </p>
     }
     <p class="mt-4 text-xs text-slate-700">
-      Nhập lại cùng một danh sách sẽ bị từ chối vì sinh viên đã ghi danh; hệ thống không tạo sinh viên trùng.
+      Nhập lại cùng một danh sách sẽ bị từ chối vì sinh viên đã ghi danh lớp này.
     </p>
   </section>
   }

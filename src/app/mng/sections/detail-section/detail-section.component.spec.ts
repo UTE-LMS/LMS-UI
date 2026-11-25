@@ -10,7 +10,6 @@ import { EnrollmentService } from '@services/course/enrollment.service';
 import { SectionService } from '@services/course/section.service';
 import { SyllabusService } from '@services/course/syllabus.service';
 import { TermService } from '@services/course/term.service';
-import { UserService } from '@services/user/user.service';
 import { ToastrService } from 'ngx-toastr';
 import { of, throwError } from 'rxjs';
 import { DetailSectionComponent } from './detail-section.component';
@@ -21,8 +20,15 @@ describe('DetailSectionComponent (F05a US-19, US-20)', () => {
   let component: DetailSectionComponent;
 
   const section: ISection = {
-    id: 'sec1', code: 'TEST101-01', courseId: 'c1', syllabusId: 's1', termId: 't1',
-    lecturerIds: ['u1'], enrolledCount: 3, status: 'OPEN',
+    id: 'sec1',
+    code: 'TEST101-01',
+    courseId: 'c1',
+    syllabusId: 's1',
+    termId: 't1',
+    lecturerIds: ['u1'],
+    lecturers: [{ id: 'u1', username: 'gv.test01', fullName: 'Nguyễn Văn Thử' }],
+    enrolledCount: 3,
+    status: 'OPEN',
   };
   const enrollment = (id: string, ref: string, status: IEnrollment['status']): IEnrollment => ({
     id, sectionId: 'sec1', studentId: `st-${id}`, studentCode: ref, status, enrolledAt: '2026-09-07T00:00:00Z',
@@ -34,6 +40,11 @@ describe('DetailSectionComponent (F05a US-19, US-20)', () => {
       enrollment('e1', 'SV-0001', 'ENROLLED'), enrollment('e2', 'SV-0002', 'ENROLLED'), enrollment('e3', 'SV-0003', 'ENROLLED'),
       enrollment('e4', 'SV-0004', 'WITHDRAWN'), enrollment('e5', 'SV-0005', 'WITHDRAWN'),
     ],
+    page: 0,
+    size: 20,
+    totalElements: 5,
+    totalPages: 1,
+    last: true,
   };
 
   const sectionSvc = {
@@ -48,13 +59,6 @@ describe('DetailSectionComponent (F05a US-19, US-20)', () => {
   const termSvc = { getTermById: vi.fn() };
   const courseSvc = { getCourseById: vi.fn(() => of({ id: 'c1', code: 'TEST101', name: 'Học phần thử nghiệm' })) };
   const syllabusSvc = { getSyllabusById: vi.fn(() => of({ id: 's1', courseId: 'c1', version: '1', status: 'CONFIRMED' })) };
-  const userSvc = {
-    filter: vi.fn(() => of({
-      content: [{ id: 'u1', username: 'gv.test01', fullName: 'Nguyễn Văn Thử', email: 'a@test.local', status: 'ACTIVE', createdAt: '', updatedAt: '', roles: ['LECTURER'] }],
-      page: 0, size: 100, totalElements: 1, totalPages: 1, last: true,
-    })),
-    getById: vi.fn(),
-  };
   const authSvc = { getRoles: vi.fn<() => string[]>(), getUserId: vi.fn(() => 'u1'), getNameOfLogin: vi.fn(() => 'Lê Văn Giảng') };
   const alertSvc = { success: vi.fn(), error: vi.fn() };
 
@@ -66,10 +70,6 @@ describe('DetailSectionComponent (F05a US-19, US-20)', () => {
     authSvc.getRoles.mockReturnValue(roles);
     authSvc.getUserId.mockReturnValue('u1');
     authSvc.getNameOfLogin.mockReturnValue('Lê Văn Giảng');
-    userSvc.filter.mockReturnValue(of({
-      content: [{ id: 'u1', username: 'gv.test01', fullName: 'Nguyễn Văn Thử', email: 'a@test.local', status: 'ACTIVE', createdAt: '', updatedAt: '', roles: ['LECTURER'] }],
-      page: 0, size: 100, totalElements: 1, totalPages: 1, last: true,
-    }));
     sectionSvc.getSection.mockReturnValue(of(opts.section ?? section));
     sectionSvc.getLecturers.mockReturnValue(of(opts.lecturers ?? [
       { id: 'u1', username: 'gv.khoa', fullName: 'Trần Thị Khoa', email: 'a@test.local', status: 'ACTIVE', createdAt: '', updatedAt: '', roles: ['LECTURER'] },
@@ -85,7 +85,6 @@ describe('DetailSectionComponent (F05a US-19, US-20)', () => {
         { provide: TermService, useValue: termSvc },
         { provide: CourseService, useValue: courseSvc },
         { provide: SyllabusService, useValue: syllabusSvc },
-        { provide: UserService, useValue: userSvc },
         { provide: AuthService, useValue: authSvc },
         { provide: ToastrService, useValue: alertSvc },
       ],
@@ -109,7 +108,9 @@ describe('DetailSectionComponent (F05a US-19, US-20)', () => {
   });
 
   it('lớp chưa có bản ghi ghi danh: hiện "—" và giải thích chưa có mẫu số, không hiện 0', async () => {
-    await setup([SystemConstant.ROLE.ADMIN], { roster: { sectionId: 'sec1', enrolled: 0, withdrawn: 0, enrollments: [] } });
+    await setup([SystemConstant.ROLE.ADMIN], {
+      roster: { sectionId: 'sec1', enrolled: 0, withdrawn: 0, enrollments: [], page: 0, size: 20, totalElements: 0, totalPages: 0, last: true },
+    });
     expect(component.hasNoRoster()).toBe(true);
     expect(el().textContent).toContain('Chưa nhập danh sách lớp, nên chưa có mẫu số');
     expect(el().querySelectorAll('p.text-3xl').length).toBe(0);
@@ -117,18 +118,53 @@ describe('DetailSectionComponent (F05a US-19, US-20)', () => {
 
   it('biên: có sinh viên nhưng tất cả đã rút thì hiện số 0 thật (khác với chưa nhập danh sách)', async () => {
     await setup([SystemConstant.ROLE.ADMIN], {
-      roster: { sectionId: 'sec1', enrolled: 0, withdrawn: 1, enrollments: [enrollment('e4', 'SV-0004', 'WITHDRAWN')] },
+      roster: {
+        sectionId: 'sec1',
+        enrolled: 0,
+        withdrawn: 1,
+        enrollments: [enrollment('e4', 'SV-0004', 'WITHDRAWN')],
+        page: 0,
+        size: 20,
+        totalElements: 1,
+        totalPages: 1,
+        last: true,
+      },
     });
     expect(component.hasNoRoster()).toBe(false);
     expect(Array.from(el().querySelectorAll('p.text-3xl')).map(p => (p.textContent ?? '').trim())).toEqual(['0', '1']);
   });
 
-  it('lọc danh sách theo Đang học / Đã rút ở phía hiển thị', async () => {
+  it('lọc trạng thái, tìm kiếm debounce 300ms và phân trang server-side trên enrollments, giữ nguyên mẫu số toàn lớp', async () => {
     await setup([SystemConstant.ROLE.ADMIN]);
-    component.rosterFilter.set('WITHDRAWN');
-    expect(component.visibleEnrollments().map(e => e.studentCode)).toEqual(['SV-0004', 'SV-0005']);
-    component.rosterFilter.set('ENROLLED');
-    expect(component.visibleEnrollments().length).toBe(3);
+    vi.useFakeTimers();
+    try {
+      enrollmentSvc.getEnrollments.mockClear();
+      enrollmentSvc.getEnrollments.mockReturnValue(of({
+        sectionId: 'sec1',
+        enrolled: 3,
+        withdrawn: 2,
+        enrollments: [],
+        page: 0,
+        size: 20,
+        totalElements: 0,
+        totalPages: 0,
+        last: true,
+      }));
+
+      component.onRosterFilterChange('WITHDRAWN');
+      expect(enrollmentSvc.getEnrollments).toHaveBeenLastCalledWith('sec1', 'WITHDRAWN', undefined, 0, 20);
+      // Thống kê tổng toàn lớp vẫn giữ nguyên dù kết quả trang lọc = 0
+      expect(component.hasNoRoster()).toBe(false);
+
+      component.onRosterSearchChange('SV-999');
+      await vi.advanceTimersByTimeAsync(350);
+      expect(enrollmentSvc.getEnrollments).toHaveBeenLastCalledWith('sec1', 'WITHDRAWN', 'SV-999', 0, 20);
+
+      component.onRosterPageIndexChange(2);
+      expect(enrollmentSvc.getEnrollments).toHaveBeenLastCalledWith('sec1', 'WITHDRAWN', 'SV-999', 1, 20);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('giảng viên của lớp rút sinh viên: gọi API đổi sang WITHDRAWN rồi tải lại số đếm', async () => {
@@ -179,6 +215,21 @@ describe('DetailSectionComponent (F05a US-19, US-20)', () => {
     expect(enrollmentSvc.getEnrollments).toHaveBeenCalledTimes(1);
   });
 
+  it('lỗi 422 khi Ghi danh lại sinh viên không ở trạng thái ACTIVE: hiện nguyên văn error.message ở alert và toast', async () => {
+    await setup([SystemConstant.ROLE.ADMIN]);
+    const backendMessage = 'Sinh viên SV-0004 hiện đang ở trạng thái SUSPENDED, chỉ sinh viên ACTIVE mới được ghi danh';
+    enrollmentSvc.updateStatus.mockReturnValue(throwError(() => new HttpErrorResponse({
+      status: 422,
+      error: { status: 422, code: 'BUSINESS_RULE_VIOLATION', message: backendMessage },
+    })));
+    component.changeEnrollment(roster.enrollments[3], 'ENROLLED');
+    fixture.detectChanges();
+    expect(component.actionError()).toBe(backendMessage);
+    expect(el().querySelector('[role="alert"]')?.textContent).toContain(backendMessage);
+    expect(alertSvc.error).toHaveBeenCalledWith(backendMessage);
+    expect(enrollmentSvc.getEnrollments).toHaveBeenCalledTimes(1);
+  });
+
   it('403 khi tải lớp: hiện trạng thái hết quyền và không hiện dữ liệu', async () => {
     vi.clearAllMocks();
     authSvc.getRoles.mockReturnValue([SystemConstant.ROLE.QA]);
@@ -194,7 +245,6 @@ describe('DetailSectionComponent (F05a US-19, US-20)', () => {
         { provide: TermService, useValue: termSvc },
         { provide: CourseService, useValue: courseSvc },
         { provide: SyllabusService, useValue: syllabusSvc },
-        { provide: UserService, useValue: userSvc },
         { provide: AuthService, useValue: authSvc },
         { provide: ToastrService, useValue: alertSvc },
       ],
@@ -243,23 +293,58 @@ describe('DetailSectionComponent (F05a US-19, US-20)', () => {
     });
   });
 
-  describe('hiển thị họ tên giảng viên ở màn chi tiết', () => {
-    it('ADMIN thấy fullName thay vì username', async () => {
-      await setup([SystemConstant.ROLE.ADMIN]);
-      expect(el().textContent).toContain('Nguyễn Văn Thử');
-      expect(el().textContent).not.toContain('gv.test01');
-    });
-
-    it('PROGRAM_MANAGER thấy fullName từ sectionSvc.getLecturers() (không gọi /api/v1/users)', async () => {
-      await setup([SystemConstant.ROLE.PROGRAM_MANAGER]);
-      expect(userSvc.filter).not.toHaveBeenCalled();
+  describe('hiển thị họ tên giảng viên và phân quyền tải danh sách ở màn chi tiết', () => {
+    it('ADMIN thấy fullName từ section.lecturers (kể cả GV đã LOCKED), gọi sectionSvc.getLecturers() và không hiện username khi có fullName', async () => {
+      await setup([SystemConstant.ROLE.ADMIN], {
+        lecturers: [],
+        section: {
+          ...section,
+          lecturerIds: ['u_locked'],
+          lecturers: [{ id: 'u_locked', username: 'gv.locked', fullName: 'GV Đã Khóa' }],
+        },
+      });
       expect(sectionSvc.getLecturers).toHaveBeenCalled();
-      expect(el().textContent).toContain('Trần Thị Khoa');
+      expect(component.lecturerListAvailable()).toBe(true);
+      expect(el().textContent).toContain('GV Đã Khóa');
+      expect(el().textContent).not.toContain('gv.locked');
     });
 
-    it('LECTURER thấy fullName của mình (khi getLecturers trả rỗng)', async () => {
-      await setup([SystemConstant.ROLE.LECTURER], { lecturers: [] });
+    it('PROGRAM_MANAGER thấy fullName từ section.lecturers và gọi sectionSvc.getLecturers()', async () => {
+      await setup([SystemConstant.ROLE.PROGRAM_MANAGER]);
+      expect(sectionSvc.getLecturers).toHaveBeenCalled();
+      expect(component.lecturerListAvailable()).toBe(true);
+      expect(el().textContent).toContain('Nguyễn Văn Thử');
+    });
+
+    it('LECTURER KHÔNG gọi sectionSvc.getLecturers() (tránh 403), hiển thị từ section.lecturers và fallback sang username', async () => {
+      await setup([SystemConstant.ROLE.LECTURER], {
+        section: {
+          ...section,
+          lecturerIds: ['u2', 'u1'],
+          lecturers: [
+            { id: 'u2', username: 'gv.fallback', fullName: '' },
+            { id: 'u1', username: 'gv.me', fullName: 'Lê Văn Giảng' },
+          ],
+        },
+      });
+      expect(sectionSvc.getLecturers).not.toHaveBeenCalled();
+      expect(el().textContent).toContain('gv.fallback, Lê Văn Giảng');
+      expect(buttonByLabel('Đổi giảng viên')).toBeUndefined();
+      expect(buttonByLabel('Đổi trạng thái lớp')).toBeUndefined();
+    });
+
+    it('LECTURER fallback sang currentUserName khi section.lecturers rỗng và không gọi sectionSvc.getLecturers()', async () => {
+      await setup([SystemConstant.ROLE.LECTURER], {
+        section: { ...section, lecturers: [] },
+      });
+      expect(sectionSvc.getLecturers).not.toHaveBeenCalled();
       expect(el().textContent).toContain('Lê Văn Giảng');
+    });
+
+    it('QA KHÔNG gọi sectionSvc.getLecturers() và hiển thị tên giảng viên trực tiếp từ section.lecturers', async () => {
+      await setup([SystemConstant.ROLE.QA]);
+      expect(sectionSvc.getLecturers).not.toHaveBeenCalled();
+      expect(el().textContent).toContain('Nguyễn Văn Thử');
     });
   });
 });

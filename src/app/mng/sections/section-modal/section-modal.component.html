@@ -21,12 +21,31 @@
         <nz-form-item>
           <nz-form-label nzRequired nzFor="sectionTerm">Học kỳ</nz-form-label>
           <nz-form-control nzErrorTip="Chọn học kỳ.">
-            <nz-select nzId="sectionTerm" formControlName="termId" class="w-full" nzPlaceHolder="Chọn học kỳ">
-              @for (term of terms(); track term.id) {
+            <nz-select
+              nzId="sectionTerm"
+              formControlName="termId"
+              class="w-full"
+              nzPlaceHolder="Chọn học kỳ"
+              [nzShowSearch]="hasTermService"
+              [nzServerSearch]="hasTermService"
+              [nzLoading]="termSelect.loading()"
+              [nzDropdownRender]="termFooterTpl"
+              (nzOpenChange)="hasTermService && termSelect.onOpenChange($event)"
+              (nzOnSearch)="hasTermService && termSelect.onSearch($event)"
+              (nzScrollToBottom)="hasTermService && termSelect.loadMore()"
+              (ngModelChange)="onTermChange($event)">
+              @for (term of termOptions(); track term.id) {
               <nz-option [nzValue]="term.id" [nzLabel]="term.code + (term.status === 'OPEN' ? '' : ' (không còn mở)')"
                 [nzDisabled]="term.status !== 'OPEN'" />
               }
             </nz-select>
+            <ng-template #termFooterTpl>
+              @if (termSelect.loadingMore()) {
+                <div class="px-3 py-2 text-center text-xs text-slate-500">
+                  <nz-spin nzSimple nzSize="small" class="mr-1.5" />Đang tải thêm...
+                </div>
+              }
+            </ng-template>
           </nz-form-control>
           <div class="mt-1 text-xs text-slate-600">Chỉ mở được lớp trong học kỳ đang mở.</div>
         </nz-form-item>
@@ -34,12 +53,30 @@
         <nz-form-item>
           <nz-form-label nzRequired nzFor="sectionCourse">Học phần</nz-form-label>
           <nz-form-control nzErrorTip="Chọn học phần.">
-            <nz-select nzId="sectionCourse" formControlName="courseId" class="w-full" nzShowSearch
-              nzPlaceHolder="Chọn học phần" (ngModelChange)="onCourseChange($event)">
-              @for (course of courses(); track course.id) {
+            <nz-select
+              nzId="sectionCourse"
+              formControlName="courseId"
+              class="w-full"
+              nzShowSearch
+              [nzServerSearch]="hasCourseService"
+              [nzLoading]="courseSelect.loading()"
+              [nzDropdownRender]="courseFooterTpl"
+              nzPlaceHolder="Chọn học phần"
+              (nzOpenChange)="hasCourseService && courseSelect.onOpenChange($event)"
+              (nzOnSearch)="hasCourseService && courseSelect.onSearch($event)"
+              (nzScrollToBottom)="hasCourseService && courseSelect.loadMore()"
+              (ngModelChange)="onCourseChange($event)">
+              @for (course of courseOptions(); track course.id) {
               <nz-option [nzValue]="course.id" [nzLabel]="course.code + ' · ' + course.name" />
               }
             </nz-select>
+            <ng-template #courseFooterTpl>
+              @if (courseSelect.loadingMore()) {
+                <div class="px-3 py-2 text-center text-xs text-slate-500">
+                  <nz-spin nzSimple nzSize="small" class="mr-1.5" />Đang tải thêm...
+                </div>
+              }
+            </ng-template>
           </nz-form-control>
         </nz-form-item>
 
@@ -79,7 +116,7 @@
         <div class="mt-1 text-xs text-slate-600">Chỉ người dùng đang hoạt động có vai trò Giảng viên.</div>
         } @else {
         <div class="mt-1 text-xs text-slate-600">
-          Tài khoản của bạn không có quyền tải danh sách giảng viên (API chỉ cho Quản trị viên), nên cần nhập ID.
+          Không tải được danh sách giảng viên (API chỉ cho Quản trị viên và Trưởng chương trình đào tạo), nên cần nhập ID.
         </div>
         }
       </nz-form-item>

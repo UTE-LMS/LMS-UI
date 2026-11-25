@@ -33,6 +33,9 @@ export interface IAnalyticsQuery {
   studentIds?: string[];
   subjectIds?: string[];
   passed?: boolean;
+  page?: number;
+  size?: number;
+  search?: string;
 }
 
 /** Tiêu đề một hàng hoặc một cột của ma trận (MatrixHeader). */
@@ -72,4 +75,9 @@ export interface IAnalyticsMatrix {
   columns: IMatrixHeader[];
   rows: IMatrixHeader[];
   matrix: IMatrixMetricCell[][];
+  page?: number;
+  size?: number;
+  totalElements?: number;
+  totalPages?: number;
+  last?: boolean;
 }

@@ -1,7 +1,8 @@
 import { DecimalPipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, effect, inject, input, OnInit, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, input, OnInit, signal, untracked } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
+import { createPaginatedSelect } from '@builder/paginated-select.builder';
 import { ASSESSMENT_STATUS_DISPLAY, ASSESSMENT_TYPE_LABEL } from '@constants/assessment-display.constant';
 import { UrlConstant } from '@constants/url.constant';
 import {
@@ -18,9 +19,9 @@ import { TestDataFlagComponent } from '@widget/test-data-flag/test-data-flag.com
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzCheckboxModule } from 'ng-zorro-antd/checkbox';
 import { NzSelectModule } from 'ng-zorro-antd/select';
+import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzTableModule } from 'ng-zorro-antd/table';
 import { NzTagModule } from 'ng-zorro-antd/tag';
-import { catchError, of } from 'rxjs';
 
 export interface IAlignmentWarningMeta {
   label: string;
@@ -57,7 +58,7 @@ export const ALIGNMENT_WARNING_META: Record<AlignmentWarning, IAlignmentWarningM
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     DecimalPipe, FormsModule, RouterLink,
-    NzButtonModule, NzCheckboxModule, NzSelectModule, NzTableModule, NzTagModule,
+    NzButtonModule, NzCheckboxModule, NzSelectModule, NzSpinModule, NzTableModule, NzTagModule,
     BloomLevelLabelComponent, DisplayChipComponent, ErrorStateComponent, TestDataFlagComponent,
   ],
 })
@@ -71,7 +72,11 @@ export class AssessmentAlignmentComponent implements OnInit {
   protected readonly statusDisplay = ASSESSMENT_STATUS_DISPLAY;
   protected readonly warningMeta = ALIGNMENT_WARNING_META;
 
-  readonly sections = signal<ISection[]>([]);
+  readonly sectionSelect = createPaginatedSelect<ISection>({
+    fetchPage: ({ page, size, search }) => this.sectionSvc.getSections(undefined, undefined, search, page, size),
+    getId: s => s.id,
+    fetchById: id => this.sectionSvc.getSection(id),
+  });
   readonly alignment = signal<IAssessmentAlignmentResponse | null>(null);
   readonly isLoading = signal(true);
   readonly loadError = signal<IUserError | null>(null);
@@ -86,15 +91,16 @@ export class AssessmentAlignmentComponent implements OnInit {
     effect(() => {
       const id = this.sectionId();
       if (id) {
-        this.loadAlignment(id);
+        untracked(() => {
+          this.sectionSelect.syncSelected(id);
+          this.loadAlignment(id);
+        });
       }
     });
   }
 
   ngOnInit(): void {
-    this.sectionSvc.getSections().pipe(catchError(() => of([] as ISection[]))).subscribe(list => {
-      this.sections.set(list ?? []);
-    });
+    this.sectionSelect.loadInitial();
   }
 
   load(): void {

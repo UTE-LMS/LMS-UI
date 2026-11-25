@@ -7,7 +7,7 @@ import { AuthService } from '@services/auth/auth.service';
 import { CloService } from '@services/course/clo.service';
 import { ModalOptions, NzModalService } from 'ng-zorro-antd/modal';
 import { ToastrService } from 'ngx-toastr';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { ReviewAssessmentComponent } from './review-assessment.component';
 
 function invokeConfirm(cfg: ModalOptions): void {
@@ -49,6 +49,7 @@ describe('ReviewAssessmentComponent (F04 NEW-01, ADR 0014)', () => {
 
   const assessmentSvc = {
     getAssessment: vi.fn(),
+    getSectionAssessments: vi.fn(),
     getCoverage: vi.fn(),
     lock: vi.fn(),
     unlock: vi.fn(),
@@ -68,6 +69,7 @@ describe('ReviewAssessmentComponent (F04 NEW-01, ADR 0014)', () => {
     vi.clearAllMocks();
     authSvc.getRoles.mockReturnValue(roles);
     assessmentSvc.getAssessment.mockReturnValue(of(assessment));
+    assessmentSvc.getSectionAssessments.mockReturnValue(of([assessment]));
     assessmentSvc.getCoverage.mockReturnValue(of(coverage));
     await TestBed.configureTestingModule({
       imports: [ReviewAssessmentComponent],
@@ -118,5 +120,35 @@ describe('ReviewAssessmentComponent (F04 NEW-01, ADR 0014)', () => {
     component.unlock();
     expect(assessmentSvc.unlock).toHaveBeenCalledWith('a1');
     expect(alertSvc.success).toHaveBeenCalled();
+  });
+
+  it('hiển thị tổng trọng số CLO toàn lớp cùng các bài khác và cảnh báo vượt 100%', async () => {
+    const current = make('DRAFT');
+    const other: IAssessment = {
+      id: 'a0', syllabusId: 'syl1', sectionId: 'sec1', code: 'GK', name: 'Giữa kỳ', scope: 'SECTION',
+      status: 'LOCKED', locked: true,
+      cloWeights: [{ cloId: 'clo1', weight: 0.25 }],
+      items: [],
+    };
+    await setup([SystemConstant.ROLE.LECTURER], current);
+    assessmentSvc.getSectionAssessments.mockReturnValue(of([other, current]));
+    component.load();
+    fixture.detectChanges();
+
+    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    expect(text).toContain('Trọng số bài này: 100%');
+    expect(text).toContain('Các bài khác: 25%');
+    expect(text).toContain('Tổng toàn lớp: 125%');
+    expect(text).toContain('Vượt 25%');
+  });
+
+  it('lỗi tải danh sách bài cùng lớp ở màn độ phủ: hiện "—" thay vì 0%', async () => {
+    await setup([SystemConstant.ROLE.LECTURER], make('DRAFT'));
+    assessmentSvc.getSectionAssessments.mockReturnValue(throwError(() => new Error('fail')));
+    component.load();
+    fixture.detectChanges();
+
+    expect(component.sectionAssessmentsError()).toBe(true);
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('Trọng số toàn lớp: —');
   });
 });

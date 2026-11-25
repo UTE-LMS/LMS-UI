@@ -10,12 +10,22 @@
     </div>
 
     <div class="flex flex-wrap items-center gap-2.5">
+      <input
+        nz-input
+        type="search"
+        class="w-56"
+        placeholder="Tìm mã hoặc tên học phần..."
+        aria-label="Tìm mã hoặc tên học phần"
+        [ngModel]="filterSearch()"
+        (ngModelChange)="onSearchChange($event)"
+      />
+
       <nz-select
-        class="w-40"
+        class="w-36"
         nzAllowClear
         nzPlaceHolder="Lọc theo Học kỳ"
         [ngModel]="filterSemester()"
-        (ngModelChange)="filterSemester.set($event)"
+        (ngModelChange)="onSemesterChange($event)"
       >
         @for (sem of semesterOptions; track sem) {
         <nz-option [nzValue]="sem" [nzLabel]="'Học kỳ ' + sem" />
@@ -23,11 +33,22 @@
       </nz-select>
 
       <nz-select
+        class="w-36"
+        nzAllowClear
+        nzPlaceHolder="Loại học phần"
+        [ngModel]="filterType()"
+        (ngModelChange)="onTypeChange($event)"
+      >
+        <nz-option nzValue="COMPULSORY" nzLabel="Bắt buộc" />
+        <nz-option nzValue="ELECTIVE" nzLabel="Tự chọn" />
+      </nz-select>
+
+      <nz-select
         class="w-48"
         nzAllowClear
         nzPlaceHolder="Lọc theo Khối kiến thức"
         [ngModel]="filterCategory()"
-        (ngModelChange)="filterCategory.set($event)"
+        (ngModelChange)="onCategoryChange($event)"
       >
         @for (cat of categoryOptions; track cat.value) {
         <nz-option [nzValue]="cat.value" [nzLabel]="cat.label" />
@@ -51,9 +72,17 @@
   <nz-table
     #pcTable
     [nzData]="filteredProgramCourses()"
-    [nzShowPagination]="false"
     [nzFrontPagination]="false"
+    [nzShowPagination]="true"
+    [nzTotal]="hasLoadedServerPage() ? totalElements() : filteredProgramCourses().length"
+    [nzPageIndex]="page() + 1"
+    [nzPageSize]="size()"
+    [nzShowSizeChanger]="true"
+    [nzPageSizeOptions]="[10, 20, 50, 100]"
+    [nzLoading]="isLoading()"
     [nzScroll]="{ x: '960px' }"
+    (nzPageIndexChange)="onPageIndexChange($event)"
+    (nzPageSizeChange)="onPageSizeChange($event)"
   >
     <thead>
       <tr>
@@ -67,7 +96,7 @@
       </tr>
     </thead>
     <tbody>
-      @for (pc of filteredProgramCourses(); track pc.id) {
+      @for (pc of pcTable.data; track pc.id) {
       <tr>
         <td>
           <div class="font-bold text-slate-900">{{ getCourseCode(pc) }}</div>

@@ -9,7 +9,9 @@ import { IClo } from '@models/course/clo.model';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzModalModule } from 'ng-zorro-antd/modal';
 import { NzSelectModule } from 'ng-zorro-antd/select';
-import { formatNumber, hasDuplicates, nextItemCode, sumOutcomeScores } from '../assessments.util';
+import {
+  CLO_WEIGHT_EPSILON, formatNumber, formatWeightPercent, hasDuplicates, nextItemCode, roundWeight, sumOutcomeScores,
+} from '../assessments.util';
 
 const CODE_PATTERN = /^[A-Za-z0-9._ -]{1,40}$/;
 
@@ -34,6 +36,7 @@ export class AssessmentItemModalComponent {
   readonly clos = input<IClo[]>([]);
   /** Mã của các câu hỏi khác trong bài, để báo trùng mã. */
   readonly otherCodes = input<string[]>([]);
+  readonly sectionCloTotals = input<ReadonlyMap<string, number>>(new Map());
   readonly disabled = input(false);
 
   readonly visibleChange = output<boolean>();
@@ -129,6 +132,43 @@ export class AssessmentItemModalComponent {
       return;
     }
     this.mappings.removeAt(index);
+  }
+
+  cloOptionLabel(clo: IClo): string {
+    const base = clo.code + (clo.contentOriginal ? ' · ' + clo.contentOriginal.slice(0, 50) : '');
+    const totals = this.sectionCloTotals();
+    if (!totals.has(clo.id)) {
+      return base;
+    }
+    const total = roundWeight(totals.get(clo.id) ?? 0);
+    const suffix = total > 1 + CLO_WEIGHT_EPSILON ? ' - vượt 100%' : '';
+    return `${base} · Toàn lớp: ${formatWeightPercent(total)}${suffix}`;
+  }
+
+  cloTotalHint(cloId: string): { text: string; tone: 'over' | 'exact' | 'under'; } | null {
+    const totals = this.sectionCloTotals();
+    if (!cloId || !totals.has(cloId)) {
+      return null;
+    }
+    const total = roundWeight(totals.get(cloId) ?? 0);
+    if (total > 1 + CLO_WEIGHT_EPSILON) {
+      const excess = roundWeight(total - 1);
+      return {
+        text: `Toàn lớp đã chiếm ${formatWeightPercent(total)} (vượt ${formatWeightPercent(excess)} so với 100%).`,
+        tone: 'over',
+      };
+    }
+    if (Math.abs(total - 1) <= CLO_WEIGHT_EPSILON) {
+      return {
+        text: `Toàn lớp đã chiếm đủ ${formatWeightPercent(total)}.`,
+        tone: 'exact',
+      };
+    }
+    const remaining = roundWeight(Math.max(0, 1 - total));
+    return {
+      text: `Toàn lớp đã chiếm ${formatWeightPercent(total)}, còn lại ${formatWeightPercent(remaining)}.`,
+      tone: 'under',
+    };
   }
 
   handleCancel(): void {

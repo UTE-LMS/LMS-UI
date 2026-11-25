@@ -90,16 +90,24 @@
   <div class="mt-10 flex flex-wrap items-center gap-3">
     <h2 class="m-0 text-lg font-semibold">Danh sách ghi danh</h2>
     <span class="flex-1"></span>
+    <input
+      class="h-8 w-60 rounded border border-slate-400 px-2.5 text-sm"
+      type="search"
+      placeholder="Tìm theo MSSV hoặc họ tên…"
+      aria-label="Tìm theo MSSV hoặc họ tên"
+      [ngModel]="rosterSearch()"
+      (ngModelChange)="onRosterSearchChange($event)"
+    />
     <div role="group" aria-label="Lọc theo trạng thái ghi danh" class="inline-flex overflow-hidden rounded border border-slate-400">
       <button type="button" class="px-3 py-1 text-sm" [class.bg-blue-800]="rosterFilter() === 'ALL'"
         [class.text-white]="rosterFilter() === 'ALL'" [attr.aria-pressed]="rosterFilter() === 'ALL'"
-        (click)="rosterFilter.set('ALL')">Tất cả {{ roster()?.enrollments?.length ?? 0 }}</button>
+        (click)="onRosterFilterChange('ALL')">Tất cả {{ totalSectionRosterCount() }}</button>
       <button type="button" class="border-l border-slate-400 px-3 py-1 text-sm" [class.bg-blue-800]="rosterFilter() === 'ENROLLED'"
         [class.text-white]="rosterFilter() === 'ENROLLED'" [attr.aria-pressed]="rosterFilter() === 'ENROLLED'"
-        (click)="rosterFilter.set('ENROLLED')">Đang học {{ roster()?.enrolled ?? 0 }}</button>
+        (click)="onRosterFilterChange('ENROLLED')">Đang học {{ roster()?.enrolled ?? 0 }}</button>
       <button type="button" class="border-l border-slate-400 px-3 py-1 text-sm" [class.bg-blue-800]="rosterFilter() === 'WITHDRAWN'"
         [class.text-white]="rosterFilter() === 'WITHDRAWN'" [attr.aria-pressed]="rosterFilter() === 'WITHDRAWN'"
-        (click)="rosterFilter.set('WITHDRAWN')">Đã rút {{ roster()?.withdrawn ?? 0 }}</button>
+        (click)="onRosterFilterChange('WITHDRAWN')">Đã rút {{ roster()?.withdrawn ?? 0 }}</button>
     </div>
   </div>
 
@@ -109,7 +117,23 @@
   </div>
   }
 
-  <nz-table class="mt-3" nzSize="middle" [nzData]="visibleEnrollments()" [nzPageSize]="50" [nzNoResult]="emptyRosterTpl">
+  <nz-table
+    #rosterTable
+    class="mt-3"
+    nzSize="middle"
+    [nzData]="visibleEnrollments()"
+    [nzFrontPagination]="false"
+    [nzShowPagination]="true"
+    [nzLoading]="isLoadingRoster()"
+    [nzTotal]="rosterTotalElements()"
+    [nzPageIndex]="rosterPage() + 1"
+    [nzPageSize]="rosterSize()"
+    [nzShowSizeChanger]="true"
+    [nzPageSizeOptions]="[10, 20, 50, 100]"
+    [nzNoResult]="emptyRosterTpl"
+    (nzPageIndexChange)="onRosterPageIndexChange($event)"
+    (nzPageSizeChange)="onRosterPageSizeChange($event)"
+  >
     <thead>
       <tr>
         <th>Mã số sinh viên (MSSV)</th>
@@ -121,7 +145,7 @@
       </tr>
     </thead>
     <tbody>
-      @for (row of visibleEnrollments(); track row.id) {
+      @for (row of rosterTable.data; track row.id) {
       <tr>
         <td class="font-semibold">{{ row.studentCode }}</td>
         <td>{{ row.enrolledAt ? (row.enrolledAt | date: 'dd/MM/yyyy') : '—' }}</td>

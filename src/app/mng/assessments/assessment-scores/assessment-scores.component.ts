@@ -1,21 +1,24 @@
 import { DatePipe, DecimalPipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, inject, input, OnInit, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, DestroyRef, inject, input, OnInit, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { ASSESSMENT_STATUS_DISPLAY } from '@constants/assessment-display.constant';
 import { UrlConstant } from '@constants/url.constant';
 import { IAssessment, IAssessmentScoreItem } from '@models/assessment/assessment.model';
 import { IUserError } from '@models/common/user-error.model';
-import { AssessmentService } from '@services/assessment/assessment.service';
+import { AssessmentService, ScoreExportFormat } from '@services/assessment/assessment.service';
 import { toUserError } from '@services/common/api-error.util';
 import { DisplayChipComponent } from '@widget/display-chip/display-chip.component';
 import { ErrorStateComponent } from '@widget/error-state/error-state.component';
 import { BloomLevelLabelComponent } from '@widget/level-label/bloom-level-label.component';
 import { TestDataFlagComponent } from '@widget/test-data-flag/test-data-flag.component';
 import { NzButtonModule } from 'ng-zorro-antd/button';
+import { NzPaginationModule } from 'ng-zorro-antd/pagination';
 import { NzTableModule } from 'ng-zorro-antd/table';
 import { NzTagModule } from 'ng-zorro-antd/tag';
-import { catchError, forkJoin, of } from 'rxjs';
+import { ToastrService } from 'ngx-toastr';
+import { catchError, debounceTime, distinctUntilChanged, forkJoin, map, of, Subject } from 'rxjs';
 import { formatNumber } from '../assessments.util';
 
 export interface IScoreColumn {
@@ -37,18 +40,25 @@ export interface IStudentScoreRow {
 
 type ScoreViewMode = 'MATRIX' | 'DETAIL';
 
+function fileNameFromDisposition(header: string | null, fallback: string): string {
+  const match = header ? /filename\*?=(?:UTF-8'')?"?([^";]+)"?/i.exec(header) : null;
+  return match ? decodeURIComponent(match[1]) : fallback;
+}
+
 @Component({
   selector: 'app-assessment-scores',
   templateUrl: './assessment-scores.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     DatePipe, DecimalPipe, FormsModule, RouterLink,
-    NzButtonModule, NzTableModule, NzTagModule,
+    NzButtonModule, NzPaginationModule, NzTableModule, NzTagModule,
     BloomLevelLabelComponent, DisplayChipComponent, ErrorStateComponent, TestDataFlagComponent,
   ],
 })
 export class AssessmentScoresComponent implements OnInit {
+  private readonly destroyRef = inject(DestroyRef);
   private readonly assessmentSvc = inject(AssessmentService);
+  private readonly toastr = inject(ToastrService, { optional: true });
 
   readonly id = input.required<string>();
 
@@ -60,23 +70,18 @@ export class AssessmentScoresComponent implements OnInit {
   readonly scores = signal<IAssessmentScoreItem[]>([]);
   readonly isLoading = signal(true);
   readonly loadError = signal<IUserError | null>(null);
+  readonly exportingFormat = signal<ScoreExportFormat | null>(null);
+
+  readonly page = signal(0);
+  readonly size = signal(20);
+  readonly totalStudents = signal(0);
 
   readonly searchText = signal('');
   readonly viewMode = signal<ScoreViewMode>('MATRIX');
 
-  readonly filteredScores = computed(() => {
-    const q = this.searchText().trim().toLowerCase();
-    const list = this.scores();
-    if (!q) {
-      return list;
-    }
-    return list.filter(s => s.studentCode.toLowerCase().includes(q)
-      || (s.studentName ?? '').toLowerCase().includes(q)
-      || s.itemCode.toLowerCase().includes(q)
-      || s.cloCode.toLowerCase().includes(q));
-  });
+  private readonly searchSubject$ = new Subject<string>();
 
-  /** Các cột câu hỏi + CLO theo thứ tự xuất hiện ổn định. */
+  /** Các cột câu hỏi + CLO theo thứ tự xuất hiện ổn định trên trang hiện tại. */
   readonly matrixColumns = computed<IScoreColumn[]>(() => {
     const colMap = new Map<string, IScoreColumn>();
     for (const item of this.scores()) {
@@ -96,17 +101,13 @@ export class AssessmentScoresComponent implements OnInit {
     });
   });
 
-  /** Bảng tổng hợp theo từng sinh viên (lọc theo MSSV hoặc họ tên). */
+  /** Bảng tổng hợp theo từng sinh viên (nhóm từ `content` trang hiện tại do backend đã gom đủ dòng theo sinh viên). */
   readonly studentRows = computed<IStudentScoreRow[]>(() => {
     const cols = this.matrixColumns();
     const grouped = new Map<string, IStudentScoreRow>();
-    const q = this.searchText().trim().toLowerCase();
 
     for (const s of this.scores()) {
       const name = s.studentName ?? '';
-      if (q && !s.studentCode.toLowerCase().includes(q) && !name.toLowerCase().includes(q)) {
-        continue;
-      }
       let row = grouped.get(s.studentId);
       if (!row) {
         const emptyCells: Record<string, number | null> = {};
@@ -138,7 +139,7 @@ export class AssessmentScoresComponent implements OnInit {
       .sort((a, b) => a.studentCode.localeCompare(b.studentCode, undefined, { numeric: true }));
   });
 
-  readonly uniqueStudentCount = computed(() => new Set(this.scores().map(s => s.studentId)).size);
+  readonly uniqueStudentCount = computed(() => this.totalStudents());
 
   readonly averagePercentage = computed<number | null>(() => {
     const rows = this.studentRows().filter(r => r.percentage !== null);
@@ -150,6 +151,18 @@ export class AssessmentScoresComponent implements OnInit {
   });
 
   ngOnInit(): void {
+    this.searchSubject$
+      .pipe(
+        map(q => q.trim()),
+        debounceTime(300),
+        distinctUntilChanged(),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe(() => {
+        this.page.set(0);
+        this.loadScores();
+      });
+
     this.load();
   }
 
@@ -159,11 +172,16 @@ export class AssessmentScoresComponent implements OnInit {
     const assessmentId = this.id();
     forkJoin({
       assessment: this.assessmentSvc.getAssessment(assessmentId).pipe(catchError(() => of(null))),
-      scores: this.assessmentSvc.getScores(assessmentId),
+      scoresPage: this.assessmentSvc.getScores(
+        assessmentId,
+        this.searchText().trim() || undefined,
+        this.page(),
+        this.size(),
+      ),
     }).subscribe({
-      next: ({ assessment, scores }) => {
+      next: ({ assessment, scoresPage }) => {
         this.assessment.set(assessment);
-        this.scores.set(scores ?? []);
+        this.applyScoresPage(scoresPage);
         this.isLoading.set(false);
       },
       error: err => {
@@ -173,40 +191,87 @@ export class AssessmentScoresComponent implements OnInit {
     });
   }
 
-  exportCsv(): void {
-    const cols = this.matrixColumns();
-    const rows = this.studentRows();
-    if (rows.length === 0) {
+  loadScores(): void {
+    this.isLoading.set(true);
+    this.loadError.set(null);
+    this.assessmentSvc
+      .getScores(
+        this.id(),
+        this.searchText().trim() || undefined,
+        this.page(),
+        this.size(),
+      )
+      .subscribe({
+        next: scoresPage => {
+          this.applyScoresPage(scoresPage);
+          this.isLoading.set(false);
+        },
+        error: err => {
+          this.isLoading.set(false);
+          this.loadError.set(toUserError(err));
+        },
+      });
+  }
+
+  onSearchChange(keyword: string): void {
+    this.searchText.set(keyword);
+    this.searchSubject$.next(keyword);
+  }
+
+  onPageIndexChange(page1Indexed: number): void {
+    this.page.set(Math.max(0, page1Indexed - 1));
+    this.loadScores();
+  }
+
+  onPageSizeChange(newSize: number): void {
+    this.size.set(newSize);
+    this.page.set(0);
+    this.loadScores();
+  }
+
+  exportScores(format: ScoreExportFormat = 'csv'): void {
+    if (this.exportingFormat()) {
       return;
     }
-    const escapeCell = (val: string): string => {
-      const safe = /^[=+\-@]/.test(val) ? `'${val}` : val;
-      return /[",\n\r]/.test(safe) ? `"${safe.replace(/"/g, '""')}"` : safe;
-    };
-    const headers = [
-      'MSSV',
-      'Họ tên',
-      ...cols.map(c => `${c.itemCode} - ${c.cloCode} (Max: ${c.maxScore})`),
-      'Tổng điểm',
-      'Tổng tối đa',
-      'Tỷ lệ (%)',
-    ];
-    const lines = rows.map(r => [
-      r.studentCode,
-      r.studentName,
-      ...cols.map(c => (r.cells[c.key] !== null && r.cells[c.key] !== undefined ? String(r.cells[c.key]) : '')),
-      String(Number(r.totalRaw.toFixed(2))),
-      String(Number(r.totalMax.toFixed(2))),
-      r.percentage !== null ? r.percentage.toFixed(1) : '',
-    ].map(escapeCell).join(','));
+    this.exportingFormat.set(format);
+    const assessmentId = this.id();
+    const search = this.searchText().trim() || undefined;
+    this.assessmentSvc.exportScores(assessmentId, format, search).subscribe({
+      next: res => {
+        this.exportingFormat.set(null);
+        const blob = res.body;
+        if (!blob) {
+          return;
+        }
+        const fallback = `${this.assessment()?.code ?? 'assessment'}-scores.${format}`;
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = fileNameFromDisposition(res.headers.get('Content-Disposition'), fallback);
+        link.click();
+        URL.revokeObjectURL(url);
+      },
+      error: err => {
+        this.exportingFormat.set(null);
+        this.toastr?.error(toUserError(err).message);
+      },
+    });
+  }
 
-    const csv = `\uFEFF${headers.map(escapeCell).join(',')}\n${lines.join('\n')}\n`;
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `${this.assessment()?.code ?? 'assessment'}-scores.csv`;
-    link.click();
-    URL.revokeObjectURL(url);
+  exportCsv(): void {
+    this.exportScores('csv');
+  }
+
+  private applyScoresPage(scoresPage: {
+    content: IAssessmentScoreItem[];
+    page: number;
+    size: number;
+    totalElements: number;
+  }): void {
+    const content = scoresPage?.content ?? [];
+    this.scores.set(content);
+    this.page.set(scoresPage?.page ?? this.page());
+    this.size.set(scoresPage?.size ?? this.size());
+    this.totalStudents.set(scoresPage?.totalElements ?? new Set(content.map(s => s.studentId)).size);
   }
 }
