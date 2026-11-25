@@ -733,3 +733,298 @@ Bước gitleaks của PR Google báo ví dụ `idToken` cắt ngắn ở `doc/A
 ### 3. Kết quả kiểm chứng
 - **`npm run check` (`ng lint` + `ng build --configuration development`):** All files pass linting; build thành công 0 errors.
 - **Unit tests (`ng test --no-watch` trên 5 file liên quan):** 5/5 test files passed, 60/60 tests passed (`user.service.spec.ts` 7/7, `faculty.service.spec.ts` 19/19, `csv-import-modal.component.spec.ts` 8/8, `list-users.component.spec.ts` 12/12, `list-faculties.component.spec.ts` 14/14).
+
+
+## Phiên #24: Gom nhóm môn học theo học kỳ trên trang Home (Phiên bản CTĐT)
+
+### 1. Thông tin phiên làm việc
+- **Thời gian:** 2026-11-25
+- **Người thực hiện (`git config user.name`):** `minhat5`
+- **Sinh viên yêu cầu:** Sửa giao diện trang home ở phiên bản chương trình đào tạo chỗ các môn học cho hiển thị gom nhóm theo học kỳ, vẫn giữ lọc theo từng học kỳ.
+- **Công cụ / mô hình:** Antigravity (Gemini 4 Neon). Không thêm package.
+- **Nhánh:** `main` (chưa commit/push)
+
+### 2. Các hạng mục đã thực hiện
+1. **`src/app/main/home/homepage/homepage.component.ts`:**
+   - Thêm interface `ISemesterCourseGroup` biểu diễn từng nhóm học kỳ (`semesterKey`, `semesterNumber`, `semesterLabel`, `courseCount`, `totalCredits`, `courses`).
+   - Thêm `computed` signals `availableSemesterOptions` (gộp `1..8` với các học kỳ dương thực tế từ dữ liệu CTĐT), `hasActiveCourseFilters`, và `groupedCoursesBySemester` (gom nhóm từ `filteredCourses()` theo học kỳ tăng dần, đưa các môn chưa xếp kỳ xuống cuối với nhãn `Chưa xếp kỳ`).
+   - Bổ sung `resetCourseFilters()`, `normalizeSemester()`, `sortSemesterKeys()` và đồng nhất logic chuẩn hóa học kỳ với `semesterSummaries`.
+2. **`src/app/main/home/homepage/homepage.component.html`:**
+   - Cập nhật Tab 2 (`COURSES`) trong chế độ `VERSIONS`: hiển thị từng nhóm học kỳ dạng thẻ riêng (header hiển thị học kỳ, số học phần, tổng tín chỉ, nút toggle `Chỉ xem kỳ này` / `Xem tất cả học kỳ` và lưới các thẻ môn học bên trong).
+   - Giữ nguyên đầy đủ bộ lọc theo từng học kỳ (dropdown `filterSemesterSelect`, dải pill chọn nhanh học kỳ), lọc khối kiến thức, tìm kiếm mã/tên môn, nút `Đặt lại` / `Xóa bộ lọc`, skeleton loading theo khối học kỳ và trạng thái rỗng.
+3. **`src/app/main/home/homepage/homepage.component.spec.ts`:**
+   - Cập nhật test Tab 2 hiện có và bổ sung 4 ca test mới: gom nhóm nhiều môn theo thứ tự học kỳ tăng dần + `Chưa xếp kỳ`, lọc riêng một học kỳ rồi toggle lại toàn bộ, trạng thái rỗng khi lọc + xóa bộ lọc, và trạng thái phiên bản chưa có học phần.
+
+### 3. Kết quả kiểm chứng
+- **ESLint (`npx eslint` trên 3 file đã sửa):** 0 errors.
+- **Unit tests (`node node_modules/@angular/cli/bin/ng test --watch=false --include src/app/main/home/homepage/homepage.component.spec.ts`):** 1 test file passed, 13/13 tests passed.
+- **Build (`npm run build:dev`):** `ng build --configuration development` thành công, 0 errors.
+
+- **Sinh viên đã sửa/rà soát:** _chờ sinh viên rà soát_
+- **Commit / PR:** chưa commit
+
+
+## Phiên #25: Bỏ 3 nút điều hướng phân hệ trên header chính (`MainHeaderComponent`)
+
+### 1. Thông tin phiên làm việc
+- **Thời gian:** 2026-11-25
+- **Người thực hiện (`git config user.name`):** `minhat5`
+- **Sinh viên yêu cầu:** Bỏ 3 nút Chương trình đào tạo, Phiên bản CTĐT, Đề cương học phần trên header vì ở dưới trang chủ đã có thanh chuyển chức năng.
+- **Công cụ / mô hình:** Antigravity (Gemini 4 Neon). Không thêm package.
+- **Nhánh:** `main` (chưa commit/push)
+
+### 2. Các hạng mục đã thực hiện
+1. **`src/app/layout/main/main-header/main-header.component.html`:**
+   - Xóa 3 nút `header-btn-programs`, `header-btn-versions`, `header-btn-syllabi` ở thanh điều hướng PC và 3 mục tương ứng (cùng `nz-menu-divider` đi kèm) trong dropdown mobile `#menuUser`.
+   - Giữ lại logo HCM-UTE trỏ về `/`, nút `Hướng dẫn`, nút `Đăng nhập` / menu người dùng và nút đổi ngôn ngữ `vi`/`en`.
+2. **`src/app/layout/main/main-header/main-header.component.ts` & `main-header.component.css`:**
+   - Xóa type `PublicHeaderView`, signal `currentView`, method `syncActiveView()`, injection `ActivatedRoute` và subscription `queryParamMap` không còn sử dụng.
+   - Xóa các class CSS `.nz-btn-blue`, `.nz-btn-purple`, `.nz-btn-green`, `.youth-nav-active` không còn dùng trong header.
+3. **`src/app/layout/main/main-header/main-header.component.spec.ts`:**
+   - Tạo unit test mới kiểm tra không còn render 3 nút điều hướng trên header, vẫn giữ nút `Hướng dẫn`, nút `Đăng nhập` khi chưa đăng nhập và hiển thị tên người dùng khi đã đăng nhập.
+
+### 3. Kết quả kiểm chứng
+- **ESLint (`node node_modules/eslint/bin/eslint.js` trên 3 file `main-header.component.ts/.html/.spec.ts`):** 0 errors.
+- **Unit tests (`node node_modules/@angular/cli/bin/ng test --watch=false --include src/app/layout/main/main-header/main-header.component.spec.ts`):** 1 test file passed, 2/2 tests passed.
+- **Build (`npm run build:dev`):** `ng build --configuration development` thành công, 0 errors.
+
+- **Sinh viên đã sửa/rà soát:** _chờ sinh viên rà soát_
+- **Commit / PR:** chưa commit
+
+
+## Phiên #26: Đồng bộ `SectionResponse.lecturers` và phân quyền tra cứu giảng viên (`F05a / US-19`)
+
+### 1. Thông tin phiên làm việc
+- **Thời gian:** 2026-11-25
+- **Người thực hiện (`git config user.name`):** `minhat5`
+- **Sinh viên yêu cầu:** Cập nhật `LMS-UI` theo thay đổi `SectionResponse` bổ sung `lecturers[]` của `LMS-API`, hiển thị trực tiếp từ `section.lecturers`, chỉ gọi `GET /api/v1/sections/lecturers` cho `ADMIN`/`PROGRAM_MANAGER`, không gọi `/api/v1/users` ở màn hình lớp học phần, kiểm tra phân quyền nút và cập nhật `API-CONTRACT.md` + unit tests.
+- **Công cụ / mô hình:** Antigravity (Gemini 4 Neon). Không thêm package.
+- **Nhánh:** `main` (chưa commit/push)
+
+### 2. Các hạng mục đã thực hiện
+1. **`src/app/core/models/course/section.model.ts` & `src/app/mng/sections/sections.util.ts`:**
+   - Chuẩn hóa `ISectionLecturerSummary` (`{ id: string; username: string; fullName: string }`) và bỏ trường thừa `lecturerNames` khỏi `ISection`.
+   - Cập nhật `sectionLecturersText(section, currentUserId, currentUserName)` để đọc trực tiếp từ `section.lecturers` (`fullName` → fallback `username`), không nhận map từ `/api/v1/users` hay `/api/v1/sections/lecturers`, vẫn giữ fallback `lecturerIds` + `currentUserName` nếu `lecturers` trống.
+2. **`src/app/mng/sections/list-sections/list-sections.component.ts` & `src/app/mng/sections/detail-section/detail-section.component.ts`:**
+   - Gỡ bỏ `UserService` (`userSvc.filter`, `userSvc.getById`) và map tra cứu tên giảng viên.
+   - Chỉ gọi `sectionSvc.getLecturers()` (`GET /api/v1/sections/lecturers`) khi có vai trò `ADMIN` hoặc `PROGRAM_MANAGER` (`canCreate()` / `canManage()`), tuyệt đối không gọi khi là `LECTURER` hoặc `QA` (hết lỗi `403 Forbidden`).
+   - Giữ nguyên ẩn/hiện nút theo vai trò: `LECTURER` xem được lớp phụ trách và import danh sách lớp, không thấy `Thêm lớp` / `Import Lớp học phần` / `Đổi giảng viên` / `Đổi trạng thái lớp`; `ADMIN` và `PROGRAM_MANAGER` dùng được đầy đủ tạo/sửa/import lớp.
+3. **`src/app/mng/sections/section-modal/section-modal.component.html` & `doc/API-CONTRACT.md`:**
+   - Cập nhật thông báo fallback trong `SectionModalComponent` khi không tải được danh sách giảng viên.
+   - Cập nhật `doc/API-CONTRACT.md` (§6.2 bỏ `/departments/lecturers`, §6.4 bổ sung `GET /sections/lecturers`, `GET /sections/import-template`, `POST /sections/import` và `SectionResponse.lecturers[]`).
+4. **Unit tests (`sections.util.spec.ts`, `list-sections.component.spec.ts`, `detail-section.component.spec.ts`, `section.service.spec.ts`):**
+   - Cập nhật và bổ sung các ca test cho `ADMIN`, `PROGRAM_MANAGER`, `LECTURER` (không gọi `getLecturers()`, fallback `username` / `currentUserName`), `QA`, và giảng viên đã `LOCKED` vẫn hiển thị tên từ `section.lecturers`.
+
+### 3. Kết quả kiểm chứng
+- **ESLint (`node node_modules/eslint/bin/eslint.js` trên 9 file đã sửa):** 0 errors sau khi sửa.
+- **Unit tests (`node node_modules/@angular/cli/bin/ng test --watch=false --include src/app/mng/sections --include src/app/core/services/course/section.service.spec.ts`):** 7/7 test files passed, 87/87 tests passed (`sections.util.spec.ts` 18, `section.service.spec.ts` 11, `roster-import.component.spec.ts` 11, `assessment-alignment.component.spec.ts` 3, `section-modal.component.spec.ts` 11, `list-sections.component.spec.ts` 13, `detail-section.component.spec.ts` 20).
+- **Build (`npm run build:dev`):** `ng build --configuration development` thành công, 0 errors.
+
+### 4. Lỗi/ảo giác AI đã phát hiện trong phiên
+| Mô tả | Cách phát hiện | Nguyên nhân | Commit sửa |
+|---|---|---|---|
+| Gán `let labels: string[] = []` rồi gán đè ở cả hai nhánh `if/else` trong `sections.util.ts` | ESLint báo `no-useless-assignment` | Không dùng biểu thức điều kiện trực tiếp | sửa trước khi commit |
+| Gọi `await TestBed.resetTestingModule()` trong `detail-section.component.spec.ts` | ESLint báo `@typescript-eslint/await-thenable` | Nhầm `resetTestingModule()` trả về `Promise` (thực tế trả về `TestBed`) | tách thành test case độc lập trước khi commit |
+
+- **Sinh viên đã sửa/rà soát:** _chờ sinh viên rà soát_
+- **Commit / PR:** chưa commit
+
+
+## Phiên #27: Bổ sung phân hệ Quản lý Sinh viên (`ADMIN`) & Đồng bộ nghiệp vụ Ghi danh lớp học phần
+
+### 1. Thông tin phiên làm việc
+- **Thời gian:** 2026-11-25
+- **Người thực hiện (`git config user.name`):** `minhat5`
+- **Sinh viên yêu cầu:** Cập nhật `LMS-UI` để đồng bộ với API quản lý sinh viên mới (`/api/v1/students`, chỉ `ADMIN`) và thay đổi nghiệp vụ ghi danh trên `LMS-API` (không tự tạo sinh viên mới khi ghi danh, chỉ cho phép ghi danh sinh viên đang ở trạng thái `ACTIVE`).
+- **Công cụ / mô hình:** Antigravity (Gemini 4 Neon). Không thêm package.
+- **Nhánh:** `main` (chưa commit/push)
+
+### 2. Các hạng mục đã thực hiện
+1. **Model, Hằng số & Service Sinh viên:**
+   - Tạo `src/app/core/models/student/student.model.ts` (`StudentStatus`, `StudentResponse`, `StudentFilter`, `StudentStatusUpdateRequest`, `StudentBatchStatusUpdateRequest`, `StudentBatchStatusUpdateResponse`).
+   - Cập nhật `src/app/core/constants/url.constant.ts` (nhóm API `/api/v1/students/*` và route `/mng/students`).
+   - Cập nhật `src/app/core/constants/academic-display.constant.ts` (`STUDENT_STATUS_DISPLAY` và `STUDENT_STATUS_OPTIONS` với 4 trạng thái `ACTIVE`, `SUSPENDED`, `GRADUATED`, `DROPPED_OUT`).
+   - Tạo `src/app/core/services/student/student.service.ts` và `src/app/core/services/student/student.service.spec.ts` (7 unit tests).
+2. **Trang Quản lý Sinh viên (`/mng/students`, chỉ `ADMIN`):**
+   - Tạo `src/app/mng/students/students.menu.ts`, `src/app/mng/students/students.routes.ts`, và `src/app/mng/students/list-students/list-students.component.{ts,html,css,spec.ts}` (9 unit tests).
+   - Cập nhật `src/app/mng/mng.routes.ts` (`canActiveGuard` yêu cầu vai trò `ADMIN`) và `src/app/layout/mng/management-header/management-header.component.{ts,spec.ts}` (mục menu "Sinh viên" chỉ hiển thị với `ADMIN`).
+   - Giao diện gồm thanh tìm kiếm & bộ lọc (`search`, `cohort`, `status`), phân trang chuẩn `PageResponse`, checkbox chọn từng dòng/tất cả trong trang, thanh thao tác hàng loạt (tối đa 500 sinh viên/lần, có xác nhận & toast `updatedCount/requestedCount`), dropdown đổi trạng thái nhanh từng dòng, và 2 modal Import tách biệt ("Import sinh viên mới" mặc định `ACTIVE` và "Import đổi trạng thái" gồm 2 cột `studentCode,status`).
+3. **Cập nhật màn hình Import & Quản lý Ghi danh lớp học phần:**
+   - `src/app/mng/sections/roster-import/roster-import.component.{html,spec.ts}`: bổ sung lưu ý điều kiện `ADMIN` import trước và trạng thái `ACTIVE`, bỏ hiển thị `newStudents` ở màn kết quả `200`, kiểm thử hiển thị đầy đủ `fieldErrors` (`422`) khi `studentCode` chưa tồn tại hoặc không phải `ACTIVE`.
+   - `src/app/mng/sections/list-sections/list-sections.component.{ts,spec.ts}` & `src/app/shared/widget/csv-import-modal/csv-import-modal.component.{html,spec.ts}`: cập nhật hướng dẫn import ghi danh nhiều lớp và đảm bảo hiển thị đầy đủ bảng `errors[]` (`row`, `key`, `message`).
+   - `src/app/mng/sections/detail-section/detail-section.component.{ts,spec.ts}`: hiển thị nguyên văn `error.message` (cả banner alert và toast lỗi) khi thao tác **Ghi danh lại** nhận `422` (`BUSINESS_RULE_VIOLATION`).
+4. **Tài liệu:**
+   - Cập nhật `doc/API-CONTRACT.md` (§6.4 và §6.4a cho nhóm API `/api/v1/students` và nghiệp vụ ghi danh mới).
+
+### 3. Kết quả kiểm chứng
+- **ESLint (`npm run lint`):** `All files pass linting.` (0 lỗi).
+- **Unit tests liên quan (`ng test --no-watch` trên 10 file spec bị ảnh hưởng):** 10/10 file passed, 112/112 tests passed (`student.service.spec.ts` 7, `list-students.component.spec.ts` 9, `management-header.component.spec.ts` 6, `roster-import.component.spec.ts` 13, `list-sections.component.spec.ts` 14, `detail-section.component.spec.ts` 21, `csv-import-modal.component.spec.ts` 10, `section-modal.component.spec.ts` 11, `sections.util.spec.ts` 18, `assessment-alignment.component.spec.ts` 3).
+- **Toàn bộ test suite (`npm run test:ci` trước khi sửa mock `NzModalService` ở `list-students.component.spec.ts`):** 108/110 file passed (1131/1150 tests); 2 file fail gồm `list-students.component.spec.ts` (2 tests, đã sửa và pass 9/9 ở lượt chạy lại) và `login.component.spec.ts` (17/18 tests fail do `src/environments/environment.ts` có sẵn `googleClientId` cục bộ ngoài phạm vi phiên này).
+- **Production Build (`npm run build`):** Biên dịch thành công tại `dist/` (0 lỗi; không phát sinh cảnh báo budget mới).
+
+### 4. Lỗi/ảo giác AI đã phát hiện trong phiên
+| Mô tả | Cách phát hiện | Nguyên nhân | Commit sửa |
+|---|---|---|---|
+| Ghi đè provider `{ provide: NzModalService, useValue: { confirm } }` trong `list-students.component.spec.ts` làm `<nz-modal>` của `CsvImportModalComponent` báo lỗi `Cannot read properties of undefined (reading 'push')` | Chạy `npm run test:ci` | `NzModalComponent` nội bộ gọi `NzModalService.open()` yêu cầu thực thể `NzModalService` đầy đủ; đã sửa bằng `vi.spyOn(fixture.debugElement.injector.get(NzModalService), 'confirm')` giống `list-users.component.spec.ts` | sửa trước khi commit |
+
+- **Sinh viên đã sửa/rà soát:** _chờ sinh viên rà soát_
+- **Commit / PR:** chưa commit
+
+
+## Phiên #28: Đồng bộ ràng buộc bắt buộc `studentCode`, `fullName`, `cohort` khi Import & quản lý Sinh viên (`ADMIN`)
+
+### 1. Thông tin phiên làm việc
+- **Thời gian:** 2026-11-25
+- **Người thực hiện (`git config user.name`):** `minhat5`
+- **Sinh viên yêu cầu:** Cập nhật `StudentResponse` (`fullName: string`, `cohort: string`), hướng dẫn và cột bắt buộc trên modal "Import sinh viên mới" (cả 3 cột `studentCode`, `fullName`, `cohort` đều bắt buộc, không có `status`, mặc định `ACTIVE`), đồng bộ kiểm thử lỗi `422` thiếu cột / `errors[]` trống `fullName` hoặc `cohort`, chạy lint/test và ghi nhật ký AI.
+- **Công cụ / mô hình:** Antigravity (Gemini 4 Neon). Không thêm package.
+- **Nhánh:** `main` (chưa commit/push)
+
+### 2. Các hạng mục đã thực hiện
+1. **`src/app/core/models/student/student.model.ts`:**
+   - Đổi kiểu `fullName: string` và `cohort: string` trong `StudentResponse` (không còn nullable).
+2. **`src/app/mng/students/list-students/list-students.component.html`:**
+   - Cập nhật `guideText` và `[requiredColumns]="['studentCode', 'fullName', 'cohort']"` cho modal "Import sinh viên mới", nêu rõ cả 3 cột bắt buộc, không có cột `status`, mặc định trạng thái `ACTIVE`.
+   - Giữ fallback `{{ item.fullName || '—' }}` và `{{ item.cohort || '—' }}` trong bảng để an toàn khi hiển thị.
+3. **Unit tests & Tài liệu:**
+   - `src/app/mng/students/list-students/list-students.component.spec.ts`: cập nhật dữ liệu mẫu `stu4` sang chuỗi rỗng `''` khớp kiểu mới và cập nhật assertion kiểm tra nội dung hướng dẫn modal Import sinh viên mới.
+   - `src/app/shared/widget/csv-import-modal/csv-import-modal.component.spec.ts`: bổ sung 2 test kiểm tra hiển thị nguyên văn lỗi `422 BUSINESS_RULE_VIOLATION` khi thiếu cột bắt buộc (`fullName`, `cohort`) và lỗi từng dòng trong `errors[]` khi trống `fullName` hoặc `cohort`.
+   - `doc/API-CONTRACT.md` (§6.4a): cập nhật ghi chú 3 cột bắt buộc `studentCode,fullName,cohort`, mã lỗi `422` khi thiếu cột và `errors[]` khi trống trường.
+
+### 3. Kết quả kiểm chứng
+- **ESLint (`npm run lint`):** `All files pass linting.` (0 lỗi).
+- **Unit tests (`ng test --no-watch` trên 3 file spec liên quan):** 3/3 file passed, 28/28 tests passed (`student.service.spec.ts` 7, `csv-import-modal.component.spec.ts` 12, `list-students.component.spec.ts` 9).
+- **Production Build (`npm run build`):** Biên dịch thành công tại `dist/` (0 lỗi; không phát sinh cảnh báo budget mới).
+
+- **Sinh viên đã sửa/rà soát:** _chờ sinh viên rà soát_
+- **Commit / PR:** chưa commit
+
+
+## Phiên #29: Sửa lỗi lọc học phần theo Khoa của `PROGRAM_MANAGER` khi quay lại từ chi tiết đề cương (`ListSyllabiComponent`)
+
+### 1. Thông tin phiên làm việc
+- **Thời gian:** 2026-11-25
+- **Người thực hiện (`git config user.name`):** `minhat5`
+- **Sinh viên yêu cầu:** Khắc phục lỗi khi PM xem chi tiết đề cương rồi bấm quay lại `/mng/syllabi?courseId=...` thì combobox lọc học phần hiển thị/gọi toàn bộ môn học của trường thay vì chỉ các môn thuộc Khoa PM phụ trách.
+- **Công cụ / mô hình:** Antigravity (Gemini 4 Neon). Không thêm package.
+- **Nhánh:** `main` (chưa commit/push)
+
+### 2. Các hạng mục đã thực hiện
+1. **`src/app/mng/syllabi/list-syllabi/list-syllabi.component.ts`:**
+   - Gỡ bỏ `if (queryCourseId) { this.showAllCourses.set(true); }` trong `ngOnInit()` và không tự bật `showAllCourses` khi gõ tìm kiếm trong `onSearchCourse()`.
+   - Bổ sung `activeFacultyFilter()`, `isOutsideFaculty()` và `fetchCoursesPage()` để truyền `facultyId` vào `CourseService.getCourses(...)` khi PM đang ở chế độ lọc theo Khoa (cả khi khởi tạo, tìm kiếm, chuyển chế độ `toggleShowAllCourses()` và cuộn tải thêm `onCourseScrollToBottom()`).
+   - Khi có `?courseId=...` trong `loadInitialCatalog()`: giữ nguyên chế độ lọc theo Khoa nếu học phần thuộc Khoa của PM; chỉ tự chuyển sang `showAllCourses = true` và nạp toàn trường nếu học phần đó thuộc Khoa khác.
+   - Bỏ fallback trả về `allCourses()` trong `filteredCourses()` khi `scopedCourses()` rỗng ở chế độ lọc theo Khoa của PM.
+2. **`src/app/mng/syllabi/list-syllabi/list-syllabi.component.spec.ts`:**
+   - Bổ sung test xác nhận PM quay lại từ chi tiết đề cương với `?courseId` thuộc Khoa phụ trách vẫn gọi `getCourses(0, 100, undefined, 'fac-cntt')`, giữ `showAllCourses = false` và chỉ hiện môn của Khoa; đồng thời test ca deep link `?courseId` ngoài Khoa và `toggleShowAllCourses()`.
+
+### 3. Kết quả kiểm chứng
+- **ESLint (`npm run lint`):** `All files pass linting.` (0 lỗi).
+- **Unit tests (`ng test --no-watch --include src/app/mng/syllabi`):** 2/2 file passed, 22/22 tests passed (`list-syllabi.component.spec.ts` 17, `detail-syllabus.component.spec.ts` 5).
+- **Build (`npm run build:dev`):** Biên dịch thành công tại `dist/` (0 lỗi).
+
+- **Sinh viên đã sửa/rà soát:** _chờ sinh viên rà soát_
+- **Commit / PR:** chưa commit
+
+
+## Phiên #30: Hiển thị tổng % trọng số CLO toàn lớp khi tạo/soạn và xem độ phủ bài kiểm tra
+
+### 1. Thông tin phiên làm việc
+- **Thời gian:** 2026-11-25
+- **Người thực hiện (`git config user.name`):** `minhat5`
+- **Sinh viên yêu cầu:** Sửa lại giao diện khi tạo/soạn bài kiểm tra, lúc cần xem bài kiểm tra đó chiếm bao nhiêu CLO phải hiển thị thêm CLO đó trong toàn bộ lớp học đã chiếm tổng bao nhiêu % để giảng viên dễ dàng ước lượng tránh bị lố 100%.
+- **Công cụ / mô hình:** Antigravity (Gemini 4 Neon). Không thêm package.
+- **Nhánh:** `main` (chưa commit/push)
+
+### 2. Các hạng mục đã thực hiện
+1. **`src/app/mng/assessments/assessments.util.ts`:**
+   - Bổ sung `CLO_WEIGHT_EPSILON`, `IOtherAssessmentCloWeight`, `ISectionCloWeightSummary`, `roundWeight()`, `formatWeightPercent()`, `stackedBarWidths()` và `buildSectionCloWeightMap()` tổng hợp trọng số CLO trên toàn bộ các bài đánh giá của lớp (tách phần các bài khác, bài hiện tại, tổng dự kiến, phần còn lại hoặc phần vượt 100%, dùng `CLO_WEIGHT_EPSILON = 1e-6` tránh sai số dấu phẩy động).
+2. **`src/app/mng/assessments/detail-assessment/detail-assessment.component.{ts,html}`:**
+   - Với bài bản lớp (`scope === 'SECTION'`), gọi `AssessmentService.getSectionAssessments(sectionId)` để hiển thị dải tổng quan phân bổ toàn bộ CLO của lớp, banner cảnh báo vượt quá 100% (`role="alert"`), cột "Các bài khác trong lớp" và "Tổng toàn lớp (dự kiến)" kèm thanh tiến trình chồng và nhãn trạng thái (`Đủ 100%` / `Còn X%` / `Vượt X%`).
+   - Hỗ trợ cập nhật tức thì khi nhập/đổi trọng số, nút lưu trọng số nhanh, link sang màn hình Đối chiếu toàn lớp, và xử lý trạng thái tải/lỗi hiển thị `"—"` (không hiển thị thành `0%`).
+3. **`src/app/mng/assessments/assessment-item-modal/assessment-item-modal.component.{ts,html}`:**
+   - Bổ sung input `sectionCloTotals`, hàm `cloOptionLabel()` và `cloTotalHint()` để hiển thị ngay trong modal thêm/sửa câu hỏi xem CLO đang chọn đã chiếm tổng bao nhiêu % trong lớp (cảnh báo khi đủ hoặc vượt 100%).
+4. **`src/app/mng/assessments/review-assessment/review-assessment.component.{ts,html}`:**
+   - Ở màn hình Xem độ phủ ma trận bài đánh giá, hiển thị thêm trọng số bài này, các bài khác và tổng toàn lớp cho từng CLO cùng trạng thái `Đủ 100%` / `Còn X%` / `Vượt X%` (hoặc `"—"` khi lỗi tải).
+5. **Unit tests (`assessments.util.spec.ts`, `detail-assessment.component.spec.ts`, `assessment-item-modal.component.spec.ts`, `review-assessment.component.spec.ts`):**
+   - Bổ sung kiểm thử cho làm tròn dấu phẩy động `0.1 + 0.2 + 0.7 = 1.0`, vượt 100%, dưới 100%, phạm vi khung đề cương (`SYLLABUS_TEMPLATE`), trạng thái lỗi tải dữ liệu hiển thị `"—"`, và chuẩn hóa input `NaN`/âm.
+
+### 3. Kết quả kiểm chứng
+- **ESLint (`npm run lint`):** `All files pass linting.` (0 lỗi).
+- **Unit tests phân hệ assessments (`npx ng test --no-watch --include="src/app/mng/assessments/**/*.spec.ts"`):** 9/9 test files passed, 78/78 tests passed (`assessments.util.spec.ts` 21, `detail-assessment.component.spec.ts` 12, `assessment-item-modal.component.spec.ts` 10, `review-assessment.component.spec.ts` 5, `score-import.component.spec.ts` 12, `assessment-create-modal.component.spec.ts` 7, `import-batches.component.spec.ts` 5, `assessment-scores.component.spec.ts` 3, `list-assessments.component.spec.ts` 3).
+- **Toàn bộ unit tests (`npx ng test --no-watch`):** 109/110 file passed (1148/1165 tests pass); 1 file fail sẵn có ngoài phạm vi phiên này là `src/app/auth/login/login.component.spec.ts` (17/18 tests fail do `src/environments/environment.ts` có sẵn `googleClientId` cục bộ).
+- **Build (`npm run build:dev`):** `ng build --configuration development` thành công tại `dist/` (0 lỗi).
+
+- **Sinh viên đã sửa/rà soát:** _chờ sinh viên rà soát_
+- **Commit / PR:** chưa commit
+
+
+## Phiên #31: Đồng bộ phân trang server-side (`PageResponse`) và chuẩn hóa dropdown infinite-scroll + tìm kiếm phía server
+
+### 1. Thông tin phiên làm việc
+- **Thời gian:** 2026-11-26
+- **Người thực hiện (`git config user.name`):** `minhat5`
+- **Sinh viên yêu cầu:** Đồng bộ `LMS-UI` theo 6 endpoint phân trang mới từ `LMS-API` (`page >= 0`, `1 <= size <= 100`), xây dựng helper tái sử dụng cho `nz-select` tải từng trang nhỏ + cuộn tải thêm + tìm kiếm server-side + ghim option đang chọn, chuyển 6 màn hình bảng dữ liệu sang phân trang server-side (kèm sửa lỗi `@for` ở `assessment-scores` / `detail-section` và chuyển xuất điểm sang API server), kiểm tra toàn repo và chạy lint/test/build đạt 100%.
+- **Công cụ / mô hình:** Antigravity (Gemini 4 Neon). Không thêm package.
+- **Nhánh:** `main` (chưa commit/push)
+
+### 2. Các hạng mục đã thực hiện
+1. **Constants, Models & 7 Core Services:**
+   - `src/app/core/constants/url.constant.ts`: bổ sung `ASSESSMENT_SCORES_EXPORT`, `SECTION_ASSESSMENT_SCORES`, `SECTION_ASSESSMENT_SCORES_EXPORT`.
+   - `src/app/core/models/course/section.model.ts`: mở rộng `IEnrollmentList` thêm 5 trường phân trang (`page`, `size`, `totalElements`, `totalPages`, `last`), giữ nguyên `enrolled` và `withdrawn` toàn lớp.
+   - `src/app/core/models/measurement/analytics.model.ts`: bổ sung `page?`, `size?`, `search?` trong `IAnalyticsQuery` và `page?`, `size?`, `totalElements?`, `totalPages?`, `last?` trong `IAnalyticsMatrix`.
+   - Cập nhật 7 services trả về `IPagedResults<T>` / hỗ trợ tham số phân trang & export mới: `section.service.ts` (`getSections`), `assessment.service.ts` (`getScores`, `getSectionAssessmentScores`, `exportScores`, `exportSectionAssessmentScores`), `enrollment.service.ts` (`getEnrollments` kèm `status`, `search`, `page`, `size`), `analytics.service.ts` (`exportCsv` loại bỏ `page`/`size`), `course.service.ts` (`getProgramCourses`), `plo-pi.service.ts` (`getProgramCourses`), `term.service.ts` (`getTerms` kèm `search`, `status`, `page`, `size`).
+2. **Helper `nz-select` phân trang (`src/app/core/builder/paginated-select.builder.ts` & `.spec.ts`):**
+   - Tạo `createPaginatedSelect<T>()` với trang mặc định `size = 20`, lazy/initial load, `(nzScrollToBottom)` cuộn tải `page + 1` (khử trùng theo `id`, chặn gọi trùng), `(nzOnSearch)` debounce 300ms + `switchMap`, `reload()` khi bộ lọc cha đổi, và `syncSelected()`/`pinItems()` (bọc `untracked()` tránh vòng lặp `effect()`) giữ nhãn hiển thị của option đang chọn qua `fetchById`.
+3. **Chuẩn hóa toàn bộ Dropdown & Dashboard:**
+   - Áp dụng `createPaginatedSelect` (`size = 20`, infinite scroll, server search, selected pinning) cho `assessment-alignment`, `calculations-page`, `reports-page`, `analytics-page`, `list-sections`, `section-modal` (inject `TermService`/`CourseService` `{ optional: true }`), `list-syllabi` (gồm cả học kỳ, CTĐT và đặt `coursePageSize = 20`), `detail-syllabus` (`getTermById`), `clo-pi-matrix-table` (`CourseService` `{ optional: true }`), và cập nhật `dashboard` gọi `getSections(undefined, undefined, undefined, 0, 1)` lấy `totalElements`.
+4. **Nâng cấp 6 màn hình bảng dữ liệu sang server-side pagination:**
+   - `list-sections`: bảng `[nzFrontPagination]="false"`, `page`/`size`/`totalElements`, `codeSearch` debounce 300ms gửi lên server, bộ lọc Học kỳ & Học phần infinite scroll, hydrate tên thiếu qua `getTermById`/`getCourseById`/`getSyllabusById`.
+   - `assessment-scores`: phân trang theo **nhóm sinh viên** (`totalStudents = res.totalElements`), sửa lỗi `@for` trên `matrixTable.data` và `flatTable.data`, tìm kiếm server-side debounce 300ms, bỏ CSV build phía client chuyển sang `assessmentSvc.exportScores(id, 'csv'|'xlsx', search)`.
+   - `detail-section`: phân trang `res.enrollments` (`[nzFrontPagination]="false"`, `rosterTable.data`), giữ mẫu số toàn lớp (`enrolled`, `withdrawn`) độc lập với bộ lọc (`hasNoRoster` dựa trên `enrolled + withdrawn === 0`), thêm lọc `status` và tìm `search` (MSSV / họ tên, debounce 300ms).
+   - `analytics-page`: bổ sung `studentSearch` (debounce 300ms) và `<nz-pagination>` theo trục `columns[]`/`matrix[][]` riêng cho `dimension === 'STUDENT'`, `exportCsv()` bỏ `page`/`size` để xuất toàn bộ sinh viên.
+   - `program-courses-table`, `detail-curriculum-version`, `homepage`: `program-courses-table` phân trang server-side với `semester`/`type`/`category`/`search`; `detail-curriculum-version` đọc `totalElements` từ `ploPiSvc.getProgramCourses(vId, 0, 20)`; `homepage` dùng RxJS `expand` + `reduce` (`size = 100`) tải đủ các trang trước khi gom nhóm theo học kỳ.
+   - `list-courses` (tab Học kỳ): phân trang server-side kèm ô `termSearch` (debounce 300ms) và lọc `termStatusFilter` (`OPEN`/`SCORE_LOCKED`/`CLOSED`).
+5. **Unit tests:**
+   - Thêm mới `paginated-select.builder.spec.ts` (6 tests) và cập nhật toàn bộ 7 service specs + 14 component specs bị ảnh hưởng.
+
+### 3. Kết quả kiểm chứng
+- **Quét toàn repo (`Select-String` trên `src/`):** 0 chỗ còn đọc `getSections`, `getTerms`, `getScores`, `getProgramCourses` trực tiếp dạng mảng `T[]`; 0 dropdown dùng `size = 100`.
+- **ESLint (`npm run lint`):** `All files pass linting.` (0 lỗi).
+- **Unit tests (`npx ng test --no-watch --exclude=src/app/auth/login/login.component.spec.ts`):** 110/110 file passed, 1156/1156 tests passed (ngoại trừ `src/app/auth/login/login.component.spec.ts` được exclude vì lỗi `googleClientId` có sẵn trong `src/environments/environment.ts` cục bộ).
+- **Production Build (`npm run build`):** Biên dịch thành công tại `dist/` (0 lỗi; giữ nguyên 2 cảnh báo budget sẵn có của initial bundle 2.06 MB / 2.00 MB và `list-faculties.component.css` 4.20 kB / 4.00 kB).
+
+### 4. Lỗi/ảo giác AI đã phát hiện trong phiên
+| Mô tả | Cách phát hiện | Nguyên nhân | Commit sửa |
+|---|---|---|---|
+| Gọi `syncSelected(id)` bên trong `effect()` của `AssessmentAlignmentComponent` gây vòng lặp vô tận khi `loadInitial()` cập nhật `items()`/`pinned()` | Chạy `assessment-alignment.component.spec.ts` bị treo | `syncSelected()` đọc `pinned()` và `items()` rồi gọi `pinned.set(...)` khiến `effect()` tự đăng ký phụ thuộc và chạy lại liên tục | đã bọc `untracked()` ở cả `AssessmentAlignmentComponent` và trong `syncSelected()` của `paginated-select.builder.ts` |
+| `AssessmentScoresComponent` và `CloPiMatrixTableComponent` dùng `inject(..., { optional: true })` với service `providedIn: 'root'` nhưng Angular vẫn tạo real service trong unit test | Chạy unit test báo lỗi `NG0201 No provider for ToastConfig` / gọi real `HttpClient` | `optional: true` chỉ bỏ qua khi service không có `providedIn: 'root'`; với root service cần mock provider trong spec hoặc fallback an toàn | đã bổ sung mock `ToastrService` / `CourseService` trong spec và fallback `courseOptions` |
+
+- **Sinh viên đã sửa/rà soát:** _chờ sinh viên rà soát_
+- **Commit / PR:** chưa commit
+
+
+## Phiên #32: Bỏ thanh tab "Học kỳ" ở màn hình Lớp học phần (`ListSectionsComponent`)
+
+### 1. Thông tin phiên làm việc
+- **Thời gian:** 2026-11-26
+- **Người thực hiện (`git config user.name`):** `minhat5`
+- **Sinh viên yêu cầu:** Bỏ tab Học kỳ ở màn hình Lớp học phần.
+- **Công cụ / mô hình:** Antigravity (Gemini 4 Neon). Không thêm package.
+- **Nhánh:** `main` (chưa commit/push)
+
+### 2. Các hạng mục đã thực hiện
+1. **`src/app/mng/sections/list-sections/list-sections.component.html`:**
+   - Xóa thanh tab `<nav class="mt-4 flex gap-1 border-b border-slate-300" aria-label="Lớp học">` chứa 2 liên kết `Lớp học phần` và `Học kỳ` (vẫn giữ nguyên bộ lọc học kỳ `termFilter` trên thanh lọc).
+2. **`src/app/mng/sections/list-sections/list-sections.component.ts`:**
+   - Xóa import `ACADEMIC_TERMS_TAB_QUERY` và thuộc tính `termsTabQuery` không còn sử dụng.
+3. **`src/app/mng/sections/list-sections/list-sections.component.spec.ts`:**
+   - Bổ sung assertion xác nhận không còn render `<nav aria-label="Lớp học">`.
+
+### 3. Kết quả kiểm chứng
+- **ESLint (`npx eslint` trên 3 file `list-sections.component.*`):** 0 lỗi.
+- **Unit tests (`npx ng test --no-watch --include=src/app/mng/sections/list-sections/list-sections.component.spec.ts`):** 1/1 file passed, 13/13 tests passed.
+- **Build (`npm run build:dev`):** `ng build --configuration development` thành công tại `dist/` (0 lỗi).
+
+- **Sinh viên đã sửa/rà soát:** _chờ sinh viên rà soát_
+- **Commit / PR:** chưa commit

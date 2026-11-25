@@ -1,7 +1,8 @@
-import { IAssessmentItem } from '@models/assessment/assessment.model';
+import { IAssessment, IAssessmentItem } from '@models/assessment/assessment.model';
 import {
-  cleanOptional, describeMappings, formatNumber, hasDuplicates, isStructureEditable, lockHints, lockReason, meterWidth,
-  nextItemCode, renumber, sumCloWeights, sumItemMaxScores, sumOutcomeScores,
+  buildSectionCloWeightMap, cleanOptional, describeMappings, formatNumber, formatWeightPercent, hasDuplicates,
+  isStructureEditable, lockHints, lockReason, meterWidth, nextItemCode, renumber, stackedBarWidths, sumCloWeights,
+  sumItemMaxScores, sumOutcomeScores,
 } from './assessments.util';
 
 /** DỮ LIỆU THỬ NGHIỆM: mã câu và CLO giả. */
@@ -130,5 +131,89 @@ describe('assessments.util (F04, ADR 0014)', () => {
     expect(cleanOptional('  chủ đề  ')).toBe('chủ đề');
     expect(cleanOptional('   ')).toBeUndefined();
     expect(cleanOptional(null)).toBeUndefined();
+  });
+
+  describe('formatWeightPercent & stackedBarWidths', () => {
+    it('định dạng trọng số thành phần trăm Việt Nam và xử lý thiếu dữ liệu', () => {
+      expect(formatWeightPercent(0.5)).toBe('50%');
+      expect(formatWeightPercent(0.125)).toBe('12,5%');
+      expect(formatWeightPercent(1.1)).toBe('110%');
+      expect(formatWeightPercent(null)).toBe('—');
+      expect(formatWeightPercent(undefined)).toBe('—');
+      expect(formatWeightPercent(Number.NaN)).toBe('—');
+    });
+
+    it('stackedBarWidths kẹp tổng bề rộng trong 0–100%', () => {
+      expect(stackedBarWidths(0.3, 0.25)).toEqual({ otherPct: 30, currentPct: 25 });
+      expect(stackedBarWidths(0.6, 0.4)).toEqual({ otherPct: 60, currentPct: 40 });
+      expect(stackedBarWidths(0.7, 0.5)).toEqual({ otherPct: 70, currentPct: 30 });
+      expect(stackedBarWidths(-0.1, Number.NaN)).toEqual({ otherPct: 0, currentPct: 0 });
+    });
+  });
+
+  describe('buildSectionCloWeightMap (tổng hợp CLO toàn lớp)', () => {
+    const makeAssessment = (
+      id: string,
+      code: string,
+      cloWeights: { cloId: string; weight: number; }[],
+    ): IAssessment => ({
+      id,
+      syllabusId: 'syl1',
+      sectionId: 'sec1',
+      code,
+      name: `Bài ${code}`,
+      scope: 'SECTION',
+      status: 'LOCKED',
+      locked: true,
+      cloWeights,
+      items: [],
+    });
+
+    it('loại trừ bài hiện tại, xử lý đúng sai số dấu phẩy động 0.1+0.2+0.7=1.0 và vượt 100%', () => {
+      const assessments: IAssessment[] = [
+        makeAssessment('a1', 'CK', [{ cloId: 'clo1', weight: 0.9 }]),
+        makeAssessment('a2', 'GK', [{ cloId: 'clo1', weight: 0.1 }, { cloId: 'clo2', weight: 0.6 }]),
+        makeAssessment('a3', 'TH', [{ cloId: 'clo1', weight: 0.2 }]),
+      ];
+      const map = buildSectionCloWeightMap(
+        assessments,
+        'a1',
+        [
+          { cloId: 'clo1', weight: 0.7 },
+          { cloId: 'clo2', weight: 0.5 },
+          { cloId: 'clo3', weight: 0.3 },
+        ],
+        ['clo1', 'clo2', 'clo3', 'clo4'],
+      );
+
+      const c1 = map.get('clo1')!;
+      expect(c1.otherWeight).toBe(0.3);
+      expect(c1.currentWeight).toBe(0.7);
+      expect(c1.totalWeight).toBe(1);
+      expect(c1.remainingWeight).toBe(0);
+      expect(c1.excessWeight).toBe(0);
+      expect(c1.status).toBe('EXACT');
+      expect(c1.otherAssessments.map(o => o.assessmentCode)).toEqual(['GK', 'TH']);
+
+      const c2 = map.get('clo2')!;
+      expect(c2.otherWeight).toBe(0.6);
+      expect(c2.currentWeight).toBe(0.5);
+      expect(c2.totalWeight).toBe(1.1);
+      expect(c2.remainingWeight).toBe(0);
+      expect(c2.excessWeight).toBe(0.1);
+      expect(c2.status).toBe('OVER');
+
+      const c3 = map.get('clo3')!;
+      expect(c3.otherWeight).toBe(0);
+      expect(c3.currentWeight).toBe(0.3);
+      expect(c3.totalWeight).toBe(0.3);
+      expect(c3.remainingWeight).toBe(0.7);
+      expect(c3.status).toBe('UNDER');
+
+      const c4 = map.get('clo4')!;
+      expect(c4.totalWeight).toBe(0);
+      expect(c4.remainingWeight).toBe(1);
+      expect(c4.status).toBe('UNDER');
+    });
   });
 });

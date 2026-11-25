@@ -1,5 +1,6 @@
 import { DatePipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { createListManagerNoFilter } from '@builder/list-mng-no-filter.builder';
@@ -15,8 +16,10 @@ import { StatusChipComponent } from '@widget/status-chip/status-chip.component';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzModalModule, NzModalService } from 'ng-zorro-antd/modal';
+import { NzSelectModule } from 'ng-zorro-antd/select';
 import { NzTableModule } from 'ng-zorro-antd/table';
 import { ToastrService } from 'ngx-toastr';
+import { debounceTime, distinctUntilChanged, map, Subject } from 'rxjs';
 import { CourseImportModalComponent } from '../course-import-modal/course-import-modal.component';
 import { CourseModalComponent } from '../course-modal/course-modal.component';
 import { TermModalComponent } from '../term-modal/term-modal.component';
@@ -34,6 +37,7 @@ import { TermModalComponent } from '../term-modal/term-modal.component';
     NzButtonModule,
     NzInputModule,
     NzModalModule,
+    NzSelectModule,
     TablePaginateComponent,
     StatusChipComponent,
     CourseModalComponent,
@@ -42,6 +46,7 @@ import { TermModalComponent } from '../term-modal/term-modal.component';
   ],
 })
 export class ListCoursesComponent implements OnInit {
+  private readonly destroyRef = inject(DestroyRef);
   private readonly courseSvc = inject(CourseService);
   private readonly termSvc = inject(TermService);
   private readonly authSvc = inject(AuthService);
@@ -85,10 +90,16 @@ export class ListCoursesComponent implements OnInit {
 
   /** Danh sách Học kỳ (F05a) */
   readonly terms = signal<ITerm[]>([]);
+  readonly termPage = signal(0);
+  readonly termSize = signal(20);
+  readonly termTotalElements = signal(0);
+  readonly termSearch = signal('');
+  readonly termStatusFilter = signal<TermStatus | null>(null);
   readonly isTermsLoading = signal(false);
   readonly hasTermsError = signal(false);
   readonly isTermModalVisible = signal(false);
   readonly editingTerm = signal<ITerm | null>(null);
+  private readonly termSearchSubject$ = new Subject<string>();
 
   /** Modal nhập lý do mở lại học kỳ SCORE_LOCKED -> OPEN (US-18/AC-3) */
   readonly isReopenModalVisible = signal(false);
@@ -102,6 +113,19 @@ export class ListCoursesComponent implements OnInit {
       this.activeTab.set('TERMS');
     }
     this.userRoles.set(this.authSvc.getRoles());
+
+    this.termSearchSubject$
+      .pipe(
+        map(q => q.trim()),
+        debounceTime(300),
+        distinctUntilChanged(),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe(() => {
+        this.termPage.set(0);
+        this.loadTerms();
+      });
+
     this.loadTerms();
   }
 
@@ -165,16 +189,47 @@ export class ListCoursesComponent implements OnInit {
   loadTerms(): void {
     this.isTermsLoading.set(true);
     this.hasTermsError.set(false);
-    this.termSvc.getTerms().subscribe({
-      next: list => {
+    this.termSvc.getTerms(
+      this.termSearch().trim() || undefined,
+      this.termStatusFilter() ?? undefined,
+      this.termPage(),
+      this.termSize(),
+    ).subscribe({
+      next: res => {
+        const list = res.content ?? [];
         this.isTermsLoading.set(false);
-        this.terms.set(list || []);
+        this.terms.set(list);
+        this.termTotalElements.set(res.totalElements ?? list.length);
+        this.termPage.set(res.page ?? this.termPage());
+        this.termSize.set(res.size ?? this.termSize());
       },
       error: () => {
         this.isTermsLoading.set(false);
         this.hasTermsError.set(true);
       },
     });
+  }
+
+  onTermSearchChange(keyword: string): void {
+    this.termSearch.set(keyword);
+    this.termSearchSubject$.next(keyword);
+  }
+
+  onTermStatusFilterChange(status: TermStatus | null): void {
+    this.termStatusFilter.set(status);
+    this.termPage.set(0);
+    this.loadTerms();
+  }
+
+  onTermPageIndexChange(page1Indexed: number): void {
+    this.termPage.set(Math.max(0, page1Indexed - 1));
+    this.loadTerms();
+  }
+
+  onTermPageSizeChange(newSize: number): void {
+    this.termSize.set(newSize);
+    this.termPage.set(0);
+    this.loadTerms();
   }
 
   openCreateTermModal(): void {

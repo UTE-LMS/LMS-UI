@@ -40,6 +40,34 @@
                 <div class="mt-1 h-2.5 w-full overflow-hidden rounded bg-slate-100">
                   <div class="h-full bg-blue-600 transition-all" [style.width]="meterWidth(row.percentage)"></div>
                 </div>
+                @if (isSectionScope()) {
+                  @if (sectionCloWeightMap()?.get(row.cloId); as summary) {
+                    <div class="mt-1.5 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-600">
+                      <span>
+                        Trọng số bài này: <strong class="text-slate-800">{{ formatWeightPercent(summary.currentWeight) }}</strong>
+                        · Các bài khác: <strong class="text-slate-800">{{ formatWeightPercent(summary.otherWeight) }}</strong>
+                        · Tổng toàn lớp: <strong class="text-slate-900">{{ formatWeightPercent(summary.totalWeight) }}</strong>
+                      </span>
+                      @if (summary.status === 'OVER') {
+                        <span class="inline-flex items-center gap-1 rounded border border-[#d9a0a6] bg-[#fdf2f3] px-1.5 py-0.5 font-medium text-[#8c2f39]">
+                          <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>Vượt {{ formatWeightPercent(summary.excessWeight) }}
+                        </span>
+                      } @else if (summary.status === 'EXACT') {
+                        <span class="inline-flex items-center gap-1 rounded border border-emerald-300 bg-emerald-50 px-1.5 py-0.5 font-medium text-emerald-800">
+                          <i class="fa-solid fa-circle-check" aria-hidden="true"></i>Đủ 100%
+                        </span>
+                      } @else {
+                        <span class="inline-flex items-center gap-1 rounded border border-slate-300 bg-slate-100 px-1.5 py-0.5 font-medium text-slate-700">
+                          Còn {{ formatWeightPercent(summary.remainingWeight) }}
+                        </span>
+                      }
+                    </div>
+                  } @else if (sectionAssessmentsError()) {
+                    <p class="m-0 mt-1 text-xs text-slate-500">
+                      Trọng số toàn lớp: — (không tải được dữ liệu các bài khác)
+                    </p>
+                  }
+                }
               </div>
             } @empty {
               <p class="text-xs text-slate-400">Chưa có câu hỏi nào được gán CLO.</p>

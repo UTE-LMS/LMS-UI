@@ -12,20 +12,33 @@
     </div>
     <app-test-data-flag />
     <span class="flex-1"></span>
-    @if (sections().length > 0) {
+    @if (sectionSelect.options().length > 0 || sectionSelect.initialized() || sectionSelect.loading()) {
       <div class="flex items-center gap-2">
         <label class="text-sm font-medium text-slate-700" for="alignSectionSelect">Chọn lớp:</label>
         <nz-select
           nzId="alignSectionSelect"
           class="w-56"
           nzShowSearch
+          [nzServerSearch]="true"
+          [nzLoading]="sectionSelect.loading()"
+          [nzDropdownRender]="sectionFooterTpl"
           [ngModel]="sectionId()"
+          (nzOpenChange)="sectionSelect.onOpenChange($event)"
+          (nzOnSearch)="sectionSelect.onSearch($event)"
+          (nzScrollToBottom)="sectionSelect.loadMore()"
           (ngModelChange)="onSectionChange($event)"
         >
-          @for (sec of sections(); track sec.id) {
+          @for (sec of sectionSelect.options(); track sec.id) {
             <nz-option [nzValue]="sec.id" [nzLabel]="sec.code" />
           }
         </nz-select>
+        <ng-template #sectionFooterTpl>
+          @if (sectionSelect.loadingMore()) {
+            <div class="px-3 py-2 text-center text-xs text-slate-500">
+              <nz-spin nzSimple nzSize="small" class="mr-1.5" />Đang tải thêm...
+            </div>
+          }
+        </ng-template>
       </div>
     }
     <a nz-button [routerLink]="urlConst.ASSESSMENTS_OF_SECTION(sectionId())">Danh sách bài đánh giá</a>

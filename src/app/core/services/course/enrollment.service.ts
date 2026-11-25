@@ -23,10 +23,22 @@ import { ImportTemplateFormat, templateRequestParams } from '@services/common/im
 export class EnrollmentService {
   private readonly http = inject(HttpClient);
 
-  getEnrollments(sectionId: string, status?: EnrollmentStatus): Observable<IEnrollmentList> {
-    let params = new HttpParams();
+  getEnrollments(
+    sectionId: string,
+    status?: EnrollmentStatus,
+    search?: string,
+    page = 0,
+    size = 20,
+  ): Observable<IEnrollmentList> {
+    let params = new HttpParams()
+      .set('page', page.toString())
+      .set('size', size.toString());
     if (status) {
       params = params.set('status', status);
+    }
+    const trimmed = search?.trim();
+    if (trimmed) {
+      params = params.set('search', trimmed);
     }
     return this.http.get<IEnrollmentList>(UrlConstant.API.SECTION_ENROLLMENTS(sectionId), {
       params,

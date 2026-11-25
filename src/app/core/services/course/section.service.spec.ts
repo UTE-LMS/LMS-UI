@@ -20,35 +20,60 @@ describe('SectionService (F05a US-19)', () => {
 
   afterEach(() => http.verify());
 
-  it('US-19/AC-4: getSections không lọc thì gọi GET /sections không có query', () => {
-    service.getSections().subscribe();
+  it('US-19/AC-4: getSections mặc định gửi page=0, size=20 khi không lọc và trả PageResponse', () => {
+    service.getSections().subscribe(res => {
+      expect(res.totalElements).toBe(0);
+      expect(res.content).toEqual([]);
+    });
     const req = http.expectOne(r => r.url === UrlConstant.API.SECTIONS);
     expect(req.request.method).toBe('GET');
-    expect(req.request.params.keys()).toEqual([]);
+    expect(req.request.params.get('page')).toBe('0');
+    expect(req.request.params.get('size')).toBe('20');
+    expect(req.request.params.has('termId')).toBe(false);
+    expect(req.request.params.has('courseId')).toBe(false);
+    expect(req.request.params.has('search')).toBe(false);
     expect(req.request.context.get(INLINE_ERRORS)).toBe(true);
-    req.flush([]);
+    req.flush({ content: [], page: 0, size: 20, totalElements: 0, totalPages: 0, last: true });
   });
 
-  it('getSections gửi termId và courseId làm query khi có lọc', () => {
-    service.getSections('t1', 'c1').subscribe();
+  it('getSections gửi termId, courseId, search (đã trim), page và size khi có lọc', () => {
+    service.getSections('t1', 'c1', '  LOP01 ', 1, 50).subscribe();
     const req = http.expectOne(r => r.url === UrlConstant.API.SECTIONS);
     expect(req.request.params.get('termId')).toBe('t1');
     expect(req.request.params.get('courseId')).toBe('c1');
-    req.flush([]);
+    expect(req.request.params.get('search')).toBe('LOP01');
+    expect(req.request.params.get('page')).toBe('1');
+    expect(req.request.params.get('size')).toBe('50');
+    req.flush({ content: [], page: 1, size: 50, totalElements: 0, totalPages: 0, last: true });
   });
 
   it('getSections bỏ qua bộ lọc rỗng (chuỗi rỗng không thành query)', () => {
-    service.getSections('', undefined).subscribe();
+    service.getSections('', undefined, '   ').subscribe();
     const req = http.expectOne(r => r.url === UrlConstant.API.SECTIONS);
-    expect(req.request.params.keys()).toEqual([]);
-    req.flush([]);
+    expect(req.request.params.keys()).toEqual(['page', 'size']);
+    req.flush({ content: [], page: 0, size: 20, totalElements: 0, totalPages: 0, last: true });
   });
 
-  it('getSection gọi GET /sections/{id}', () => {
-    service.getSection(sectionId).subscribe();
+  it('getSection gọi GET /sections/{id} và nhận lecturers nạp sẵn từ SectionResponse', () => {
+    let actual: unknown = null;
+    service.getSection(sectionId).subscribe(res => {
+      actual = res;
+    });
     const req = http.expectOne(UrlConstant.API.SECTION_DETAIL(sectionId));
     expect(req.request.method).toBe('GET');
-    req.flush({});
+    const mockSection = {
+      id: sectionId,
+      code: 'TEST101-01',
+      courseId: 'c1',
+      syllabusId: 's1',
+      termId: 't1',
+      lecturerIds: ['u1'],
+      lecturers: [{ id: 'u1', username: 'gv1', fullName: 'Nguyễn Văn A' }],
+      enrolledCount: 10,
+      status: 'OPEN',
+    };
+    req.flush(mockSection);
+    expect(actual).toEqual(mockSection);
   });
 
   it('US-19/AC-1: createSection gửi đúng body qua POST /sections', () => {

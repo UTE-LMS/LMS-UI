@@ -1,8 +1,10 @@
-import { ChangeDetectionStrategy, Component, computed, inject, OnInit, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, DestroyRef, inject, OnInit, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
+import { createPaginatedSelect } from '@builder/paginated-select.builder';
 import {
-  ACADEMIC_TERMS_TAB_QUERY, SECTION_STATUS_DISPLAY, SYLLABUS_STATUS_DISPLAY,
+  SECTION_STATUS_DISPLAY, SYLLABUS_STATUS_DISPLAY,
 } from '@constants/academic-display.constant';
 import { SystemConstant } from '@constants/system.constant';
 import { UrlConstant } from '@constants/url.constant';
@@ -19,7 +21,6 @@ import { EnrollmentService } from '@services/course/enrollment.service';
 import { SectionService } from '@services/course/section.service';
 import { SyllabusService } from '@services/course/syllabus.service';
 import { TermService } from '@services/course/term.service';
-import { UserService } from '@services/user/user.service';
 import { ImportTemplateFormat } from '@services/common/import-file.util';
 import { CsvImportModalComponent } from '@widget/csv-import-modal/csv-import-modal.component';
 import { DisplayChipComponent } from '@widget/display-chip/display-chip.component';
@@ -27,50 +28,67 @@ import { ErrorStateComponent } from '@widget/error-state/error-state.component';
 import { TestDataFlagComponent } from '@widget/test-data-flag/test-data-flag.component';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzSelectModule } from 'ng-zorro-antd/select';
+import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzTableModule } from 'ng-zorro-antd/table';
-import { catchError, forkJoin, map, Observable, of } from 'rxjs';
+import { catchError, debounceTime, distinctUntilChanged, EMPTY, forkJoin, map, Observable, of, Subject } from 'rxjs';
 import { SectionModalComponent } from '../section-modal/section-modal.component';
-import { displayEnrolledCount, sectionLecturersText, userDisplayName } from '../sections.util';
+import { displayEnrolledCount, sectionLecturersText } from '../sections.util';
 
 /**
  * Danh sách lớp học phần (F05a US-19). Giảng viên chỉ thấy lớp mình phụ trách: do API lọc, UI không tự lọc quyền.
- * Backend chỉ trả ID của học phần, đề cương, giảng viên nên màn hình tra thêm tên/phiên bản để hiển thị.
+ * Tên giảng viên hiển thị trực tiếp từ `section.lecturers` do backend nạp sẵn; danh sách giảng viên ACTIVE chỉ tải cho ADMIN/PROGRAM_MANAGER khi mở hoặc sửa lớp.
  */
 @Component({
   selector: 'app-list-sections',
   templateUrl: './list-sections.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
-    FormsModule, RouterLink, NzTableModule, NzButtonModule, NzSelectModule,
+    FormsModule, RouterLink, NzTableModule, NzButtonModule, NzSelectModule, NzSpinModule,
     CsvImportModalComponent, DisplayChipComponent, ErrorStateComponent, TestDataFlagComponent, SectionModalComponent,
   ],
 })
 export class ListSectionsComponent implements OnInit {
+  private readonly destroyRef = inject(DestroyRef);
   private readonly sectionSvc = inject(SectionService);
   private readonly enrollmentSvc = inject(EnrollmentService);
   private readonly termSvc = inject(TermService);
   private readonly courseSvc = inject(CourseService);
   private readonly syllabusSvc = inject(SyllabusService);
-  private readonly userSvc = inject(UserService);
   private readonly authSvc = inject(AuthService);
 
   protected readonly urlConst = UrlConstant.ROUTE.MANAGEMENT;
-  protected readonly termsTabQuery = ACADEMIC_TERMS_TAB_QUERY;
   protected readonly sectionStatusDisplay = SECTION_STATUS_DISPLAY;
   protected readonly syllabusStatusDisplay = SYLLABUS_STATUS_DISPLAY;
 
   readonly roles = signal<string[]>([]);
   readonly currentUserId = signal('');
   readonly currentUserName = signal('');
-  readonly terms = signal<ITerm[]>([]);
-  readonly courses = signal<ICourse[]>([]);
+  readonly termCache = signal<ReadonlyMap<string, ITerm>>(new Map());
+  readonly courseCache = signal<ReadonlyMap<string, ICourse>>(new Map());
   readonly syllabi = signal<ReadonlyMap<string, ISyllabus>>(new Map());
-  readonly users = signal<IUser[]>([]);
+  readonly lecturers = signal<IUser[]>([]);
   readonly sections = signal<ISection[]>([]);
 
   readonly termFilter = signal<string | null>(null);
   readonly courseFilter = signal<string | null>(null);
   readonly codeSearch = signal('');
+  readonly page = signal(0);
+  readonly size = signal(20);
+  readonly totalElements = signal(0);
+
+  readonly termSelect = createPaginatedSelect<ITerm>({
+    fetchPage: ({ page, size, search }) => this.termSvc.getTerms(search, undefined, page, size),
+    getId: t => t.id,
+    fetchById: id => (this.termSvc.getTermById ? this.termSvc.getTermById(id) : EMPTY),
+  });
+
+  readonly courseSelect = createPaginatedSelect<ICourse>({
+    fetchPage: ({ page, size, search }) => this.courseSvc.getCourses(page, size, search),
+    getId: c => c.id,
+    fetchById: id => (this.courseSvc.getCourseById ? this.courseSvc.getCourseById(id) : EMPTY),
+  });
+
+  private readonly searchSubject$ = new Subject<string>();
 
   readonly isLoading = signal(false);
   readonly loadError = signal<IUserError | null>(null);
@@ -103,50 +121,47 @@ export class ListSectionsComponent implements OnInit {
       : base;
   });
 
-  readonly bulkEnrollmentGuideText = 'Các cột: sectionCode, studentCode, cohort. Dùng để ghi danh hàng loạt nhiều lớp học phần.';
+  readonly bulkEnrollmentGuideText
+    = 'Các cột: sectionCode, studentCode, cohort. Sinh viên phải đã được ADMIN import vào hệ thống và đang ở trạng thái ACTIVE (Đang học); các dòng có studentCode chưa tồn tại hoặc ở trạng thái SUSPENDED / GRADUATED / DROPPED_OUT sẽ bị báo lỗi và không được ghi danh.';
 
   readonly downloadSectionTemplateFn = (format: ImportTemplateFormat) => this.sectionSvc.downloadImportTemplate(format);
   readonly importSectionsFn = (file: File) => this.sectionSvc.importSections(file);
   readonly downloadBulkEnrollmentTemplateFn = (format: ImportTemplateFormat) => this.enrollmentSvc.downloadBulkImportTemplate(format);
   readonly importBulkEnrollmentsFn = (file: File) => this.enrollmentSvc.importEnrollmentsBulk(file);
 
-  readonly lecturerNames = computed<ReadonlyMap<string, string>>(
-    () => new Map(this.users().map(user => [user.id, userDisplayName(user)])),
-  );
-
   /** Giảng viên chọn được khi mở lớp: người dùng LECTURER đang ACTIVE. */
-  readonly lecturerOptions = computed(() => this.users().filter(user => user.status === 'ACTIVE' && user.roles.includes(SystemConstant.ROLE.LECTURER)));
+  readonly lecturerOptions = computed(() => this.lecturers().filter(user => user.status === 'ACTIVE' && user.roles.includes(SystemConstant.ROLE.LECTURER)));
 
   readonly lecturerListAvailable = signal(false);
-
-  /** Lọc theo mã lớp chỉ để hiển thị (không gọi lại API). */
-  readonly visibleSections = computed(() => {
-    const needle = this.codeSearch().trim().toLowerCase();
-    return needle ? this.sections().filter(s => s.code.toLowerCase().includes(needle)) : this.sections();
-  });
 
   ngOnInit(): void {
     this.roles.set(this.authSvc.getRoles());
     this.currentUserId.set(this.authSvc.getUserId());
     this.currentUserName.set(this.authSvc.getNameOfLogin?.() ?? '');
+
+    this.searchSubject$
+      .pipe(
+        map(q => q.trim()),
+        debounceTime(300),
+        distinctUntilChanged(),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe(() => {
+        this.page.set(0);
+        this.loadSections();
+      });
+
     this.loadCatalogs();
     this.loadSections();
   }
 
   loadCatalogs(): void {
-    this.termSvc.getTerms().pipe(catchError(() => of([] as ITerm[]))).subscribe(list => this.terms.set(list ?? []));
-    this.courseSvc.getCourses(0, 100).pipe(catchError(() => of(null))).subscribe(page => this.courses.set(page?.content ?? []));
-    if (this.roles().includes(SystemConstant.ROLE.ADMIN)) {
-      this.userSvc.filter(0, 100).pipe(catchError(() => of(null))).subscribe(page => {
-        this.mergeUsers(page?.content ?? []);
-        this.lecturerListAvailable.set(page !== null);
-      });
-    } else if (typeof this.sectionSvc.getLecturers === 'function') {
-      this.sectionSvc.getLecturers().pipe(catchError(() => of([] as IUser[]))).subscribe(list => {
-        this.mergeUsers(list);
-        if (list.length > 0 && this.canCreate()) {
-          this.lecturerListAvailable.set(true);
-        }
+    this.termSelect.loadInitial();
+    this.courseSelect.loadInitial();
+    if (this.canCreate() && typeof this.sectionSvc.getLecturers === 'function') {
+      this.sectionSvc.getLecturers().pipe(catchError(() => of(null))).subscribe(list => {
+        this.lecturers.set(list ?? []);
+        this.lecturerListAvailable.set(list !== null);
       });
     }
   }
@@ -154,11 +169,21 @@ export class ListSectionsComponent implements OnInit {
   loadSections(): void {
     this.isLoading.set(true);
     this.loadError.set(null);
-    this.sectionSvc.getSections(this.termFilter() ?? undefined, this.courseFilter() ?? undefined).subscribe({
-      next: list => {
-        this.sections.set(list ?? []);
+    this.sectionSvc.getSections(
+      this.termFilter() ?? undefined,
+      this.courseFilter() ?? undefined,
+      this.codeSearch().trim() || undefined,
+      this.page(),
+      this.size(),
+    ).subscribe({
+      next: res => {
+        const list = res.content ?? [];
+        this.sections.set(list);
+        this.totalElements.set(res.totalElements ?? list.length);
+        this.page.set(res.page ?? this.page());
+        this.size.set(res.size ?? this.size());
         this.isLoading.set(false);
-        this.hydrateReferences(list ?? []);
+        this.hydrateReferences(list);
       },
       error: err => {
         this.isLoading.set(false);
@@ -167,16 +192,45 @@ export class ListSectionsComponent implements OnInit {
     });
   }
 
-  applyFilters(): void {
+  onTermFilterChange(termId: string | null): void {
+    this.termFilter.set(termId);
+    this.termSelect.syncSelected(termId);
+    this.page.set(0);
+    this.loadSections();
+  }
+
+  onCourseFilterChange(courseId: string | null): void {
+    this.courseFilter.set(courseId);
+    this.courseSelect.syncSelected(courseId);
+    this.page.set(0);
+    this.loadSections();
+  }
+
+  onCodeSearchChange(keyword: string): void {
+    this.codeSearch.set(keyword);
+    this.searchSubject$.next(keyword);
+  }
+
+  onPageIndexChange(page1Indexed: number): void {
+    this.page.set(Math.max(0, page1Indexed - 1));
+    this.loadSections();
+  }
+
+  onPageSizeChange(newSize: number): void {
+    this.size.set(newSize);
+    this.page.set(0);
     this.loadSections();
   }
 
   termCode(termId: string): string {
-    return this.terms().find(t => t.id === termId)?.code ?? '—';
+    return this.termSelect.options().find(t => t.id === termId)?.code
+      ?? this.termCache().get(termId)?.code
+      ?? '—';
   }
 
   courseOf(courseId: string): ICourse | undefined {
-    return this.courses().find(c => c.id === courseId);
+    return this.courseSelect.options().find(c => c.id === courseId)
+      ?? this.courseCache().get(courseId);
   }
 
   syllabusOf(syllabusId: string): ISyllabus | undefined {
@@ -188,43 +242,41 @@ export class ListSectionsComponent implements OnInit {
   }
 
   lecturersText(section: ISection): string {
-    return sectionLecturersText(section, this.lecturerNames(), this.currentUserId(), this.currentUserName());
+    return sectionLecturersText(section, this.currentUserId(), this.currentUserName());
   }
 
   onSaved(): void {
     this.loadSections();
   }
 
-  /** Tra thêm các học phần/đề cương/giảng viên chưa có trong danh mục đã tải. */
+  /** Tra thêm các học kỳ/học phần/đề cương chưa có trong bộ nhớ đệm. */
   private hydrateReferences(list: ISection[]): void {
+    const missingTermIds = [...new Set(list.map(s => s.termId))].filter(
+      id => !this.termSelect.options().some(t => t.id === id) && !this.termCache().has(id),
+    );
+    if (missingTermIds.length > 0 && typeof this.termSvc.getTermById === 'function') {
+      this.fetchAll(missingTermIds.map(id => this.termSvc.getTermById(id))).subscribe(found => {
+        if (found.length > 0) {
+          this.termCache.update(current => new Map([...current, ...found.map(t => [t.id, t] as const)]));
+        }
+      });
+    }
     const missingCourseIds = [...new Set(list.map(s => s.courseId))].filter(id => !this.courseOf(id));
     if (missingCourseIds.length > 0) {
-      this.fetchAll(missingCourseIds.map(id => this.courseSvc.getCourseById(id))).subscribe(found => this.courses.update(current => [...current, ...found]));
+      this.fetchAll(missingCourseIds.map(id => this.courseSvc.getCourseById(id))).subscribe(found => {
+        if (found.length > 0) {
+          this.courseCache.update(current => new Map([...current, ...found.map(c => [c.id, c] as const)]));
+        }
+      });
     }
     const syllabusIds = [...new Set(list.map(s => s.syllabusId))].filter(id => !this.syllabi().has(id));
     if (syllabusIds.length > 0) {
-      this.fetchAll(syllabusIds.map(id => this.syllabusSvc.getSyllabusById(id))).subscribe(found => this.syllabi.update(current => new Map([...current, ...found.map(s => [s.id, s] as const)])));
+      this.fetchAll(syllabusIds.map(id => this.syllabusSvc.getSyllabusById(id))).subscribe(found => {
+        if (found.length > 0) {
+          this.syllabi.update(current => new Map([...current, ...found.map(s => [s.id, s] as const)]));
+        }
+      });
     }
-    if (this.roles().includes(SystemConstant.ROLE.ADMIN) && typeof this.userSvc.getById === 'function') {
-      const knownUserIds = new Set(this.users().map(u => u.id));
-      const missingLecturerIds = [...new Set(list.flatMap(s => s.lecturerIds))].filter(id => !knownUserIds.has(id));
-      if (missingLecturerIds.length > 0) {
-        this.fetchAll(missingLecturerIds.map(id => this.userSvc.getById(id))).subscribe(found => this.mergeUsers(found));
-      }
-    }
-  }
-
-  private mergeUsers(incoming: IUser[]): void {
-    if (incoming.length === 0) {
-      return;
-    }
-    this.users.update(current => {
-      const merged = new Map(current.map(u => [u.id, u] as const));
-      for (const user of incoming) {
-        merged.set(user.id, user);
-      }
-      return [...merged.values()];
-    });
   }
 
   /** Gọi song song, lỗi một phần tử bị bỏ qua (khi đó giao diện hiện mã thay vì tên). */

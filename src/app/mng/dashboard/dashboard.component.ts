@@ -6,7 +6,6 @@ import { CALCULATION_SCOPE_LABEL } from '@constants/analytics-display.constant';
 import { PLACEHOLDER } from '@constants/measurement-display.constant';
 import { SystemConstant } from '@constants/system.constant';
 import { UrlConstant } from '@constants/url.constant';
-import { ISection } from '@models/course/section.model';
 import { AggregateResultResponse, CalculationRunResponse } from '@models/measurement/measurement.model';
 import { AuthService } from '@services/auth/auth.service';
 import { SectionService } from '@services/course/section.service';
@@ -77,7 +76,7 @@ export class DashboardComponent implements OnInit {
 
   readonly loading = signal(false);
   readonly loadFailed = signal(false);
-  readonly sections = signal<ISection[] | null>(null);
+  readonly sectionsTotal = signal<number | null>(null);
   readonly runs = signal<CalculationRunResponse[]>([]);
   readonly piResults = signal<AggregateResultResponse[]>([]);
   readonly ploResults = signal<AggregateResultResponse[]>([]);
@@ -94,13 +93,13 @@ export class DashboardComponent implements OnInit {
     this.loading.set(true);
     this.loadFailed.set(false);
     forkJoin({
-      sections: this.sectionSvc.getSections().pipe(catchError(() => of(null))),
+      sections: this.sectionSvc.getSections(undefined, undefined, undefined, 0, 1).pipe(catchError(() => of(null))),
       runs: this.calcSvc.getCalculationRuns(undefined, 0, 20).pipe(catchError(() => of(null))),
     }).pipe(
       finalize(() => this.loading.set(false)),
       takeUntilDestroyed(this.destroyRef),
     ).subscribe(({ sections, runs }) => {
-      this.sections.set(sections);
+      this.sectionsTotal.set(sections === null ? null : (sections.totalElements ?? sections.content?.length ?? 0));
       this.loadFailed.set(sections === null && runs === null);
       this.runs.set(runs?.content ?? []);
       this.loadAggregates();

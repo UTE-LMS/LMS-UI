@@ -11,6 +11,7 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
+import { IPagedResults } from '@models/common/response-data.model';
 import { ICloPiLinkCell, ICloPiMatrix } from '@models/course/clo.model';
 import { CourseCategory, IProgramCourse } from '@models/course/course.model';
 import { ISyllabus } from '@models/course/syllabus.model';
@@ -29,6 +30,7 @@ import { BloomLevelLabelComponent } from '@widget/level-label/bloom-level-label.
 import { StatusChipComponent } from '@widget/status-chip/status-chip.component';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzSelectModule } from 'ng-zorro-antd/select';
+import { EMPTY, expand, reduce } from 'rxjs';
 import { HomeProgramPickerComponent } from '../components/home-program-picker/home-program-picker.component';
 import { HomeSyllabusSelectorComponent } from '../components/home-syllabus-selector/home-syllabus-selector.component';
 import { HomeVersionSelectorComponent } from '../components/home-version-selector/home-version-selector.component';
@@ -74,6 +76,15 @@ export interface ISemesterSummary {
   semesterNumber: number | null;
   courseCount: number;
   totalCredits: number;
+}
+
+export interface ISemesterCourseGroup {
+  semesterKey: string;
+  semesterNumber: number | null;
+  semesterLabel: string;
+  courseCount: number;
+  totalCredits: number;
+  courses: IProgramCourse[];
 }
 
 @Component({
@@ -345,10 +356,28 @@ export class HomepageComponent implements OnInit {
     }, 0);
   });
 
+  readonly availableSemesterOptions = computed<number[]>(() => {
+    const semSet = new Set<number>(this.semesterOptions);
+    for (const pc of this.programCourses()) {
+      if (pc.semester !== undefined && pc.semester !== null && pc.semester > 0) {
+        semSet.add(pc.semester);
+      }
+    }
+    return Array.from(semSet).sort((a, b) => a - b);
+  });
+
+  readonly hasActiveCourseFilters = computed<boolean>(() => {
+    return (
+      this.filterSemester() !== null
+      || this.filterCategory() !== null
+      || this.courseSearchQuery().trim().length > 0
+    );
+  });
+
   readonly semesterSummaries = computed<ISemesterSummary[]>(() => {
     const groups = new Map<number | null, { count: number; credits: number; }>();
     for (const pc of this.programCourses()) {
-      const sem = pc.semester ?? null;
+      const sem = this.normalizeSemester(pc.semester);
       const existing = groups.get(sem) ?? { count: 0, credits: 0 };
       const cred = pc.credits ?? pc.course?.credits ?? 0;
       groups.set(sem, {
@@ -357,15 +386,7 @@ export class HomepageComponent implements OnInit {
       });
     }
     const result: ISemesterSummary[] = [];
-    const sortedKeys = Array.from(groups.keys()).sort((a, b) => {
-      if (a === null) {
-        return 1;
-      }
-      if (b === null) {
-        return -1;
-      }
-      return a - b;
-    });
+    const sortedKeys = this.sortSemesterKeys(groups.keys());
     for (const key of sortedKeys) {
       const item = groups.get(key);
       if (item) {
@@ -378,6 +399,30 @@ export class HomepageComponent implements OnInit {
       }
     }
     return result;
+  });
+
+  readonly groupedCoursesBySemester = computed<ISemesterCourseGroup[]>(() => {
+    const groups = new Map<number | null, IProgramCourse[]>();
+    for (const pc of this.filteredCourses()) {
+      const sem = this.normalizeSemester(pc.semester);
+      const list = groups.get(sem) ?? [];
+      list.push(pc);
+      groups.set(sem, list);
+    }
+
+    const sortedKeys = this.sortSemesterKeys(groups.keys());
+    return sortedKeys.map(key => {
+      const courses = groups.get(key) ?? [];
+      const totalCredits = courses.reduce((sum, pc) => sum + (pc.credits ?? pc.course?.credits ?? 0), 0);
+      return {
+        semesterKey: key !== null ? String(key) : 'unassigned',
+        semesterNumber: key,
+        semesterLabel: key !== null ? `Học kỳ ${key}` : 'Chưa xếp kỳ',
+        courseCount: courses.length,
+        totalCredits,
+        courses,
+      };
+    });
   });
 
   // --- Computed Matrix Helpers for Tab 3 ---
@@ -619,8 +664,22 @@ export class HomepageComponent implements OnInit {
       });
 
     this.courseService
-      .getProgramCourses(versionId)
-      .pipe(takeUntilDestroyed(this.destroyRef))
+      .getProgramCourses(versionId, undefined, undefined, undefined, undefined, 0, 100)
+      .pipe(
+        expand(res => {
+          const nextPage = (res.page ?? 0) + 1;
+          const totalPages = res.totalPages ?? 1;
+          if (res.last || nextPage >= totalPages || (res.content ?? []).length === 0) {
+            return EMPTY;
+          }
+          return this.courseService.getProgramCourses(versionId, undefined, undefined, undefined, undefined, nextPage, 100);
+        }),
+        reduce<IPagedResults<IProgramCourse>, IProgramCourse[]>(
+          (acc, res) => [...acc, ...(res.content ?? [])],
+          [],
+        ),
+        takeUntilDestroyed(this.destroyRef),
+      )
       .subscribe({
         next: courses => {
           const courseList = courses ?? [];
@@ -756,6 +815,28 @@ export class HomepageComponent implements OnInit {
       return;
     }
     this.filterSemester.set(this.filterSemester() === semester ? null : semester);
+  }
+
+  resetCourseFilters(): void {
+    this.filterSemester.set(null);
+    this.filterCategory.set(null);
+    this.courseSearchQuery.set('');
+  }
+
+  private normalizeSemester(semester?: number | null): number | null {
+    return semester !== undefined && semester !== null && semester > 0 ? semester : null;
+  }
+
+  private sortSemesterKeys(keys: Iterable<number | null>): (number | null)[] {
+    return Array.from(keys).sort((a, b) => {
+      if (a === null) {
+        return 1;
+      }
+      if (b === null) {
+        return -1;
+      }
+      return a - b;
+    });
   }
 
   scrollToCatalog(): void {

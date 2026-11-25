@@ -1,8 +1,9 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ICsvImportResultResponse } from '@models/common/response-data.model';
 import { ImportTemplateFormat } from '@services/common/import-file.util';
 import { ToastrService } from 'ngx-toastr';
-import { Observable, of } from 'rxjs';
+import { Observable, of, throwError } from 'rxjs';
 import { CsvImportModalComponent } from './csv-import-modal.component';
 
 describe('CsvImportModalComponent (nhập .csv và .xlsx, ADR 0015)', () => {
@@ -119,5 +120,69 @@ describe('CsvImportModalComponent (nhập .csv và .xlsx, ADR 0015)', () => {
     fixture.detectChanges();
 
     expect(document.body.textContent).toContain('Xem trước dữ liệu trước khi nhập');
+  });
+
+  it('hiển thị đầy đủ thống kê và bảng errors[] (row, key, message) khi có dòng bị từ chối', () => {
+    fixture.componentRef.setInput('isVisible', true);
+    fixture.componentRef.setInput('keyColumnLabel', 'Mã lớp / MSSV');
+    importFn.mockReturnValue(of({
+      totalRows: 3,
+      successCount: 1,
+      failureCount: 2,
+      errors: [
+        { row: 2, key: 'SEC1 / SV-9999', message: 'Sinh viên chưa tồn tại trong hệ thống' },
+        { row: 3, key: 'SEC1 / SV-0002', message: 'Sinh viên không ở trạng thái ACTIVE' },
+      ],
+    }));
+
+    pick(new File(['sectionCode,studentCode\nSEC1,SV-0001\n'], 'bulk.csv', { type: 'text/csv' }));
+    component.submitImport();
+    fixture.detectChanges();
+
+    const bodyText = document.body.textContent ?? '';
+    expect(bodyText).toContain('Chi tiết các dòng lỗi (2)');
+    expect(bodyText).toContain('SEC1 / SV-9999');
+    expect(bodyText).toContain('Sinh viên chưa tồn tại trong hệ thống');
+    expect(bodyText).toContain('SEC1 / SV-0002');
+    expect(bodyText).toContain('Sinh viên không ở trạng thái ACTIVE');
+  });
+
+  it('hiển thị nguyên văn thông báo lỗi 422 BUSINESS_RULE_VIOLATION khi tệp thiếu cột bắt buộc (fullName / cohort)', () => {
+    fixture.componentRef.setInput('isVisible', true);
+    const backendMessage = 'Tệp import sinh viên thiếu cột bắt buộc: fullName, cohort';
+    importFn.mockReturnValue(throwError(() => new HttpErrorResponse({
+      status: 422,
+      error: { status: 422, code: 'BUSINESS_RULE_VIOLATION', message: backendMessage },
+    })));
+
+    pick(new File(['studentCode\nSV-0001\n'], 'students.csv', { type: 'text/csv' }));
+    component.submitImport();
+    fixture.detectChanges();
+
+    expect(component.errorMessage()).toBe(backendMessage);
+    expect(document.body.querySelector('[role="alert"]')?.textContent).toContain(backendMessage);
+    expect(toastStub.error).toHaveBeenCalledWith(backendMessage);
+  });
+
+  it('hiển thị nguyên văn lỗi từng dòng khi trống fullName hoặc trống cohort trong CsvImportResultResponse.errors[]', () => {
+    fixture.componentRef.setInput('isVisible', true);
+    fixture.componentRef.setInput('keyColumnLabel', 'MSSV');
+    importFn.mockReturnValue(of({
+      totalRows: 2,
+      successCount: 0,
+      failureCount: 2,
+      errors: [
+        { row: 2, key: 'SV-0001', message: 'Thiếu họ và tên (fullName)' },
+        { row: 3, key: 'SV-0002', message: 'Thiếu khóa (cohort)' },
+      ],
+    }));
+
+    pick(new File(['studentCode,fullName,cohort\nSV-0001,,K2023\n'], 'students.csv', { type: 'text/csv' }));
+    component.submitImport();
+    fixture.detectChanges();
+
+    const bodyText = document.body.textContent ?? '';
+    expect(bodyText).toContain('Thiếu họ và tên (fullName)');
+    expect(bodyText).toContain('Thiếu khóa (cohort)');
   });
 });

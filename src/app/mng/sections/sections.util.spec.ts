@@ -114,7 +114,7 @@ describe('sections.util (F05a)', () => {
       expect(lecturerLabel('671dcba5f123456789abcd01', names, 'me')).toBe('GV …abcd01');
     });
 
-    it('sectionLecturersText ưu tiên section.lecturers rồi tới map tên', () => {
+    it('sectionLecturersText hiển thị trực tiếp từ section.lecturers (ưu tiên fullName, rơi về username) và fallback lecturerIds khi trống', () => {
       expect(sectionLecturersText({
         id: 'sec1',
         code: 'L01',
@@ -122,9 +122,12 @@ describe('sections.util (F05a)', () => {
         syllabusId: 's1',
         termId: 't1',
         lecturerIds: ['u1', 'u2'],
-        lecturers: [{ id: 'u2', fullName: 'Lê Văn C', username: 'gv.c' }],
+        lecturers: [
+          { id: 'u1', username: 'gv.a', fullName: 'Lê Văn C' },
+          { id: 'u2', username: 'gv.b', fullName: '   ' },
+        ],
         status: 'OPEN',
-      }, names, 'me')).toBe('Lê Văn C');
+      }, 'me')).toBe('Lê Văn C, gv.b');
 
       expect(sectionLecturersText({
         id: 'sec1',
@@ -132,9 +135,11 @@ describe('sections.util (F05a)', () => {
         courseId: 'c1',
         syllabusId: 's1',
         termId: 't1',
-        lecturerIds: ['u1', 'me'],
+        lecturerIds: ['671dcba5f123456789abcd01', 'me'],
         status: 'OPEN',
-      }, names, 'me', 'Trần Thị B')).toBe('Nguyễn Văn A, Trần Thị B');
+      }, 'me', 'Trần Thị B')).toBe('GV …abcd01, Trần Thị B');
+
+      expect(sectionLecturersText(null, 'me')).toBe('—');
     });
   });
 });

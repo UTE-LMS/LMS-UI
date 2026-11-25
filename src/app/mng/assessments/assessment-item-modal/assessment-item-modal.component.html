@@ -59,9 +59,23 @@
                 <td class="py-1 pr-2">
                   <nz-select class="w-full" formControlName="cloId" nzShowSearch nzPlaceHolder="Chọn CLO">
                     @for (clo of clos(); track clo.id) {
-                      <nz-option [nzValue]="clo.id" [nzLabel]="clo.code + (clo.contentOriginal ? ' · ' + clo.contentOriginal.slice(0, 50) : '')" />
+                      <nz-option [nzValue]="clo.id" [nzLabel]="cloOptionLabel(clo)" />
                     }
                   </nz-select>
+                  @if (cloTotalHint(row.controls.cloId.value); as hint) {
+                    <p class="m-0 mt-1 text-xs"
+                      [class.text-[#8c2f39]]="hint.tone === 'over'"
+                      [class.font-medium]="hint.tone === 'over'"
+                      [class.text-emerald-800]="hint.tone === 'exact'"
+                      [class.text-slate-600]="hint.tone === 'under'">
+                      @if (hint.tone === 'over') {
+                        <i class="fa-solid fa-triangle-exclamation mr-1" aria-hidden="true"></i>
+                      } @else if (hint.tone === 'exact') {
+                        <i class="fa-solid fa-circle-check mr-1" aria-hidden="true"></i>
+                      }
+                      {{ hint.text }}
+                    </p>
+                  }
                 </td>
                 <td class="py-1 pr-2">
                   <input type="number" step="0.25" min="0.01" inputmode="decimal"

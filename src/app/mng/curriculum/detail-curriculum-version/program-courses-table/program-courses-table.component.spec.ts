@@ -8,6 +8,29 @@ describe('ProgramCoursesTableComponent (Read-only)', () => {
   let fixture: ComponentFixture<ProgramCoursesTableComponent>;
   let component: ProgramCoursesTableComponent;
 
+  const mockProgramCourses = [
+    {
+      id: 'pc_1',
+      programVersionId: '671dcba5f123456789abcdef',
+      courseId: '671dcba5f123456789abcde1',
+      type: 'COMPULSORY' as const,
+      category: 'MAJOR_FOUNDATION' as const,
+      semester: 2,
+      credits: 3,
+      course: { id: '671dcba5f123456789abcde1', code: 'OOPR230279', name: 'Lập trình OOP', credits: 3 },
+    },
+    {
+      id: 'pc_2',
+      programVersionId: '671dcba5f123456789abcdef',
+      courseId: '671dcba5f123456789abcde2',
+      type: 'ELECTIVE' as const,
+      category: 'FOUNDATION' as const,
+      semester: 1,
+      credits: 3,
+      course: { id: '671dcba5f123456789abcde2', code: 'INTR130185', name: 'Nhập môn lập trình', credits: 3 },
+    },
+  ];
+
   const courseSvc = {
     getCourses: vi.fn(() => of({
       content: [
@@ -17,6 +40,14 @@ describe('ProgramCoursesTableComponent (Read-only)', () => {
       page: 0,
       size: 100,
       totalElements: 2,
+      totalPages: 1,
+      last: true,
+    })),
+    getProgramCourses: vi.fn(() => of({
+      content: mockProgramCourses,
+      page: 0,
+      size: 20,
+      totalElements: mockProgramCourses.length,
       totalPages: 1,
       last: true,
     })),
@@ -71,17 +102,28 @@ describe('ProgramCoursesTableComponent (Read-only)', () => {
     fixture.detectChanges();
   });
 
-  it('hiển thị danh sách học phần và lọc theo học kỳ, khối kiến thức', () => {
-    expect(component.filteredProgramCourses().length).toBe(2);
+  it('tải danh sách học phần phân trang server-side và lọc theo học kỳ, loại, khối kiến thức, search', async () => {
+    vi.useFakeTimers();
+    try {
+      expect(courseSvc.getProgramCourses).toHaveBeenCalledWith('671dcba5f123456789abcdef', undefined, undefined, undefined, undefined, 0, 20);
+      expect(component.filteredProgramCourses().length).toBe(2);
 
-    component.filterSemester.set(2);
-    expect(component.filteredProgramCourses().length).toBe(1);
-    expect(component.getCourseCode(component.filteredProgramCourses()[0])).toBe('OOPR230279');
+      component.onSemesterChange(2);
+      expect(courseSvc.getProgramCourses).toHaveBeenLastCalledWith('671dcba5f123456789abcdef', 2, undefined, undefined, undefined, 0, 20);
 
-    component.filterSemester.set(null);
-    component.filterCategory.set('FOUNDATION');
-    expect(component.filteredProgramCourses().length).toBe(1);
-    expect(component.getCourseCode(component.filteredProgramCourses()[0])).toBe('INTR130185');
+      component.onTypeChange('ELECTIVE');
+      component.onCategoryChange('FOUNDATION');
+      expect(courseSvc.getProgramCourses).toHaveBeenLastCalledWith('671dcba5f123456789abcdef', 2, 'ELECTIVE', 'FOUNDATION', undefined, 0, 20);
+
+      component.onSearchChange('INTR');
+      await vi.advanceTimersByTimeAsync(350);
+      expect(courseSvc.getProgramCourses).toHaveBeenLastCalledWith('671dcba5f123456789abcdef', 2, 'ELECTIVE', 'FOUNDATION', 'INTR', 0, 20);
+
+      component.onPageIndexChange(2);
+      expect(courseSvc.getProgramCourses).toHaveBeenLastCalledWith('671dcba5f123456789abcdef', 2, 'ELECTIVE', 'FOUNDATION', 'INTR', 1, 20);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('hiển thị nút Import Khung học phần (CSV) khi canImportCourses=true và gọi API import thành công', () => {

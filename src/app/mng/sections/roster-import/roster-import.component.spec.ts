@@ -82,10 +82,10 @@ describe('RosterImportComponent (F05a US-20)', () => {
     expect(component.file()).toBeNull();
   });
 
-  it('US-20/AC-1: tệp hợp lệ được gửi và kết quả hiện số dòng, sinh viên mới/dùng lại, sĩ số và cột bị bỏ qua', async () => {
+  it('US-20/AC-1: tệp hợp lệ được gửi và kết quả hiện số sinh viên đã ghi danh thành công, tổng sĩ số và cột bị bỏ qua (ẩn newStudents)', async () => {
     await setup();
     enrollmentSvc.importEnrollments.mockReturnValue(of({
-      sectionId: 'sec1', totalRows: 5, newStudents: 3, reusedStudents: 2, sectionEnrolledCount: 5, ignoredColumns: ['hoTen', 'email'],
+      sectionId: 'sec1', totalRows: 5, newStudents: 0, reusedStudents: 5, sectionEnrolledCount: 5, ignoredColumns: ['hoTen', 'email'],
     }));
     pick(csv());
     expect(submitButton().disabled).toBe(false);
@@ -94,9 +94,44 @@ describe('RosterImportComponent (F05a US-20)', () => {
     expect(enrollmentSvc.importEnrollments).toHaveBeenCalledWith('sec1', expect.any(File));
     expect(component.step()).toBe('DONE');
     const text = el().textContent ?? '';
-    expect(text).toContain('Đã ghi danh 5 dòng');
-    expect(text).toContain('3 sinh viên mới, 2 đã có hồ sơ');
+    expect(text).toContain('Đã ghi danh thành công 5 sinh viên');
+    expect(text).not.toContain('sinh viên mới');
+    expect(text).toContain('5');
     expect(text).toContain('hoTen, email');
+  });
+
+  it('hiển thị lưu ý yêu cầu ADMIN import sinh viên trước và trạng thái ACTIVE', async () => {
+    await setup();
+    const noteText = el().querySelector('[role="note"]')?.textContent ?? '';
+    expect(noteText).toContain('ADMIN');
+    expect(noteText).toContain('ACTIVE');
+    expect(noteText).toContain('SUSPENDED');
+    expect(noteText).toContain('GRADUATED');
+    expect(noteText).toContain('DROPPED_OUT');
+  });
+
+  it('422 khi studentCode chưa tồn tại hoặc không ở trạng thái ACTIVE: hiện đầy đủ bảng fieldErrors và báo chưa ghi dòng nào', async () => {
+    await setup();
+    enrollmentSvc.importEnrollments.mockReturnValue(throwError(() => new HttpErrorResponse({
+      status: 422,
+      error: {
+        status: 422,
+        code: 'BUSINESS_RULE_VIOLATION',
+        message: 'Tệp có dòng lỗi',
+        fieldErrors: [
+          { field: 'line 2', message: 'Mã sinh viên SV-9999 chưa tồn tại trong hệ thống', rejectedValue: 'SV-9999' },
+          { field: 'line 3', message: 'Sinh viên SV-0002 đang ở trạng thái SUSPENDED, chỉ sinh viên ACTIVE mới được ghi danh', rejectedValue: 'SV-0002' },
+        ],
+      },
+    })));
+    pick(csv());
+    component.submit();
+    fixture.detectChanges();
+    const rows = Array.from(el().querySelectorAll('tbody tr.ant-table-row')).map(r => (r.textContent ?? '').replace(/\s+/g, ' ').trim());
+    expect(rows.length).toBe(2);
+    expect(rows[0]).toContain('SV-9999');
+    expect(rows[1]).toContain('SUSPENDED');
+    expect(el().textContent).toContain('chưa có sinh viên nào được ghi danh');
   });
 
   it('US-20/AC-2: 422 kèm lỗi theo dòng hiện bảng Dòng/Giá trị/Lỗi, nói rõ chưa ghi gì và khóa nút Ghi danh', async () => {

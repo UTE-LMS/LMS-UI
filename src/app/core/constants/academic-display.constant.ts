@@ -2,6 +2,7 @@ import { IStatusDisplay } from '@models/common/status-display.model';
 import { EnrollmentStatus, SectionStatus } from '@models/course/section.model';
 import { TermStatus } from '@models/course/term.model';
 import { SyllabusStatus } from '@models/course/syllabus.model';
+import { StudentStatus } from '@models/student/student.model';
 
 /**
  * Nhãn trạng thái học kỳ, lớp học phần, ghi danh và đề cương, đặt một chỗ (rule 02: mỗi trạng thái có CHỮ,
@@ -88,6 +89,44 @@ export const SYLLABUS_STATUS_DISPLAY: Record<SyllabusStatus, IStatusDisplay> = {
     lineStyle: 'solid',
   },
 };
+
+export const STUDENT_STATUS_DISPLAY: Record<StudentStatus, IStatusDisplay> = {
+  ACTIVE: {
+    label: 'Đang học',
+    description: 'Sinh viên đang theo học, đủ điều kiện ghi danh vào lớp học phần.',
+    icon: 'fa-user-check',
+    tone: 'success',
+    lineStyle: 'solid',
+  },
+  SUSPENDED: {
+    label: 'Tạm dừng / Bảo lưu',
+    description: 'Sinh viên đang tạm dừng hoặc bảo lưu, không thể ghi danh mới.',
+    icon: 'fa-pause-circle',
+    tone: 'warning',
+    lineStyle: 'dashed',
+  },
+  GRADUATED: {
+    label: 'Đã tốt nghiệp',
+    description: 'Sinh viên đã tốt nghiệp, không thể ghi danh mới.',
+    icon: 'fa-graduation-cap',
+    tone: 'info',
+    lineStyle: 'solid',
+  },
+  DROPPED_OUT: {
+    label: 'Thôi học',
+    description: 'Sinh viên đã thôi học, không thể ghi danh mới.',
+    icon: 'fa-user-xmark',
+    tone: 'danger',
+    lineStyle: 'dotted',
+  },
+};
+
+export const STUDENT_STATUS_OPTIONS: readonly { value: StudentStatus; label: string; }[] = [
+  { value: 'ACTIVE', label: STUDENT_STATUS_DISPLAY.ACTIVE.label },
+  { value: 'SUSPENDED', label: STUDENT_STATUS_DISPLAY.SUSPENDED.label },
+  { value: 'GRADUATED', label: STUDENT_STATUS_DISPLAY.GRADUATED.label },
+  { value: 'DROPPED_OUT', label: STUDENT_STATUS_DISPLAY.DROPPED_OUT.label },
+];
 
 /** Tham số truy vấn mở thẳng tab "Học kỳ" của màn Học phần & Học kỳ (F03/F05a dùng chung một màn hình học kỳ). */
 export const ACADEMIC_TERMS_TAB_QUERY = { tab: 'terms' } as const;

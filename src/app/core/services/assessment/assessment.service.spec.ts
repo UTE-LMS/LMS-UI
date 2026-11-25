@@ -111,13 +111,50 @@ describe('AssessmentService (F04 US-15, US-16, NEW-01, ADR 0014)', () => {
     delReq.flush(null);
   });
 
-  it('getScores gọi GET /assessments/{id}/scores', () => {
-    service.getScores(id).subscribe(res => {
-      expect(res.length).toBe(1);
-      expect(res[0].studentCode).toBe('SV001');
+  it('getScores gọi GET /assessments/{id}/scores kèm search, page, size và trả PageResponse', () => {
+    service.getScores(id, '  SV001 ', 1, 20).subscribe(res => {
+      expect(res.totalElements).toBe(1);
+      expect(res.content.length).toBe(1);
+      expect(res.content[0].studentCode).toBe('SV001');
     });
-    const req = http.expectOne(UrlConstant.API.ASSESSMENT_SCORES(id));
+    const req = http.expectOne(r => r.url === UrlConstant.API.ASSESSMENT_SCORES(id));
     expect(req.request.method).toBe('GET');
-    req.flush([{ id: 'sc1', sectionId: 'sec1', assessmentId: id, studentId: 'st1', studentCode: 'SV001', itemId: 'i1', itemCode: 'Q1', cloId: 'c1', cloCode: 'CLO1', rawScore: 8, maxScore: 10 }]);
+    expect(req.request.params.get('page')).toBe('1');
+    expect(req.request.params.get('size')).toBe('20');
+    expect(req.request.params.get('search')).toBe('SV001');
+    req.flush({
+      content: [{ id: 'sc1', sectionId: 'sec1', assessmentId: id, studentId: 'st1', studentCode: 'SV001', itemId: 'i1', itemCode: 'Q1', cloId: 'c1', cloCode: 'CLO1', rawScore: 8, maxScore: 10 }],
+      page: 1,
+      size: 20,
+      totalElements: 1,
+      totalPages: 2,
+      last: true,
+    });
+  });
+
+  it('getSectionAssessmentScores và exportScores/exportSectionAssessmentScores gọi đúng endpoint và query', () => {
+    service.getSectionAssessmentScores(sectionId, id, 'CLO1', 0, 20).subscribe();
+    const secScoresReq = http.expectOne(r => r.url === UrlConstant.API.SECTION_ASSESSMENT_SCORES(sectionId, id));
+    expect(secScoresReq.request.method).toBe('GET');
+    expect(secScoresReq.request.params.get('search')).toBe('CLO1');
+    expect(secScoresReq.request.params.get('page')).toBe('0');
+    expect(secScoresReq.request.params.get('size')).toBe('20');
+    secScoresReq.flush({ content: [], page: 0, size: 20, totalElements: 0, totalPages: 0, last: true });
+
+    service.exportScores(id, 'xlsx', 'SV001').subscribe(res => {
+      expect(res.body).toBeInstanceOf(Blob);
+    });
+    const expReq = http.expectOne(r => r.url === UrlConstant.API.ASSESSMENT_SCORES_EXPORT(id));
+    expect(expReq.request.method).toBe('GET');
+    expect(expReq.request.responseType).toBe('blob');
+    expect(expReq.request.params.get('format')).toBe('xlsx');
+    expect(expReq.request.params.get('search')).toBe('SV001');
+    expReq.flush(new Blob(['xlsx']));
+
+    service.exportSectionAssessmentScores(sectionId, id, 'csv').subscribe();
+    const secExpReq = http.expectOne(r => r.url === UrlConstant.API.SECTION_ASSESSMENT_SCORES_EXPORT(sectionId, id));
+    expect(secExpReq.request.params.get('format')).toBe('csv');
+    expect(secExpReq.request.params.has('search')).toBe(false);
+    secExpReq.flush(new Blob(['csv']));
   });
 });

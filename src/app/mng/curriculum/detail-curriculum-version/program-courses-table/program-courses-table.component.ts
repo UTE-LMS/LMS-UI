@@ -1,7 +1,9 @@
-import { ChangeDetectionStrategy, Component, OnInit, computed, inject, input, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, effect, OnInit, computed, inject, input, output, signal, untracked } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import {
   CourseCategory,
+  CourseType,
   ICourse,
   IProgramCourse,
   IProgramCourseCsvImportResponse,
@@ -10,6 +12,7 @@ import { ProgramVersionStatus } from '@models/program/program-version.model';
 import { toApiError } from '@services/common/api-error.util';
 import { CourseService } from '@services/course/course.service';
 import { NzButtonModule } from 'ng-zorro-antd/button';
+import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzModalModule } from 'ng-zorro-antd/modal';
 import { NzSelectModule } from 'ng-zorro-antd/select';
 import { NzTableModule } from 'ng-zorro-antd/table';
@@ -18,6 +21,7 @@ import {
   ImportTemplateFormat, importFileNameError, saveBlobAs, templateFileNameFor,
 } from '@services/common/import-file.util';
 import { ImportFilePreviewComponent } from '@widget/import-file-preview/import-file-preview.component';
+import { debounceTime, distinctUntilChanged, map, Subject } from 'rxjs';
 
 @Component({
   selector: 'app-program-courses-table',
@@ -27,12 +31,14 @@ import { ImportFilePreviewComponent } from '@widget/import-file-preview/import-f
     FormsModule,
     NzTableModule,
     NzButtonModule,
+    NzInputModule,
     NzSelectModule,
     NzModalModule,
     ImportFilePreviewComponent,
   ],
 })
 export class ProgramCoursesTableComponent implements OnInit {
+  private readonly destroyRef = inject(DestroyRef);
   private readonly courseSvc = inject(CourseService);
   private readonly alert = inject(ToastrService, { optional: true });
 
@@ -43,11 +49,22 @@ export class ProgramCoursesTableComponent implements OnInit {
   readonly canImportCourses = input<boolean>(false);
 
   readonly changed = output<void>();
+  readonly totalChange = output<number>();
   readonly openCloPiMatrix = output<string>();
 
   readonly allCourses = signal<ICourse[]>([]);
   readonly filterSemester = signal<number | null>(null);
+  readonly filterType = signal<CourseType | null>(null);
   readonly filterCategory = signal<CourseCategory | null>(null);
+  readonly filterSearch = signal('');
+
+  readonly page = signal(0);
+  readonly size = signal(20);
+  readonly totalElements = signal(0);
+  readonly pagedCourses = signal<IProgramCourse[]>([]);
+  readonly hasLoadedServerPage = signal(false);
+  readonly isLoading = signal(false);
+  private readonly searchSubject$ = new Subject<string>();
 
   // Modal Import Khung học phần CSV
   readonly isImportModalVisible = signal(false);
@@ -74,25 +91,106 @@ export class ProgramCoursesTableComponent implements OnInit {
     THESIS: 'Khóa luận TN',
   };
 
-  readonly filteredProgramCourses = computed(() => {
-    const sem = this.filterSemester();
-    const cat = this.filterCategory();
-    return this.programCourses().filter(pc => {
-      if (sem !== null && pc.semester !== sem) {
-        return false;
+  readonly filteredProgramCourses = computed(() => (
+    this.hasLoadedServerPage() ? this.pagedCourses() : this.programCourses()
+  ));
+
+  constructor() {
+    effect(() => {
+      const vId = this.versionId();
+      if (vId) {
+        untracked(() => {
+          this.page.set(0);
+          this.loadProgramCourses();
+        });
       }
-      if (cat !== null && pc.category !== cat) {
-        return false;
-      }
-      return true;
     });
-  });
+  }
 
   ngOnInit(): void {
+    this.searchSubject$
+      .pipe(
+        map(q => q.trim()),
+        debounceTime(300),
+        distinctUntilChanged(),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe(() => {
+        this.page.set(0);
+        this.loadProgramCourses();
+      });
+
     this.courseSvc.getCourses(0, 100).subscribe({
       next: page => this.allCourses.set(page.content || []),
       error: () => undefined,
     });
+  }
+
+  loadProgramCourses(): void {
+    const vId = this.versionId();
+    if (!vId || typeof this.courseSvc.getProgramCourses !== 'function') {
+      return;
+    }
+    this.isLoading.set(true);
+    this.courseSvc
+      .getProgramCourses(
+        vId,
+        this.filterSemester() ?? undefined,
+        this.filterType() ?? undefined,
+        this.filterCategory() ?? undefined,
+        this.filterSearch().trim() || undefined,
+        this.page(),
+        this.size(),
+      )
+      .subscribe({
+        next: res => {
+          const content = res?.content ?? [];
+          this.pagedCourses.set(content);
+          this.totalElements.set(res?.totalElements ?? content.length);
+          this.page.set(res?.page ?? this.page());
+          this.size.set(res?.size ?? this.size());
+          this.hasLoadedServerPage.set(true);
+          this.isLoading.set(false);
+          this.totalChange.emit(res?.totalElements ?? content.length);
+        },
+        error: () => {
+          this.isLoading.set(false);
+        },
+      });
+  }
+
+  onSemesterChange(sem: number | null): void {
+    this.filterSemester.set(sem);
+    this.page.set(0);
+    this.loadProgramCourses();
+  }
+
+  onTypeChange(type: CourseType | null): void {
+    this.filterType.set(type);
+    this.page.set(0);
+    this.loadProgramCourses();
+  }
+
+  onCategoryChange(cat: CourseCategory | null): void {
+    this.filterCategory.set(cat);
+    this.page.set(0);
+    this.loadProgramCourses();
+  }
+
+  onSearchChange(keyword: string): void {
+    this.filterSearch.set(keyword);
+    this.searchSubject$.next(keyword);
+  }
+
+  onPageIndexChange(page1Indexed: number): void {
+    this.page.set(Math.max(0, page1Indexed - 1));
+    this.loadProgramCourses();
+  }
+
+  onPageSizeChange(newSize: number): void {
+    this.size.set(newSize);
+    this.page.set(0);
+    this.loadProgramCourses();
   }
 
   openImportModal(): void {
@@ -152,6 +250,7 @@ export class ProgramCoursesTableComponent implements OnInit {
         this.isImporting.set(false);
         this.importResult.set(res);
         this.alert?.success(`Import thành công: ${res.importedCount} thêm mới, ${res.updatedCount} cập nhật`);
+        this.loadProgramCourses();
         this.changed.emit();
       },
       error: err => {
@@ -184,7 +283,9 @@ export class ProgramCoursesTableComponent implements OnInit {
   }
 
   getCourseCodeById(courseId: string): string {
-    const fromPc = this.programCourses().find(p => p.courseId === courseId)?.course?.code;
+    const fromPc =
+      this.filteredProgramCourses().find(p => p.courseId === courseId)?.course?.code
+      ?? this.programCourses().find(p => p.courseId === courseId)?.course?.code;
     if (fromPc) {
       return fromPc;
     }
@@ -192,7 +293,9 @@ export class ProgramCoursesTableComponent implements OnInit {
   }
 
   getCourseTooltip(courseId: string): string {
-    const fromPc = this.programCourses().find(p => p.courseId === courseId)?.course;
+    const fromPc =
+      this.filteredProgramCourses().find(p => p.courseId === courseId)?.course
+      ?? this.programCourses().find(p => p.courseId === courseId)?.course;
     const found = fromPc ?? this.allCourses().find(c => c.id === courseId);
     if (!found) {
       return courseId;

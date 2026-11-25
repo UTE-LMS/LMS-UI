@@ -3,6 +3,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, computed, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
+import { createPaginatedSelect } from '@builder/paginated-select.builder';
 import {
   CALCULATION_SCOPE_LABEL,
   REPORT_TYPE_LABEL,
@@ -28,6 +29,7 @@ import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzCardModule } from 'ng-zorro-antd/card';
 import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzSelectModule } from 'ng-zorro-antd/select';
+import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzTableModule } from 'ng-zorro-antd/table';
 import { NzTagModule } from 'ng-zorro-antd/tag';
 import { ToastrService } from 'ngx-toastr';
@@ -41,6 +43,7 @@ import { ToastrService } from 'ngx-toastr';
     NzCardModule,
     NzButtonModule,
     NzSelectModule,
+    NzSpinModule,
     NzInputModule,
     NzTableModule,
     NzTagModule,
@@ -81,7 +84,11 @@ export class ReportsPageComponent implements OnInit {
   ));
 
   readonly successRuns = signal<CalculationRunResponse[]>([]);
-  readonly sections = signal<ISection[]>([]);
+  readonly sectionSelect = createPaginatedSelect<ISection>({
+    fetchPage: ({ page, size, search }) => this.sectionSvc.getSections(undefined, undefined, search, page, size),
+    getId: s => s.id,
+    fetchById: id => this.sectionSvc.getSection(id),
+  });
 
   readonly selectedType = signal<ReportType>('PROGRAM_PLO');
   readonly selectedRunId = signal<string | null>(null);
@@ -109,15 +116,17 @@ export class ReportsPageComponent implements OnInit {
   loadData(): void {
     this.loadReports();
 
-    this.calcSvc.getCalculationRuns(undefined, 0, 100).subscribe({
+    this.calcSvc.getCalculationRuns(undefined, 0, 20).subscribe({
       next: res => this.successRuns.set((res.content ?? []).filter(r => r.status === 'SUCCESS')),
       error: () => undefined,
     });
 
-    this.sectionSvc.getSections().subscribe({
-      next: list => this.sections.set(list),
-      error: () => undefined,
-    });
+    this.sectionSelect.loadInitial();
+  }
+
+  onSectionChange(sectionId: string | null): void {
+    this.selectedSectionId.set(sectionId);
+    this.sectionSelect.syncSelected(sectionId);
   }
 
   loadReports(): void {

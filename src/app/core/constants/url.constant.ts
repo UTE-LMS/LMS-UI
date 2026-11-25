@@ -31,6 +31,15 @@ export const UrlConstant = {
     USER_IMPORT_TEMPLATE: environment.serverUrl + 'api/v1/users/import-template',
     USER_IMPORT: environment.serverUrl + 'api/v1/users/import',
 
+    // Quản lý sinh viên (chỉ ADMIN)
+    STUDENTS: environment.serverUrl + 'api/v1/students',
+    STUDENT_IMPORT_TEMPLATE: environment.serverUrl + 'api/v1/students/import-template',
+    STUDENT_IMPORT: environment.serverUrl + 'api/v1/students/import',
+    STUDENT_STATUS: (id: string) => `${environment.serverUrl}api/v1/students/${id}/status`,
+    STUDENT_BATCH_STATUS: environment.serverUrl + 'api/v1/students/status',
+    STUDENT_STATUS_IMPORT_TEMPLATE: environment.serverUrl + 'api/v1/students/status-import-template',
+    STUDENT_STATUS_IMPORT: environment.serverUrl + 'api/v1/students/status-import',
+
     // F02a - Khoa & Điều phối viên (ADR / R2)
     FACULTIES: environment.serverUrl + 'api/v1/faculties',
     FACULTY_IMPORT_TEMPLATE: environment.serverUrl + 'api/v1/faculties/import-template',
@@ -116,6 +125,9 @@ export const UrlConstant = {
     ASSESSMENT_UNLOCK: (id: string) => `${environment.serverUrl}api/v1/assessments/${id}/unlock`,
     ASSESSMENT_SCORE_TEMPLATE_CSV: (id: string) => `${environment.serverUrl}api/v1/assessments/${id}/scores/template-csv`,
     ASSESSMENT_SCORES: (id: string) => `${environment.serverUrl}api/v1/assessments/${id}/scores`,
+    ASSESSMENT_SCORES_EXPORT: (id: string) => `${environment.serverUrl}api/v1/assessments/${id}/scores/export`,
+    SECTION_ASSESSMENT_SCORES: (sectionId: string, assessmentId: string) => `${environment.serverUrl}api/v1/sections/${sectionId}/assessments/${assessmentId}/scores`,
+    SECTION_ASSESSMENT_SCORES_EXPORT: (sectionId: string, assessmentId: string) => `${environment.serverUrl}api/v1/sections/${sectionId}/assessments/${assessmentId}/scores/export`,
 
     // F05b - Lô nhập điểm thi 3-bước (ADR 0014, Schema v0.7)
     IMPORT_BATCH_CREATE: (sectionId: string, assessmentId: string) => `${environment.serverUrl}api/v1/sections/${sectionId}/assessments/${assessmentId}/import-batches`,
@@ -167,6 +179,7 @@ export const UrlConstant = {
 
       USERS: '/mng/users',
       USERS_NEW: '/mng/users/new',
+      STUDENTS: '/mng/students',
 
       FACULTIES: '/mng/faculties',
 

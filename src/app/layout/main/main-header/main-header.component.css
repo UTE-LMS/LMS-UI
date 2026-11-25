@@ -1,37 +1,8 @@
-/* Đảm bảo độ tương phản WCAG AA (>= 4.5:1) trên các nút màu trên header youth.hcmute.edu.vn */
-.youth-main-header .nz-btn-blue,
-.youth-main-header .nz-btn-blue:not([disabled]):hover,
-.youth-main-header .nz-btn-blue:not([disabled]):focus {
-  background-color: #005a94;
-  border-color: #005a94;
-  color: #fff;
-}
-
-.youth-main-header .nz-btn-purple,
-.youth-main-header .nz-btn-purple:not([disabled]):hover,
-.youth-main-header .nz-btn-purple:not([disabled]):focus {
-  background-color: #5b21b6;
-  border-color: #5b21b6;
-  color: #fff;
-}
-
-.youth-main-header .nz-btn-green,
-.youth-main-header .nz-btn-green:not([disabled]):hover,
-.youth-main-header .nz-btn-green:not([disabled]):focus {
-  background-color: #15803d;
-  border-color: #15803d;
-  color: #fff;
-}
-
+/* Đảm bảo độ tương phản WCAG AA (>= 4.5:1) trên nút hướng dẫn ở header youth.hcmute.edu.vn */
 .youth-main-header .youth-help-btn,
 .youth-main-header .youth-help-btn:not([disabled]):hover,
 .youth-main-header .youth-help-btn:not([disabled]):focus {
   background-color: #c62828;
   border-color: #c62828;
   color: #fff;
-}
-
-.youth-main-header .youth-nav-active {
-  box-shadow: 0 0 0 2px #fff, 0 0 0 4px #003b64;
-  font-weight: 700;
 }

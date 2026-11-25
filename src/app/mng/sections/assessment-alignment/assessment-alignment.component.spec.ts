@@ -59,8 +59,17 @@ describe('AssessmentAlignmentComponent', () => {
     ],
   };
 
+  const mockSection = { id: 'sec1', code: 'TEST101-01', courseId: 'c1', syllabusId: 'syl1', termId: 't1', lecturerIds: [], status: 'OPEN' };
   const sectionSvc = {
-    getSections: vi.fn(() => of([{ id: 'sec1', code: 'TEST101-01', courseId: 'c1', syllabusId: 'syl1', termId: 't1', lecturerIds: [], status: 'OPEN' }])),
+    getSections: vi.fn(() => of({
+      content: [mockSection],
+      page: 0,
+      size: 20,
+      totalElements: 1,
+      totalPages: 1,
+      last: true,
+    })),
+    getSection: vi.fn(() => of(mockSection)),
     getAssessmentAlignment: vi.fn(() => of(mockAlignment)),
   };
 

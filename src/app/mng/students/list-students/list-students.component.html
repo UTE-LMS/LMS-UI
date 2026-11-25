@@ -1,0 +1,286 @@
+<div class="mx-auto max-w-7xl p-6">
+  <div class="mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+    <div>
+      <p class="m-0 mb-1 text-xs font-semibold uppercase tracking-wider text-blue-600">Hệ thống</p>
+      <h1 class="m-0 text-2xl font-bold tracking-tight text-slate-900">Quản lý Sinh viên</h1>
+      <div class="title-underline"></div>
+    </div>
+    <div class="flex flex-wrap items-center gap-2.5">
+      <button
+        id="btnOpenImportStudentStatuses"
+        nz-button
+        nzType="default"
+        type="button"
+        (click)="isStatusImportVisible.set(true)"
+      >
+        <i class="fa-solid fa-arrows-rotate mr-1.5 text-amber-700" aria-hidden="true"></i>Import đổi trạng thái
+      </button>
+      <button
+        id="btnOpenImportStudents"
+        nz-button
+        nzType="primary"
+        type="button"
+        (click)="isCreateImportVisible.set(true)"
+      >
+        <i class="fa-solid fa-file-import mr-1.5" aria-hidden="true"></i>Import sinh viên mới
+      </button>
+    </div>
+  </div>
+
+  <!-- Thanh tìm kiếm & bộ lọc -->
+  <div class="mb-4 rounded-xl border border-slate-200 bg-white p-4 shadow-xs">
+    <div class="flex flex-wrap items-center gap-3">
+      <div class="relative w-full sm:w-64">
+        <i class="fa-solid fa-magnifying-glass pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs text-slate-400" aria-hidden="true"></i>
+        <input
+          nz-input
+          type="search"
+          class="pl-8"
+          aria-label="Tìm theo MSSV hoặc họ tên"
+          placeholder="Tìm MSSV hoặc họ tên..."
+          [ngModel]="search()"
+          (ngModelChange)="search.set($event)"
+          (keyup.enter)="applyFilters()"
+        />
+      </div>
+
+      <div class="w-full sm:w-44">
+        <input
+          nz-input
+          type="text"
+          aria-label="Lọc theo khóa"
+          placeholder="Khóa (VD: K2023)"
+          [ngModel]="cohort()"
+          (ngModelChange)="cohort.set($event)"
+          (keyup.enter)="applyFilters()"
+        />
+      </div>
+
+      <div class="w-full sm:w-52">
+        <nz-select
+          id="studentStatusFilter"
+          class="w-full"
+          nzAllowClear
+          nzPlaceHolder="Tất cả trạng thái"
+          aria-label="Lọc theo trạng thái sinh viên"
+          [ngModel]="statusFilter()"
+          (ngModelChange)="statusFilter.set($event); applyFilters()"
+        >
+          @for (opt of statusOptions; track opt.value) {
+          <nz-option [nzValue]="opt.value" [nzLabel]="opt.label" />
+          }
+        </nz-select>
+      </div>
+
+      <button id="btnSearchStudents" nz-button nzType="primary" type="button" (click)="applyFilters()">
+        <i class="fa-solid fa-magnifying-glass mr-1.5" aria-hidden="true"></i>Tìm kiếm
+      </button>
+
+      @if (hasActiveFilters()) {
+      <button id="btnResetStudentFilters" nz-button nzType="default" type="button" (click)="resetFilters()">
+        Đặt lại
+      </button>
+      }
+    </div>
+  </div>
+
+  <!-- Thanh thao tác hàng loạt khi có ít nhất 1 sinh viên được chọn -->
+  @if (selectedCount() > 0) {
+  <div
+    id="studentBatchActionBar"
+    class="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-slate-900"
+    role="region"
+    aria-label="Thao tác hàng loạt sinh viên"
+  >
+    <div class="flex items-center gap-3">
+      <span class="font-semibold text-blue-950">Đã chọn {{ selectedCount() }} sinh viên</span>
+      <button
+        type="button"
+        class="text-xs font-medium text-blue-800 underline hover:text-blue-950 bg-transparent border-0 cursor-pointer p-0"
+        (click)="clearSelection()"
+      >
+        Bỏ chọn
+      </button>
+      @if (selectedCount() > maxBatchSize) {
+      <span class="text-xs font-medium text-[#8c2f39]">Tối đa {{ maxBatchSize }} sinh viên mỗi lần cập nhật.</span>
+      }
+    </div>
+
+    <div class="flex flex-wrap items-center gap-2.5">
+      <nz-select
+        id="batchTargetStatusSelect"
+        class="w-52"
+        nzPlaceHolder="Chọn trạng thái đích..."
+        aria-label="Chọn trạng thái đích hàng loạt"
+        [ngModel]="batchTargetStatus()"
+        (ngModelChange)="batchTargetStatus.set($event)"
+      >
+        @for (opt of statusOptions; track opt.value) {
+        <nz-option [nzValue]="opt.value" [nzLabel]="opt.label" />
+        }
+      </nz-select>
+      <button
+        id="btnBatchUpdateStatus"
+        nz-button
+        nzType="primary"
+        type="button"
+        [nzLoading]="isBatchUpdating()"
+        [disabled]="!batchTargetStatus() || isBatchUpdating() || selectedCount() > maxBatchSize"
+        (click)="confirmBatchStatusUpdate()"
+      >
+        Cập nhật trạng thái ({{ selectedCount() }} sinh viên)
+      </button>
+    </div>
+  </div>
+  }
+
+  @if (loadError(); as error) {
+  <app-error-state [error]="error" [retrying]="isLoading()" (retry)="loadStudents()" (reload)="loadStudents()" />
+  } @else {
+  <div class="student-table-card">
+    <nz-table
+      class="custom-admin-table"
+      nzSize="middle"
+      [nzShowPagination]="false"
+      [nzFrontPagination]="false"
+      [nzData]="students()"
+      [nzLoading]="isLoading()"
+      [nzNoResult]="emptyTpl"
+      [nzScroll]="{ x: '920px' }"
+    >
+      <thead>
+        <tr>
+          <th nzWidth="48px" nzAlign="center">
+            <input
+              id="chkSelectAllStudents"
+              type="checkbox"
+              class="h-4 w-4 cursor-pointer rounded border-slate-400 text-blue-600 focus:ring-2 focus:ring-blue-600"
+              aria-label="Chọn tất cả sinh viên trong trang"
+              [checked]="allCurrentPageChecked()"
+              [indeterminate]="someCurrentPageChecked()"
+              [disabled]="students().length === 0"
+              (change)="toggleAllCurrentPage($any($event.target).checked)"
+            />
+          </th>
+          <th nzWidth="150px">MSSV</th>
+          <th>Họ và tên</th>
+          <th nzWidth="120px">Khóa</th>
+          <th nzWidth="200px">Trạng thái</th>
+          <th nzWidth="160px">Cập nhật</th>
+          <th nzWidth="160px" nzAlign="right">Thao tác</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (item of students(); track item.id) {
+        <tr class="ui-pdf-row">
+          <td nzAlign="center">
+            <input
+              type="checkbox"
+              class="student-row-checkbox h-4 w-4 cursor-pointer rounded border-slate-400 text-blue-600 focus:ring-2 focus:ring-blue-600"
+              [attr.aria-label]="'Chọn sinh viên ' + item.studentCode"
+              [checked]="isSelected(item.id)"
+              (change)="toggleRowSelection(item.id, $any($event.target).checked)"
+            />
+          </td>
+          <td class="font-mono font-semibold text-slate-900">{{ item.studentCode }}</td>
+          <td class="text-slate-800">{{ item.fullName || '—' }}</td>
+          <td class="text-slate-700">{{ item.cohort || '—' }}</td>
+          <td>
+            <app-display-chip [display]="studentStatusDisplay[item.status]" />
+          </td>
+          <td class="text-slate-600">
+            @let displayDate = item.updatedAt ?? item.createdAt;
+            {{ displayDate ? (displayDate | date: 'dd/MM/yyyy HH:mm') : '—' }}
+          </td>
+          <td nzAlign="right">
+            <button
+              nz-button
+              nzSize="small"
+              type="button"
+              nz-dropdown
+              [nzDropdownMenu]="statusMenu"
+              [nzDisabled]="busyStudentId() === item.id"
+              [nzLoading]="busyStudentId() === item.id"
+              [attr.aria-label]="'Đổi trạng thái ' + item.studentCode"
+            >
+              Đổi trạng thái
+              <i class="fa-solid fa-chevron-down ml-1.5 text-[10px]" aria-hidden="true"></i>
+            </button>
+            <nz-dropdown-menu #statusMenu="nzDropdownMenu">
+              <ul nz-menu>
+                @for (opt of statusOptions; track opt.value) {
+                <li
+                  nz-menu-item
+                  [nzDisabled]="opt.value === item.status || busyStudentId() === item.id"
+                  (click)="changeSingleStatus(item, opt.value)"
+                >
+                  <span>{{ opt.label }}</span>
+                  @if (opt.value === item.status) {
+                  <span class="ml-2 text-xs text-slate-500">(hiện tại)</span>
+                  }
+                </li>
+                }
+              </ul>
+            </nz-dropdown-menu>
+          </td>
+        </tr>
+        }
+      </tbody>
+    </nz-table>
+
+    <div class="mt-3 border-t border-slate-100 pt-4">
+      <app-table-paginate
+        class="block w-full"
+        [pageConfig]="pageConfig()"
+        (pageChange)="onPageChange($event)"
+      />
+    </div>
+  </div>
+  }
+</div>
+
+<ng-template #emptyTpl>
+  <div class="py-10 text-center text-slate-600">
+    @if (hasActiveFilters()) {
+    <p class="mb-2 text-sm">Không tìm thấy sinh viên nào khớp bộ lọc.</p>
+    <button nz-button nzType="link" type="button" (click)="resetFilters()">Đặt lại bộ lọc</button>
+    } @else {
+    <p class="mb-3 text-sm">Chưa có sinh viên nào trong hệ thống.</p>
+    <button nz-button nzType="primary" type="button" (click)="isCreateImportVisible.set(true)">
+      <i class="fa-solid fa-file-import mr-1.5" aria-hidden="true"></i>Import sinh viên mới
+    </button>
+    }
+  </div>
+</ng-template>
+
+<!-- Modal 1: Import tạo mới sinh viên (mặc định ACTIVE) -->
+<app-csv-import-modal
+  [isVisible]="isCreateImportVisible()"
+  (isVisibleChange)="isCreateImportVisible.set($event)"
+  nzTitle="Import sinh viên mới"
+  guideTitle="Quy cách tệp nhập sinh viên mới (.csv hoặc .xlsx)"
+  guideText="Cả 3 cột bắt buộc: studentCode, fullName, cohort (không được bỏ trống). Không có cột status — tất cả sinh viên tạo mới mặc định ở trạng thái ACTIVE (Đang học)."
+  templateFileName="students-template.csv"
+  keyColumnLabel="MSSV"
+  entityLabel="sinh viên"
+  [requiredColumns]="['studentCode', 'fullName', 'cohort']"
+  [downloadTemplateFn]="downloadCreateTemplateFn"
+  [importFileFn]="importStudentsFn"
+  (importSuccess)="onImportSuccess()"
+/>
+
+<!-- Modal 2: Import đổi trạng thái sinh viên hàng loạt -->
+<app-csv-import-modal
+  [isVisible]="isStatusImportVisible()"
+  (isVisibleChange)="isStatusImportVisible.set($event)"
+  nzTitle="Import đổi trạng thái sinh viên"
+  guideTitle="Quy cách tệp nhập đổi trạng thái sinh viên (.csv hoặc .xlsx)"
+  guideText="Tệp gồm 2 cột bắt buộc: studentCode, status. 4 giá trị hợp lệ của status: ACTIVE (Đang học), SUSPENDED (Tạm dừng / Bảo lưu), GRADUATED (Đã tốt nghiệp), DROPPED_OUT (Thôi học)."
+  templateFileName="students-status-template.csv"
+  keyColumnLabel="MSSV"
+  entityLabel="trạng thái sinh viên"
+  [requiredColumns]="['studentCode', 'status']"
+  [downloadTemplateFn]="downloadStatusTemplateFn"
+  [importFileFn]="importStudentStatusesFn"
+  (importSuccess)="onImportSuccess()"
+/>

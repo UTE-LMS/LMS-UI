@@ -104,8 +104,8 @@ export class DetailSyllabusComponent implements OnInit {
   ngOnInit(): void {
     this.userRoles.set(this.authSvc.getRoles());
 
-    this.termSvc.getTerms().subscribe({
-      next: list => this.terms.set(list || []),
+    this.termSvc.getTerms(undefined, undefined, 0, 20).subscribe({
+      next: res => this.terms.set(res.content ?? []),
       error: () => undefined,
     });
 
@@ -126,6 +126,7 @@ export class DetailSyllabusComponent implements OnInit {
     this.syllabusSvc.getSyllabusById(id).subscribe({
       next: syl => {
         this.syllabus.set(syl);
+        this.hydrateEffectiveTerms(syl);
         this.courseSvc.getCourseById(syl.courseId).subscribe({
           next: c => this.course.set(c),
           error: () => undefined,
@@ -171,6 +172,26 @@ export class DetailSyllabusComponent implements OnInit {
       return termId;
     }
     return term.academicYear ? `${term.code} (${term.academicYear})` : term.code;
+  }
+
+  private hydrateEffectiveTerms(syl: ISyllabus): void {
+    if (!this.termSvc.getTermById) {
+      return;
+    }
+    const ids = [syl.effectiveFromTermId, syl.effectiveToTermId].filter(
+      (id): id is string => Boolean(id),
+    );
+    for (const id of ids) {
+      if (this.terms().some(t => t.id === id)) {
+        continue;
+      }
+      this.termSvc.getTermById(id).subscribe({
+        next: term => {
+          this.terms.update(curr => (curr.some(t => t.id === term.id) ? curr : [...curr, term]));
+        },
+        error: () => undefined,
+      });
+    }
   }
 
   getLinksForClo(cloId: string): ICloPiLink[] {

@@ -113,7 +113,14 @@ describe('DetailCurriculumVersionComponent (F02 US-06, US-07, US-08 UI.pdf Trang
   const ploPiSvc = {
     getPlos: vi.fn(() => of(mockPlos)),
     getPis: vi.fn(() => of(mockPis)),
-    getProgramCourses: vi.fn(() => of(mockCourses)),
+    getProgramCourses: vi.fn(() => of({
+      content: mockCourses,
+      page: 0,
+      size: 20,
+      totalElements: mockCourses.length,
+      totalPages: 1,
+      last: true,
+    })),
   };
 
   const authSvc = {

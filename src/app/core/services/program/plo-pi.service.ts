@@ -1,7 +1,8 @@
-import { HttpClient, HttpContext } from '@angular/common/http';
+import { HttpClient, HttpContext, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { UrlConstant } from '@constants/url.constant';
 import { INLINE_ERRORS } from '@interceptors/http-context.token';
+import { IPagedResults } from '@models/common/response-data.model';
 import { IPi, IPlo, IProgramCourse } from '@models/program/plo-pi.model';
 import { Observable } from 'rxjs';
 
@@ -35,8 +36,11 @@ export class PloPiService {
     });
   }
 
-  getProgramCourses(programVersionId: string): Observable<IProgramCourse[]> {
-    return this.http.get<IProgramCourse[]>(UrlConstant.API.PROGRAM_COURSES(programVersionId));
+  getProgramCourses(programVersionId: string, page = 0, size = 20): Observable<IPagedResults<IProgramCourse>> {
+    const params = new HttpParams()
+      .set('page', page.toString())
+      .set('size', size.toString());
+    return this.http.get<IPagedResults<IProgramCourse>>(UrlConstant.API.PROGRAM_COURSES(programVersionId), { params });
   }
 
   private inlineErrors(): HttpContext {

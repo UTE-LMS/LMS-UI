@@ -3,6 +3,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, computed, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
+import { createPaginatedSelect } from '@builder/paginated-select.builder';
 import {
   CALCULATION_SCOPE_LABEL,
   CALCULATION_STATUS_LABEL,
@@ -33,6 +34,7 @@ import { NzCardModule } from 'ng-zorro-antd/card';
 import { NzCheckboxModule } from 'ng-zorro-antd/checkbox';
 import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzSelectModule } from 'ng-zorro-antd/select';
+import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzTableModule } from 'ng-zorro-antd/table';
 import { NzTabsModule } from 'ng-zorro-antd/tabs';
 import { NzTagModule } from 'ng-zorro-antd/tag';
@@ -49,6 +51,7 @@ export type PassedFilterValue = 'ALL' | 'true' | 'false';
     NzCardModule,
     NzButtonModule,
     NzSelectModule,
+    NzSpinModule,
     NzInputModule,
     NzCheckboxModule,
     NzTableModule,
@@ -89,10 +92,6 @@ export class CalculationsPageComponent implements OnInit {
     this.runs(),
   ));
 
-  readonly programVersions = signal<IProgramVersion[]>([]);
-  readonly sections = signal<ISection[]>([]);
-  readonly terms = signal<ITerm[]>([]);
-
   readonly selectedScope = signal<CalculationScope>('SECTION');
   readonly selectedProgramVersionId = signal<string | null>(null);
   readonly selectedSectionIds = signal<string[]>([]);
@@ -100,6 +99,22 @@ export class CalculationsPageComponent implements OnInit {
   readonly cohortsText = signal<string>('');
   readonly isOfficial = signal<boolean>(true);
   readonly running = signal<boolean>(false);
+
+  readonly pvSelect = createPaginatedSelect<IProgramVersion>({
+    fetchPage: ({ page, size, search }) => this.pvSvc.getProgramVersions(page, size, undefined, undefined, undefined, undefined, search),
+    getId: pv => pv.id,
+    fetchById: id => this.pvSvc.getProgramVersionById(id),
+  });
+  readonly sectionSelect = createPaginatedSelect<ISection>({
+    fetchPage: ({ page, size, search }) => this.sectionSvc.getSections(this.selectedTermId() ?? undefined, undefined, search, page, size),
+    getId: s => s.id,
+    fetchById: id => this.sectionSvc.getSection(id),
+  });
+  readonly termSelect = createPaginatedSelect<ITerm>({
+    fetchPage: ({ page, size, search }) => this.termSvc.getTerms(search, undefined, page, size),
+    getId: t => t.id,
+    fetchById: id => this.termSvc.getTermById(id),
+  });
 
   readonly selectedRun = signal<CalculationRunResponse | null>(null);
   readonly selectedLevel = signal<ResultLevel | ''>('');
@@ -160,21 +175,27 @@ export class CalculationsPageComponent implements OnInit {
 
   loadInitialData(): void {
     this.loadRuns();
+    this.pvSelect.loadInitial();
+    this.sectionSelect.loadInitial();
+    this.termSelect.loadInitial();
+  }
 
-    this.pvSvc.getProgramVersions(0, 100).subscribe({
-      next: res => this.programVersions.set(res.content ?? []),
-      error: () => undefined,
-    });
+  onProgramVersionChange(pvId: string | null): void {
+    this.selectedProgramVersionId.set(pvId);
+    this.pvSelect.syncSelected(pvId);
+  }
 
-    this.sectionSvc.getSections().subscribe({
-      next: list => this.sections.set(list),
-      error: () => undefined,
-    });
+  onSectionIdsChange(sectionIds: string[]): void {
+    const ids = sectionIds ?? [];
+    this.selectedSectionIds.set(ids);
+    this.sectionSelect.syncSelected(ids);
+  }
 
-    this.termSvc.getTerms().subscribe({
-      next: list => this.terms.set(list),
-      error: () => undefined,
-    });
+  onTermChange(termId: string | null): void {
+    this.selectedTermId.set(termId);
+    this.termSelect.syncSelected(termId);
+    this.sectionSelect.reload(true);
+    this.sectionSelect.syncSelected(this.selectedSectionIds());
   }
 
   loadRuns(): void {

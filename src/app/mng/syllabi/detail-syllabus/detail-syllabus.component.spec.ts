@@ -78,7 +78,8 @@ describe('DetailSyllabusComponent (F03 US-10, US-11, TD-27, ADR 0010)', () => {
   };
 
   const termSvc = {
-    getTerms: vi.fn(() => of([])),
+    getTerms: vi.fn(() => of({ content: [], page: 0, size: 20, totalElements: 0, totalPages: 0, last: true })),
+    getTermById: vi.fn(),
   };
 
   const authSvc = {

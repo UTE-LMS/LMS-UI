@@ -22,7 +22,9 @@ import { NzModalModule, NzModalService } from 'ng-zorro-antd/modal';
 import { NzTableModule } from 'ng-zorro-antd/table';
 import { ToastrService } from 'ngx-toastr';
 import { catchError, of } from 'rxjs';
-import { describeMappings, formatNumber, meterWidth } from '../assessments.util';
+import {
+  buildSectionCloWeightMap, describeMappings, formatNumber, formatWeightPercent, ISectionCloWeightSummary, meterWidth,
+} from '../assessments.util';
 
 /**
  * Màn hình xem độ phủ ma trận bài đánh giá (ADR 0014, NEW-01/AC-6).
@@ -49,6 +51,7 @@ export class ReviewAssessmentComponent implements OnInit {
   protected readonly urlConst = UrlConstant.ROUTE.MANAGEMENT;
   protected readonly statusDisplay = ASSESSMENT_STATUS_DISPLAY;
   protected readonly formatNumber = formatNumber;
+  protected readonly formatWeightPercent = formatWeightPercent;
   protected readonly meterWidth = meterWidth;
   protected readonly bloomLabel = bloomLabel;
   protected readonly describeMappings = describeMappings;
@@ -57,6 +60,8 @@ export class ReviewAssessmentComponent implements OnInit {
   readonly assessment = signal<IAssessment | null>(null);
   readonly coverage = signal<ICoverage | null>(null);
   readonly clos = signal<IClo[]>([]);
+  readonly sectionAssessments = signal<IAssessment[] | null>(null);
+  readonly sectionAssessmentsError = signal(false);
 
   readonly isLoading = signal(true);
   readonly loadError = signal<IUserError | null>(null);
@@ -65,6 +70,21 @@ export class ReviewAssessmentComponent implements OnInit {
 
   readonly cloCodes = computed<ReadonlyMap<string, string>>(() => new Map(this.clos().map(c => [c.id, c.code])));
   readonly items = computed(() => this.assessment()?.items ?? []);
+  readonly isSectionScope = computed(() => this.assessment()?.scope === 'SECTION' && !!this.assessment()?.sectionId);
+
+  readonly sectionCloWeightMap = computed<ReadonlyMap<string, ISectionCloWeightSummary> | null>(() => {
+    const a = this.assessment();
+    const list = this.sectionAssessments();
+    if (!a || !this.isSectionScope() || list === null) {
+      return null;
+    }
+    return buildSectionCloWeightMap(
+      list,
+      a.id,
+      a.cloWeights ?? [],
+      this.clos().map(c => c.id),
+    );
+  });
 
   readonly canLock = computed(() => {
     const a = this.assessment();
@@ -99,10 +119,27 @@ export class ReviewAssessmentComponent implements OnInit {
         this.isLoading.set(false);
         this.loadClos(assessment.syllabusId);
         this.loadCoverage(assessment.id);
+        if (assessment.scope === 'SECTION' && assessment.sectionId) {
+          this.loadSectionAssessments(assessment.sectionId);
+        } else {
+          this.sectionAssessments.set(null);
+          this.sectionAssessmentsError.set(false);
+        }
       },
       error: err => {
         this.isLoading.set(false);
         this.loadError.set(toUserError(err));
+      },
+    });
+  }
+
+  private loadSectionAssessments(sectionId: string): void {
+    this.sectionAssessmentsError.set(false);
+    this.assessmentSvc.getSectionAssessments(sectionId).subscribe({
+      next: list => this.sectionAssessments.set(list ?? []),
+      error: () => {
+        this.sectionAssessments.set(null);
+        this.sectionAssessmentsError.set(true);
       },
     });
   }

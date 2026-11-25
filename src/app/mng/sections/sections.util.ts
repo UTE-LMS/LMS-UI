@@ -117,30 +117,23 @@ export function lecturerLabel(
   return `GV …${shortId(id)}`;
 }
 
-/** Ghép danh sách tên giảng viên của lớp học phần (hỗ trợ cả `section.lecturers`, `section.lecturerNames` và `section.lecturerIds`). */
+const EMPTY_NAME_MAP: ReadonlyMap<string, string> = new Map();
+
+/** Ghép danh sách tên giảng viên trực tiếp từ `section.lecturers` (ưu tiên `fullName`, rơi về `username`). */
 export function sectionLecturersText(
   section: ISection | null | undefined,
-  names: ReadonlyMap<string, string>,
-  currentUserId: string,
+  currentUserId = '',
   currentUserName?: string,
 ): string {
   if (!section) {
     return NOT_AVAILABLE;
   }
-  let labels: string[];
-  if (section.lecturers && section.lecturers.length > 0) {
-    labels = section.lecturers.map(entry => (
-      firstNonEmpty(entry.fullName, names.get(entry.id), entry.username)
-      || lecturerLabel(entry.id, names, currentUserId, currentUserName)
-    ));
-  } else if (section.lecturerNames && section.lecturerNames.length > 0) {
-    labels = section.lecturerNames.map((rawName, idx) => (
-      firstNonEmpty(rawName)
-      || lecturerLabel(section.lecturerIds[idx] ?? '', names, currentUserId, currentUserName)
-    ));
-  } else {
-    labels = section.lecturerIds.map(id => lecturerLabel(id, names, currentUserId, currentUserName));
-  }
+  const labels = section.lecturers && section.lecturers.length > 0
+    ? section.lecturers.map(entry => (
+      firstNonEmpty(entry.fullName, entry.username)
+      || lecturerLabel(entry.id, EMPTY_NAME_MAP, currentUserId, currentUserName)
+    ))
+    : section.lecturerIds.map(id => lecturerLabel(id, EMPTY_NAME_MAP, currentUserId, currentUserName));
   const filtered = labels.map(item => item.trim()).filter(item => item.length > 0);
   return filtered.length > 0 ? filtered.join(', ') : NOT_AVAILABLE;
 }

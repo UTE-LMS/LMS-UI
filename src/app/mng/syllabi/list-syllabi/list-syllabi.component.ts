@@ -10,7 +10,9 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
+import { createPaginatedSelect } from '@builder/paginated-select.builder';
 import { SystemConstant } from '@constants/system.constant';
+import { IPagedResults } from '@models/common/response-data.model';
 import { ICourse } from '@models/course/course.model';
 import { ISyllabus, ISyllabusCsvImportResponse } from '@models/course/syllabus.model';
 import { ITerm } from '@models/course/term.model';
@@ -26,12 +28,15 @@ import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzModalModule, NzModalService } from 'ng-zorro-antd/modal';
 import { NzSelectModule } from 'ng-zorro-antd/select';
+import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzTableModule } from 'ng-zorro-antd/table';
 import { ToastrService } from 'ngx-toastr';
 import {
   catchError,
   debounceTime,
   distinctUntilChanged,
+  EMPTY,
+  Observable,
   of,
   Subject,
   switchMap,
@@ -50,6 +55,7 @@ import { ImportFilePreviewComponent } from '@widget/import-file-preview/import-f
     NzTableModule,
     NzButtonModule,
     NzSelectModule,
+    NzSpinModule,
     NzModalModule,
     NzInputModule,
     StatusChipComponent,
@@ -71,7 +77,7 @@ export class ListSyllabiComponent implements OnInit {
   readonly isSearchingCourse = signal(false);
   readonly isLoadingMoreCourses = signal(false);
 
-  readonly coursePageSize = 100;
+  readonly coursePageSize = 20;
   readonly coursePage = signal(0);
   readonly courseTotalPages = signal(1);
   readonly isCourseLastPage = signal(true);
@@ -86,8 +92,17 @@ export class ListSyllabiComponent implements OnInit {
     const fid = this.pmFacultyId();
     return fid ? this.allCourses().filter(c => c.facultyId === fid) : [];
   });
-  readonly terms = signal<ITerm[]>([]);
-  readonly programVersions = signal<IProgramVersion[]>([]);
+  readonly termCache = signal<Record<string, ITerm>>({});
+  readonly termSelect = createPaginatedSelect<ITerm>({
+    fetchPage: ({ page, size, search }) => this.termSvc.getTerms(search, undefined, page, size),
+    getId: t => t.id,
+    fetchById: id => (this.termSvc.getTermById ? this.termSvc.getTermById(id) : EMPTY),
+  });
+  readonly pvSelect = createPaginatedSelect<IProgramVersion>({
+    fetchPage: ({ page, size, search }) => this.programVersionSvc.getProgramVersions(page, size, undefined, undefined, undefined, undefined, search),
+    getId: pv => pv.id,
+    fetchById: id => this.programVersionSvc.getProgramVersionById(id),
+  });
   readonly selectedCourseId = signal<string>('');
   readonly syllabi = signal<ISyllabus[]>([]);
   readonly isLoadingSyllabi = signal(false);
@@ -111,8 +126,7 @@ export class ListSyllabiComponent implements OnInit {
     if (this.showAllCourses() || this.isAdmin() || !fid) {
       return this.allCourses();
     }
-    const facultyCourses = this.scopedCourses();
-    return facultyCourses.length > 0 ? facultyCourses : this.allCourses();
+    return this.scopedCourses();
   });
 
   readonly selectedCourse = computed(() => {
@@ -190,9 +204,6 @@ export class ListSyllabiComponent implements OnInit {
     this.pmFacultyId.set(this.authSvc.getFacultyId?.());
 
     const queryCourseId = this.route.snapshot.queryParamMap.get('courseId');
-    if (queryCourseId) {
-      this.showAllCourses.set(true);
-    }
 
     this.searchCourseSubject$
       .pipe(
@@ -202,7 +213,7 @@ export class ListSyllabiComponent implements OnInit {
           this.isSearchingCourse.set(true);
           this.currentCourseSearch.set(keyword);
           this.coursePage.set(0);
-          return this.courseSvc.getCourses(0, this.coursePageSize, keyword).pipe(
+          return this.fetchCoursesPage(0, keyword).pipe(
             catchError(() => of({
               content: [],
               page: 0,
@@ -237,26 +248,46 @@ export class ListSyllabiComponent implements OnInit {
   }
 
   loadInitialCatalog(preferredCourseId: string | null): void {
-    this.termSvc.getTerms().subscribe({
-      next: list => this.terms.set(list || []),
-      error: () => undefined,
-    });
-
-    this.programVersionSvc.getProgramVersions(0, 100).subscribe({
-      next: page => this.programVersions.set(page.content || []),
-      error: () => undefined,
-    });
+    this.termSelect.loadInitial();
+    this.pvSelect.loadInitial();
 
     this.coursePage.set(0);
     this.currentCourseSearch.set('');
-    this.courseSvc.getCourses(0, this.coursePageSize).subscribe({
+    this.fetchCoursesPage(0).subscribe({
       next: page => {
         const list = page.content || [];
         this.courseTotalPages.set(page.totalPages || 1);
         this.isCourseLastPage.set(page.last ?? (1 >= (page.totalPages || 1)));
-        if (preferredCourseId && !list.some(c => c.id === preferredCourseId)) {
+        if (preferredCourseId) {
+          const found = list.find(c => c.id === preferredCourseId);
+          if (found) {
+            if (this.isOutsideFaculty(found)) {
+              this.showAllCourses.set(true);
+            }
+            this.allCourses.set(list);
+            this.selectDefaultCourse(preferredCourseId);
+            return;
+          }
           this.courseSvc.getCourseById(preferredCourseId).subscribe({
             next: preferredCourse => {
+              if (this.isOutsideFaculty(preferredCourse)) {
+                this.showAllCourses.set(true);
+                this.allCourses.set([preferredCourse, ...list]);
+                this.onCourseChange(preferredCourseId);
+                this.fetchCoursesPage(0).subscribe({
+                  next: fullPage => {
+                    const fullList = fullPage.content || [];
+                    const merged = fullList.some(c => c.id === preferredCourse.id)
+                      ? fullList
+                      : [preferredCourse, ...fullList];
+                    this.allCourses.set(merged);
+                    this.courseTotalPages.set(fullPage.totalPages || 1);
+                    this.isCourseLastPage.set(fullPage.last ?? (1 >= (fullPage.totalPages || 1)));
+                  },
+                  error: () => undefined,
+                });
+                return;
+              }
               this.allCourses.set([preferredCourse, ...list]);
               this.onCourseChange(preferredCourseId);
             },
@@ -274,6 +305,28 @@ export class ListSyllabiComponent implements OnInit {
         this.hasError.set(true);
       },
     });
+  }
+
+  private activeFacultyFilter(): string | undefined {
+    if (this.showAllCourses() || this.isAdmin()) {
+      return undefined;
+    }
+    return this.pmFacultyId();
+  }
+
+  private isOutsideFaculty(course: ICourse | null | undefined): boolean {
+    const fid = this.pmFacultyId();
+    return Boolean(!this.isAdmin() && fid && course?.facultyId && course.facultyId !== fid);
+  }
+
+  private fetchCoursesPage(page: number, search?: string): Observable<IPagedResults<ICourse>> {
+    const facultyId = this.activeFacultyFilter();
+    if (facultyId) {
+      return this.courseSvc.getCourses(page, this.coursePageSize, search, facultyId);
+    }
+    return search !== undefined
+      ? this.courseSvc.getCourses(page, this.coursePageSize, search)
+      : this.courseSvc.getCourses(page, this.coursePageSize);
   }
 
   private selectDefaultCourse(preferredCourseId: string | null): void {
@@ -297,10 +350,6 @@ export class ListSyllabiComponent implements OnInit {
   }
 
   onSearchCourse(keyword: string): void {
-    const trimmed = keyword?.trim() ?? '';
-    if (trimmed && !this.showAllCourses()) {
-      this.showAllCourses.set(true);
-    }
     this.searchCourseSubject$.next(keyword);
   }
 
@@ -322,7 +371,9 @@ export class ListSyllabiComponent implements OnInit {
     this.syllabusSvc.getSyllabiByCourse(courseId).subscribe({
       next: list => {
         this.isLoadingSyllabi.set(false);
-        this.syllabi.set(list || []);
+        const safeList = list || [];
+        this.syllabi.set(safeList);
+        this.hydrateTermsFromSyllabi(safeList);
       },
       error: () => {
         this.isLoadingSyllabi.set(false);
@@ -331,11 +382,39 @@ export class ListSyllabiComponent implements OnInit {
     });
   }
 
+  private hydrateTermsFromSyllabi(syllabi: readonly ISyllabus[]): void {
+    if (!this.termSvc.getTermById) {
+      return;
+    }
+    const loadedIds = new Set<string>([
+      ...this.termSelect.options().map(t => t.id),
+      ...Object.keys(this.termCache()),
+    ]);
+    const missingIds = new Set<string>();
+    for (const s of syllabi) {
+      if (s.effectiveFromTermId && !loadedIds.has(s.effectiveFromTermId)) {
+        missingIds.add(s.effectiveFromTermId);
+      }
+      if (s.effectiveToTermId && !loadedIds.has(s.effectiveToTermId)) {
+        missingIds.add(s.effectiveToTermId);
+      }
+    }
+    for (const id of missingIds) {
+      this.termSvc.getTermById(id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+        next: term => this.termCache.update(prev => ({ ...prev, [term.id]: term })),
+        error: () => undefined,
+      });
+    }
+  }
+
   getTermCode(termId?: string | null): string {
     if (!termId) {
       return '—';
     }
-    const term = this.terms().find(t => t.id === termId || t.code === termId);
+    const term =
+      this.termSelect.options().find(t => t.id === termId || t.code === termId)
+      ?? this.termCache()[termId]
+      ?? Object.values(this.termCache()).find(t => t.code === termId);
     if (!term) {
       return termId;
     }
@@ -346,29 +425,31 @@ export class ListSyllabiComponent implements OnInit {
     const nextVal = !this.showAllCourses();
     this.showAllCourses.set(nextVal);
 
-    if (!nextVal) {
-      const scoped = this.scopedCourses();
-      if (scoped.length > 0 && !this.isCourseInScope()) {
-        this.onCourseChange(scoped[0].id);
-      }
-    } else if (this.allCourses().length === 0) {
-      this.coursePage.set(0);
-      this.currentCourseSearch.set('');
-      this.courseSvc.getCourses(0, this.coursePageSize).subscribe({
-        next: page => {
-          this.allCourses.set(page.content || []);
-          this.courseTotalPages.set(page.totalPages || 1);
-          this.isCourseLastPage.set(page.last ?? (1 >= (page.totalPages || 1)));
-        },
-        error: () => undefined,
-      });
-    }
+    this.coursePage.set(0);
+    this.currentCourseSearch.set('');
+    const current = this.selectedCourse();
+    this.fetchCoursesPage(0).subscribe({
+      next: page => {
+        const list = page.content || [];
+        const merged = nextVal && current && !list.some(c => c.id === current.id)
+          ? [current, ...list]
+          : list;
+        this.allCourses.set(merged);
+        this.courseTotalPages.set(page.totalPages || 1);
+        this.isCourseLastPage.set(page.last ?? (1 >= (page.totalPages || 1)));
+
+        if (!nextVal) {
+          const scoped = this.scopedCourses();
+          if (scoped.length > 0 && !this.isCourseInScope()) {
+            this.onCourseChange(scoped[0].id);
+          }
+        }
+      },
+      error: () => undefined,
+    });
   }
 
   onCourseScrollToBottom(): void {
-    if (!this.showAllCourses() && !this.isAdmin() && Boolean(this.pmFacultyId())) {
-      return;
-    }
     if (
       this.isLoadingMoreCourses()
       || this.isSearchingCourse()
@@ -381,8 +462,7 @@ export class ListSyllabiComponent implements OnInit {
     const nextPage = this.coursePage() + 1;
     this.isLoadingMoreCourses.set(true);
 
-    this.courseSvc
-      .getCourses(nextPage, this.coursePageSize, this.currentCourseSearch())
+    this.fetchCoursesPage(nextPage, this.currentCourseSearch())
       .pipe(
         catchError(() => of({
           content: [],
@@ -423,11 +503,26 @@ export class ListSyllabiComponent implements OnInit {
   openImportModal(): void {
     this.importStep.set(1);
     this.importVersion.set('');
-    this.importProgramVersionId.set(this.programVersions()[0]?.id ?? '');
+    this.pvSelect.loadInitial();
+    this.termSelect.loadInitial();
+    const defaultPvId = this.pvSelect.options()[0]?.id ?? '';
+    this.importProgramVersionId.set(defaultPvId);
+    this.pvSelect.syncSelected(defaultPvId);
     this.importEffectiveFromTermId.set(null);
+    this.termSelect.syncSelected(null);
     this.selectedFile.set(null);
     this.importPreview.set(null);
     this.isImportModalVisible.set(true);
+  }
+
+  onImportPvChange(pvId: string): void {
+    this.importProgramVersionId.set(pvId);
+    this.pvSelect.syncSelected(pvId);
+  }
+
+  onImportTermChange(termId: string | null): void {
+    this.importEffectiveFromTermId.set(termId);
+    this.termSelect.syncSelected(termId);
   }
 
   closeImportModal(): void {

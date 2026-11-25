@@ -226,12 +226,12 @@ describe('HomepageComponent — M2 Public Homepage (R1, Q22)', () => {
   const ploPiServiceMock = {
     getPlos: vi.fn(() => of(mockPlos)),
     getPis: vi.fn(() => of(mockPis)),
-    getProgramCourses: vi.fn(() => of(mockProgramCourses)),
+    getProgramCourses: vi.fn(() => of(makePaged<IProgramCourse>(mockProgramCourses))),
   };
 
   const courseServiceMock = {
     getCourses: vi.fn(() => of(makePaged<ICourse>([], 420))),
-    getProgramCourses: vi.fn(() => of(mockProgramCourses)),
+    getProgramCourses: vi.fn(() => of(makePaged<IProgramCourse>(mockProgramCourses))),
   };
 
   const syllabusServiceMock = {
@@ -262,7 +262,7 @@ describe('HomepageComponent — M2 Public Homepage (R1, Q22)', () => {
     ploPiServiceMock.getPlos.mockImplementation(() => of(mockPlos));
     ploPiServiceMock.getPis.mockImplementation(() => of(mockPis));
     courseServiceMock.getCourses.mockImplementation(() => of(makePaged<ICourse>([], 420)));
-    courseServiceMock.getProgramCourses.mockImplementation(() => of(mockProgramCourses));
+    courseServiceMock.getProgramCourses.mockImplementation(() => of(makePaged<IProgramCourse>(mockProgramCourses)));
     syllabusServiceMock.getSyllabiByCourse.mockImplementation(() => of(mockSyllabi));
     cloServiceMock.getCloPiMatrix.mockImplementation(() => of(mockMatrix));
 
@@ -333,7 +333,7 @@ describe('HomepageComponent — M2 Public Homepage (R1, Q22)', () => {
       // Step 3 auto-triggered Tab 1, Tab 2, and Step 4 course selection
       expect(ploPiServiceMock.getPlos).toHaveBeenCalledWith(versionId1);
       expect(ploPiServiceMock.getPis).toHaveBeenCalledWith(versionId1);
-      expect(courseServiceMock.getProgramCourses).toHaveBeenCalledWith(versionId1);
+      expect(courseServiceMock.getProgramCourses).toHaveBeenCalledWith(versionId1, undefined, undefined, undefined, undefined, 0, 100);
       expect(component.selectedCourseId()).toBe(courseId1);
       expect(syllabusServiceMock.getSyllabiByCourse).toHaveBeenCalledWith(courseId1);
       expect(component.selectedSyllabusId()).toBe(syllabusId1);
@@ -387,7 +387,7 @@ describe('HomepageComponent — M2 Public Homepage (R1, Q22)', () => {
     });
   });
 
-  describe('4. Tab 2: Kế hoạch Đào tạo & Học phần (Semester table & Credit summation)', () => {
+  describe('4. Tab 2: Kế hoạch Đào tạo & Học phần (Semester grouping & Credit summation)', () => {
     it('calculates total credits, filters courses by semester/category/search, and jumps to syllabus matrix', () => {
       const { fixture, component, compiled } = createComponent();
 
@@ -398,7 +398,11 @@ describe('HomepageComponent — M2 Public Homepage (R1, Q22)', () => {
 
       expect(component.totalCourseCredits()).toBe(7);
       expect(component.semesterSummaries().length).toBe(2);
+      expect(component.groupedCoursesBySemester().length).toBe(2);
       expect(compiled.querySelector('[data-testid="total-course-credits"]')?.textContent).toContain('7 TC');
+
+      const semesterGroups = compiled.querySelectorAll('.semester-group');
+      expect(semesterGroups.length).toBe(2);
 
       const courseRows = compiled.querySelectorAll('.course-row');
       expect(courseRows.length).toBe(2);
@@ -409,6 +413,8 @@ describe('HomepageComponent — M2 Public Homepage (R1, Q22)', () => {
       fixture.detectChanges();
       expect(component.filteredCourses().length).toBe(1);
       expect(component.filteredCourseCredits()).toBe(3);
+      expect(component.groupedCoursesBySemester().length).toBe(1);
+      expect(compiled.querySelectorAll('.semester-group').length).toBe(1);
 
       // Jump to syllabus matrix for courseId2
       component.inspectCourseMatrix(courseId2);
@@ -416,6 +422,177 @@ describe('HomepageComponent — M2 Public Homepage (R1, Q22)', () => {
       expect(component.viewMode()).toBe('SYLLABI');
       expect(component.activeTab()).toBe('CLO_PI_MATRIX');
       expect(component.selectedCourseId()).toBe(courseId2);
+    });
+
+    it('groups courses by semester in ascending order with unassigned semester at the end', () => {
+      const multiSemesterCourses: IProgramCourse[] = [
+        {
+          id: 'pc_hk2_a',
+          programVersionId: versionId1,
+          courseId: courseId1,
+          semester: 2,
+          credits: 3,
+          type: 'COMPULSORY',
+          category: 'MAJOR_FOUNDATION',
+          course: { id: courseId1, code: 'OOPR230279', name: 'Lập trình hướng đối tượng', credits: 3 },
+        },
+        {
+          id: 'pc_unassigned',
+          programVersionId: versionId1,
+          courseId: 'crs_unassigned',
+          semester: undefined,
+          credits: 2,
+          type: 'ELECTIVE',
+          course: { id: 'crs_unassigned', code: 'FREE1001', name: 'Môn tự chọn tự do', credits: 2 },
+        },
+        {
+          id: 'pc_hk9',
+          programVersionId: versionId1,
+          courseId: 'crs_hk9',
+          semester: 9,
+          credits: 10,
+          type: 'COMPULSORY',
+          category: 'THESIS',
+          course: { id: 'crs_hk9', code: 'THES4901', name: 'Khóa luận tốt nghiệp', credits: 10 },
+        },
+        {
+          id: 'pc_hk1',
+          programVersionId: versionId1,
+          courseId: 'crs_hk1',
+          semester: 1,
+          credits: 4,
+          type: 'COMPULSORY',
+          category: 'FOUNDATION',
+          course: { id: 'crs_hk1', code: 'MATH1101', name: 'Giải tích 1', credits: 4 },
+        },
+        {
+          id: 'pc_hk2_b',
+          programVersionId: versionId1,
+          courseId: courseId2,
+          semester: 2,
+          credits: 4,
+          type: 'ELECTIVE',
+          category: 'SPECIALIZED',
+          course: { id: courseId2, code: 'DSAL240379', name: 'Cấu trúc dữ liệu và giải thuật', credits: 4 },
+        },
+      ];
+      courseServiceMock.getProgramCourses.mockImplementation((_pvId?: string, _s?: number, _t?: string, _c?: string, _q?: string, page = 0) => {
+        if (page === 0) {
+          return of({
+            content: multiSemesterCourses.slice(0, 3),
+            page: 0,
+            size: 100,
+            totalElements: multiSemesterCourses.length,
+            totalPages: 2,
+            last: false,
+          });
+        }
+        return of({
+          content: multiSemesterCourses.slice(3),
+          page: 1,
+          size: 100,
+          totalElements: multiSemesterCourses.length,
+          totalPages: 2,
+          last: true,
+        });
+      });
+
+      const { fixture, component, compiled } = createComponent();
+      component.onSelectFaculty(facultyId1);
+      component.onSelectProgram(programId1);
+      component.switchTab('COURSES');
+      fixture.detectChanges();
+
+      const groups = component.groupedCoursesBySemester();
+      expect(groups.map(g => g.semesterKey)).toEqual(['1', '2', '9', 'unassigned']);
+      expect(groups.map(g => g.semesterLabel)).toEqual([
+        'Học kỳ 1',
+        'Học kỳ 2',
+        'Học kỳ 9',
+        'Chưa xếp kỳ',
+      ]);
+      expect(groups[1]?.courseCount).toBe(2);
+      expect(groups[1]?.totalCredits).toBe(7);
+      expect(groups[1]?.courses.map(c => c.course?.code)).toEqual(['OOPR230279', 'DSAL240379']);
+      expect(component.availableSemesterOptions()).toContain(9);
+
+      const domGroups = compiled.querySelectorAll('.semester-group');
+      expect(domGroups.length).toBe(4);
+      const hk2Section = compiled.querySelector('[data-testid="semester-group-2"]');
+      expect(hk2Section?.querySelectorAll('.course-row').length).toBe(2);
+      expect(hk2Section?.textContent).toContain('2 học phần · 7 tín chỉ');
+      expect(compiled.querySelector('[data-testid="semester-group-unassigned"]')?.textContent).toContain('Chưa xếp kỳ');
+    });
+
+    it('filters to a single semester group via quick pill or group button and toggles back to all semesters', () => {
+      const { fixture, component, compiled } = createComponent();
+
+      component.onSelectFaculty(facultyId1);
+      component.onSelectProgram(programId1);
+      component.switchTab('COURSES');
+      fixture.detectChanges();
+
+      const focusButtons = compiled.querySelectorAll<HTMLButtonElement>('[data-testid="btn-focus-semester"]');
+      expect(focusButtons.length).toBe(2);
+      focusButtons[0]?.click();
+      fixture.detectChanges();
+
+      expect(component.filterSemester()).toBe(2);
+      expect(compiled.querySelectorAll('.semester-group').length).toBe(1);
+      expect(compiled.querySelector('[data-testid="semester-group-2"]')).not.toBeNull();
+      expect(compiled.querySelector('[data-testid="semester-group-3"]')).toBeNull();
+      expect(compiled.querySelector('[data-testid="btn-focus-semester"]')?.textContent).toContain(
+        'Xem tất cả học kỳ',
+      );
+
+      // Click again to clear semester filter
+      compiled.querySelector<HTMLButtonElement>('[data-testid="btn-focus-semester"]')?.click();
+      fixture.detectChanges();
+
+      expect(component.filterSemester()).toBeNull();
+      expect(compiled.querySelectorAll('.semester-group').length).toBe(2);
+    });
+
+    it('shows empty filter state and restores semester groups when resetting filters', () => {
+      const { fixture, component, compiled } = createComponent();
+
+      component.onSelectFaculty(facultyId1);
+      component.onSelectProgram(programId1);
+      component.switchTab('COURSES');
+      fixture.detectChanges();
+
+      component.courseSearchQuery.set('MON_KHONG_TON_TAI');
+      fixture.detectChanges();
+
+      expect(component.groupedCoursesBySemester().length).toBe(0);
+      expect(compiled.querySelectorAll('.semester-group').length).toBe(0);
+      expect(compiled.querySelector('[data-testid="semester-groups-list"]')?.textContent).toContain(
+        'Không tìm thấy học phần nào phù hợp bộ lọc.',
+      );
+
+      const resetBtn = compiled.querySelector<HTMLButtonElement>('[data-testid="btn-empty-reset-course-filters"]');
+      expect(resetBtn).not.toBeNull();
+      resetBtn?.click();
+      fixture.detectChanges();
+
+      expect(component.hasActiveCourseFilters()).toBe(false);
+      expect(compiled.querySelectorAll('.semester-group').length).toBe(2);
+    });
+
+    it('shows empty catalog message when version has no courses', () => {
+      courseServiceMock.getProgramCourses.mockImplementation(() => of(makePaged<IProgramCourse>([])));
+
+      const { fixture, component, compiled } = createComponent();
+      component.onSelectFaculty(facultyId1);
+      component.onSelectProgram(programId1);
+      component.switchTab('COURSES');
+      fixture.detectChanges();
+
+      expect(component.groupedCoursesBySemester()).toEqual([]);
+      expect(compiled.querySelectorAll('.semester-group').length).toBe(0);
+      expect(compiled.querySelector('[data-testid="semester-groups-list"]')?.textContent).toContain(
+        'Phiên bản chương trình đào tạo này chưa có dữ liệu học phần.',
+      );
     });
   });
 

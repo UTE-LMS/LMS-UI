@@ -25,8 +25,13 @@
         <i class="fa-solid fa-file-import mr-1.5" aria-hidden="true"></i>Import điểm
       </a>
     }
-    @if (studentRows().length > 0) {
-      <button nz-button nzType="primary" type="button" (click)="exportCsv()">
+    @if (totalStudents() > 0 || scores().length > 0) {
+      <button nz-button nzType="default" type="button" [nzLoading]="exportingFormat() === 'xlsx'"
+        [disabled]="!!exportingFormat()" (click)="exportScores('xlsx')">
+        <i class="fa-solid fa-file-excel mr-1.5" aria-hidden="true"></i>Xuất Excel
+      </button>
+      <button nz-button nzType="primary" type="button" [nzLoading]="exportingFormat() === 'csv'"
+        [disabled]="!!exportingFormat()" (click)="exportScores('csv')">
         <i class="fa-solid fa-download mr-1.5" aria-hidden="true"></i>Xuất CSV
       </button>
     }
@@ -43,14 +48,14 @@
     <div class="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
       <div class="rounded border border-slate-200 bg-white p-4 shadow-sm">
         <p class="m-0 text-xs font-semibold uppercase text-slate-500">Sinh viên có điểm</p>
-        <p class="m-0 mt-1 text-2xl font-bold text-slate-900">{{ uniqueStudentCount() }}</p>
+        <p class="m-0 mt-1 text-2xl font-bold text-slate-900">{{ totalStudents() }}</p>
       </div>
       <div class="rounded border border-slate-200 bg-white p-4 shadow-sm">
-        <p class="m-0 text-xs font-semibold uppercase text-slate-500">Số bản ghi điểm (Câu × CLO)</p>
+        <p class="m-0 text-xs font-semibold uppercase text-slate-500">Bản ghi điểm (trang hiện tại)</p>
         <p class="m-0 mt-1 text-2xl font-bold text-slate-900">{{ scores().length }}</p>
       </div>
       <div class="rounded border border-slate-200 bg-white p-4 shadow-sm">
-        <p class="m-0 text-xs font-semibold uppercase text-slate-500">Tỷ lệ đạt điểm trung bình</p>
+        <p class="m-0 text-xs font-semibold uppercase text-slate-500">Tỷ lệ điểm TB (trang hiện tại)</p>
         <p class="m-0 mt-1 text-2xl font-bold text-blue-700">
           {{ averagePercentage() !== null ? (averagePercentage() | number: '1.1-1') + '%' : '—' }}
         </p>
@@ -65,7 +70,7 @@
         placeholder="Tìm theo MSSV, họ tên, câu hỏi, CLO…"
         aria-label="Tìm theo MSSV, họ tên, câu hỏi, CLO"
         [ngModel]="searchText()"
-        (ngModelChange)="searchText.set($event)"
+        (ngModelChange)="onSearchChange($event)"
       />
       <div role="group" aria-label="Chế độ xem bảng điểm" class="inline-flex overflow-hidden rounded border border-slate-400">
         <button
@@ -91,7 +96,7 @@
       </div>
     </div>
 
-    @if (scores().length === 0) {
+    @if (scores().length === 0 && !searchText().trim() && !isLoading()) {
       <div class="mt-6 rounded border border-dashed border-slate-300 bg-slate-50 p-8 text-center text-slate-600">
         <p class="m-0 mb-3">Bài đánh giá này chưa có điểm sinh viên nào được ghi nhận.</p>
         @if (assessment()?.status === 'LOCKED' || assessment()?.status === 'SCORE_ENTERED') {
@@ -102,12 +107,22 @@
       </div>
     } @else if (viewMode() === 'MATRIX') {
       <nz-table
+        #matrixTable
         class="mt-4"
         nzSize="middle"
         [nzData]="studentRows()"
-        [nzPageSize]="30"
+        [nzFrontPagination]="false"
+        [nzShowPagination]="true"
+        [nzTotal]="totalStudents()"
+        [nzPageIndex]="page() + 1"
+        [nzPageSize]="size()"
+        [nzShowSizeChanger]="true"
+        [nzPageSizeOptions]="[10, 20, 50, 100]"
+        [nzLoading]="isLoading()"
         [nzScroll]="{ x: '960px' }"
         [nzNoResult]="emptyFilterTpl"
+        (nzPageIndexChange)="onPageIndexChange($event)"
+        (nzPageSizeChange)="onPageSizeChange($event)"
       >
         <thead>
           <tr>
@@ -124,7 +139,7 @@
           </tr>
         </thead>
         <tbody>
-          @for (row of studentRows(); track row.studentId) {
+          @for (row of matrixTable.data; track row.studentId) {
             <tr>
               <td class="font-semibold">{{ row.studentCode }}</td>
               <td>{{ row.studentName || '—' }}</td>
@@ -155,10 +170,13 @@
       </nz-table>
     } @else {
       <nz-table
+        #flatTable
         class="mt-4"
         nzSize="middle"
-        [nzData]="filteredScores()"
-        [nzPageSize]="50"
+        [nzData]="scores()"
+        [nzFrontPagination]="false"
+        [nzShowPagination]="false"
+        [nzLoading]="isLoading()"
         [nzScroll]="{ x: '960px' }"
         [nzNoResult]="emptyFilterTpl"
       >
@@ -175,7 +193,7 @@
           </tr>
         </thead>
         <tbody>
-          @for (s of filteredScores(); track s.id) {
+          @for (s of flatTable.data; track s.id) {
             <tr>
               <td class="font-semibold">{{ s.studentCode }}</td>
               <td>{{ s.studentName || '—' }}</td>
@@ -199,6 +217,20 @@
           }
         </tbody>
       </nz-table>
+      <div class="mt-3 flex flex-wrap items-center justify-between gap-3">
+        <span class="text-xs text-slate-600">
+          Trang hiện tại hiển thị {{ scores().length }} dòng điểm của {{ studentRows().length }}/{{ totalStudents() }} sinh viên.
+        </span>
+        <nz-pagination
+          [nzTotal]="totalStudents()"
+          [nzPageIndex]="page() + 1"
+          [nzPageSize]="size()"
+          [nzShowSizeChanger]="true"
+          [nzPageSizeOptions]="[10, 20, 50, 100]"
+          (nzPageIndexChange)="onPageIndexChange($event)"
+          (nzPageSizeChange)="onPageSizeChange($event)"
+        />
+      </div>
     }
   }
 </div>

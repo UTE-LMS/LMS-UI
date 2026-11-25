@@ -14,8 +14,11 @@ export class AnalyticsService {
   }
 
   exportCsv(query: IAnalyticsQuery): Observable<HttpResponse<Blob>> {
+    const exportQuery: IAnalyticsQuery = { ...query };
+    delete exportQuery.page;
+    delete exportQuery.size;
     return this.http.get(UrlConstant.API.ANALYTICS_EXPORT, {
-      params: this.toParams(query),
+      params: this.toParams(exportQuery),
       observe: 'response',
       responseType: 'blob',
     });
@@ -29,7 +32,12 @@ export class AnalyticsService {
         for (const item of value) {
           params = params.append(key, String(item));
         }
-      } else if (value !== undefined && value !== null && value !== '') {
+      } else if (typeof value === 'string') {
+        const trimmed = value.trim();
+        if (trimmed) {
+          params = params.set(key, trimmed);
+        }
+      } else if (value !== undefined && value !== null) {
         params = params.set(key, String(value));
       }
     }

@@ -30,13 +30,26 @@ describe('AnalyticsService (F07/US-36)', () => {
     req.flush({ dimension: 'TIME_TERM', columns: [], rows: [], matrix: [], isOfficial: false, isStale: false });
   });
 
-  it('AC-2: xuất CSV dùng cùng tham số và nhận blob kèm header', () => {
-    service.exportCsv({ dimension: 'COHORT', cohorts: ['K22'] }).subscribe(res => {
+  it('AC-2: xuất CSV loại bỏ page và size nhưng giữ nguyên search/bộ lọc', () => {
+    service.exportCsv({ dimension: 'STUDENT', cohorts: ['K22'], page: 2, size: 20, search: '  SV001  ' }).subscribe(res => {
       expect(res.body).toBeInstanceOf(Blob);
     });
     const req = httpMock.expectOne(r => r.url === UrlConstant.API.ANALYTICS_EXPORT);
     expect(req.request.responseType).toBe('blob');
     expect(req.request.params.getAll('cohorts')).toEqual(['K22']);
+    expect(req.request.params.get('search')).toBe('SV001');
+    expect(req.request.params.has('page')).toBe(false);
+    expect(req.request.params.has('size')).toBe(false);
     req.flush(new Blob(['a,b'], { type: 'text/csv' }));
+  });
+
+  it('getMatrix gửi page, size và search cho chiều STUDENT', () => {
+    service.getMatrix({ dimension: 'STUDENT', page: 1, size: 20, search: '  Nguyen ' }).subscribe();
+    const req = httpMock.expectOne(r => r.url === UrlConstant.API.ANALYTICS);
+    expect(req.request.params.get('dimension')).toBe('STUDENT');
+    expect(req.request.params.get('page')).toBe('1');
+    expect(req.request.params.get('size')).toBe('20');
+    expect(req.request.params.get('search')).toBe('Nguyen');
+    req.flush({ dimension: 'STUDENT', columns: [], rows: [], matrix: [], isOfficial: false, isStale: false, page: 1, size: 20, totalElements: 0, totalPages: 0, last: true });
   });
 });

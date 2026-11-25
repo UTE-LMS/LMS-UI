@@ -7,7 +7,7 @@ import { AuthService } from '@services/auth/auth.service';
 import { CloService } from '@services/course/clo.service';
 import { ModalOptions, NzModalService } from 'ng-zorro-antd/modal';
 import { ToastrService } from 'ngx-toastr';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { DetailAssessmentComponent } from './detail-assessment.component';
 
 function invokeConfirm(cfg: ModalOptions): void {
@@ -35,6 +35,7 @@ describe('DetailAssessmentComponent (F04 US-15, US-16, ADR 0014)', () => {
 
   const assessmentSvc = {
     getAssessment: vi.fn(),
+    getSectionAssessments: vi.fn(),
     updateAssessment: vi.fn(),
     replaceItems: vi.fn(),
     lock: vi.fn(),
@@ -55,6 +56,7 @@ describe('DetailAssessmentComponent (F04 US-15, US-16, ADR 0014)', () => {
     vi.clearAllMocks();
     authSvc.getRoles.mockReturnValue(roles);
     assessmentSvc.getAssessment.mockReturnValue(of(assessment));
+    assessmentSvc.getSectionAssessments.mockReturnValue(of([assessment]));
     await TestBed.configureTestingModule({
       imports: [DetailAssessmentComponent],
       providers: [
@@ -127,5 +129,87 @@ describe('DetailAssessmentComponent (F04 US-15, US-16, ADR 0014)', () => {
     component.removeItem(0);
     expect(component.items().length).toBe(1);
     expect(component.itemsDirty()).toBe(true);
+  });
+
+  it('hiển thị % CLO các bài khác, tổng toàn lớp và phần còn lại cho bài của lớp', async () => {
+    const current = make('DRAFT');
+    const other: IAssessment = {
+      id: 'a0', syllabusId: 'syl1', sectionId: 'sec1', code: 'GK', name: 'Giữa kỳ', scope: 'SECTION',
+      status: 'LOCKED', locked: true,
+      cloWeights: [{ cloId: 'clo1', weight: 0.4 }],
+      items: [],
+    };
+    await setup([SystemConstant.ROLE.LECTURER], current);
+    assessmentSvc.getSectionAssessments.mockReturnValue(of([other, current]));
+    component.load();
+    fixture.detectChanges();
+
+    expect(assessmentSvc.getSectionAssessments).toHaveBeenCalledWith('sec1');
+    const clo1Summary = component.sectionCloWeightMap()?.get('clo1');
+    expect(clo1Summary?.otherWeight).toBe(0.4);
+    expect(clo1Summary?.currentWeight).toBe(0.5);
+    expect(clo1Summary?.totalWeight).toBe(0.9);
+    expect(clo1Summary?.remainingWeight).toBe(0.1);
+    expect(clo1Summary?.status).toBe('UNDER');
+
+    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    expect(text).toContain('GK: 40%');
+    expect(text).toContain('90%');
+    expect(text).toContain('Còn 10%');
+  });
+
+  it('cảnh báo ngay khi nhập trọng số làm tổng CLO toàn lớp vượt quá 100%', async () => {
+    const current = make('DRAFT');
+    const other: IAssessment = {
+      id: 'a0', syllabusId: 'syl1', sectionId: 'sec1', code: 'GK', name: 'Giữa kỳ', scope: 'SECTION',
+      status: 'LOCKED', locked: true,
+      cloWeights: [{ cloId: 'clo1', weight: 0.6 }],
+      items: [],
+    };
+    await setup([SystemConstant.ROLE.LECTURER], current);
+    assessmentSvc.getSectionAssessments.mockReturnValue(of([other, current]));
+    component.load();
+    component.updateCloWeight('clo1', 0.55);
+    fixture.detectChanges();
+
+    expect(component.overflowingClos().map(o => o.cloCode)).toEqual(['CLO1']);
+    const alertEl = (fixture.nativeElement as HTMLElement).querySelector('[role="alert"]');
+    expect(alertEl?.textContent).toContain('Cảnh báo vượt quá 100%');
+    expect(alertEl?.textContent).toContain('115%');
+    expect(alertEl?.textContent).toContain('vượt 15%');
+  });
+
+  it('khung theo đề cương (SYLLABUS_TEMPLATE) không gọi getSectionAssessments', async () => {
+    const template = make('DRAFT', { scope: 'SYLLABUS_TEMPLATE', sectionId: null });
+    await setup([SystemConstant.ROLE.LECTURER], template);
+    expect(assessmentSvc.getSectionAssessments).not.toHaveBeenCalled();
+    expect(component.isSectionScope()).toBe(false);
+    expect(component.sectionCloWeightMap()).toBeNull();
+  });
+
+  it('lỗi tải danh sách bài cùng lớp: hiện "—" (không hiện 0%) và cho phép thử lại', async () => {
+    const current = make('DRAFT');
+    await setup([SystemConstant.ROLE.LECTURER], current);
+    assessmentSvc.getSectionAssessments.mockReturnValue(throwError(() => new Error('network')));
+    component.load();
+    fixture.detectChanges();
+
+    expect(component.sectionAssessmentsError()).toBe(true);
+    expect(component.sectionCloWeightMap()).toBeNull();
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('Không tải được tổng trọng số CLO');
+
+    assessmentSvc.getSectionAssessments.mockReturnValue(of([current]));
+    component.retrySectionAssessments();
+    fixture.detectChanges();
+    expect(component.sectionAssessmentsError()).toBe(false);
+    expect(component.sectionCloWeightMap()?.get('clo1')?.totalWeight).toBe(0.5);
+  });
+
+  it('updateCloWeight chuẩn hóa NaN hoặc số âm về 0', async () => {
+    await setup([SystemConstant.ROLE.LECTURER], make('DRAFT'));
+    component.updateCloWeight('clo1', Number.NaN);
+    expect(component.cloWeights().find(c => c.cloId === 'clo1')?.weight).toBe(0);
+    component.updateCloWeight('clo1', -0.2);
+    expect(component.cloWeights().find(c => c.cloId === 'clo1')?.weight).toBe(0);
   });
 });

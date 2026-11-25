@@ -14,7 +14,7 @@ import { of, throwError } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AnalyticsPageComponent, headerLabel, LECTURER_DIMENSIONS, MAX_CHART_SERIES } from './analytics-page.component';
 
-const emptyPage = { content: [], page: 0, size: 100, totalElements: 0, totalPages: 0, last: true };
+const emptyPage = { content: [], page: 0, size: 20, totalElements: 0, totalPages: 0, last: true };
 
 // DỮ LIỆU THỬ NGHIỆM: giá trị chọn tay để kiểm tra hiển thị, không phải kết quả đo thật.
 const matrix: IAnalyticsMatrix = {
@@ -67,9 +67,9 @@ describe('AnalyticsPageComponent', () => {
         { provide: AuthService, useValue: createAuthMock(roles) },
         { provide: AnalyticsService, useValue: analyticsSvc },
         { provide: ProgramVersionService, useValue: programVersionSvc },
-        { provide: CourseService, useValue: { getCourses: () => of(emptyPage) } },
-        { provide: TermService, useValue: { getTerms: () => of([]) } },
-        { provide: SectionService, useValue: { getSections: () => of([]) } },
+        { provide: CourseService, useValue: { getCourses: () => of(emptyPage), getCourseById: vi.fn() } },
+        { provide: TermService, useValue: { getTerms: () => of(emptyPage), getTermById: vi.fn() } },
+        { provide: SectionService, useValue: { getSections: () => of(emptyPage), getSection: vi.fn() } },
         { provide: CalculationService, useValue: { getCalculationRuns: () => of(emptyPage) } },
         { provide: ToastrService, useValue: toastr },
       ],
@@ -248,7 +248,39 @@ describe('AnalyticsPageComponent', () => {
     expect(component.level()).toBeNull();
     expect(component.runId()).toBeNull();
     expect(component.studentIdsText()).toBe('');
+    expect(component.studentSearch()).toBe('');
+    expect(component.studentPage()).toBe(0);
     expect(component.subjectIdsText()).toBe('');
     expect(component.passedFilter()).toBe('ALL');
+  });
+
+  it('chiều STUDENT gửi page, size, search khi phân tích và chuyển trang sinh viên', () => {
+    analyticsSvc.getMatrix.mockReturnValue(of({
+      dimension: 'STUDENT',
+      level: 'CLO',
+      runId: 'r1',
+      isOfficial: true,
+      isStale: false,
+      columns: [{ id: 'st1', code: '20110001', name: 'SV A' }],
+      rows: [{ id: 'c1', code: 'CLO1' }],
+      matrix: [[{ enrolled: 1, evaluated: 1, passed: 1, failed: 0, insufficientData: 0, mean: 0.8, passRate: 1, passRateOfEnrolled: 1, isOfficial: true, isStale: false }]],
+      page: 1,
+      size: 20,
+      totalElements: 35,
+      totalPages: 2,
+      last: true,
+    }));
+
+    component.selectDimension('STUDENT');
+    component.studentSearch.set('2011');
+    component.onStudentPageChange(2);
+
+    expect(analyticsSvc.getMatrix).toHaveBeenCalledWith(expect.objectContaining({
+      dimension: 'STUDENT',
+      page: 1,
+      size: 20,
+      search: '2011',
+    }));
+    expect(component.result()?.totalElements).toBe(35);
   });
 });

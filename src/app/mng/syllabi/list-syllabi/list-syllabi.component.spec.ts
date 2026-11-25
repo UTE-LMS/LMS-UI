@@ -9,6 +9,7 @@ import { AuthService } from '@services/auth/auth.service';
 import { CourseService } from '@services/course/course.service';
 import { SyllabusService } from '@services/course/syllabus.service';
 import { TermService } from '@services/course/term.service';
+import { ProgramVersionService } from '@services/program/program-version.service';
 import { NzModalService } from 'ng-zorro-antd/modal';
 import { ToastrService } from 'ngx-toastr';
 import { of, throwError } from 'rxjs';
@@ -63,7 +64,7 @@ describe('ListSyllabiComponent (Server-side Course Search & ADR 0010)', () => {
   const pagedResponse = (content: ICourse[]): IPagedResults<ICourse> => ({
     content,
     page: 0,
-    size: 100,
+    size: 20,
     totalElements: content.length,
     totalPages: 1,
     last: true,
@@ -82,6 +83,11 @@ describe('ListSyllabiComponent (Server-side Course Search & ADR 0010)', () => {
   };
   let termSvcMock: {
     getTerms: ReturnType<typeof vi.fn>;
+    getTermById: ReturnType<typeof vi.fn>;
+  };
+  let pvSvcMock: {
+    getProgramVersions: ReturnType<typeof vi.fn>;
+    getProgramVersionById: ReturnType<typeof vi.fn>;
   };
   let authSvcMock: {
     getRoles: ReturnType<typeof vi.fn>;
@@ -105,6 +111,7 @@ describe('ListSyllabiComponent (Server-side Course Search & ADR 0010)', () => {
         { provide: CourseService, useValue: courseSvcMock },
         { provide: SyllabusService, useValue: syllabusSvcMock },
         { provide: TermService, useValue: termSvcMock },
+        { provide: ProgramVersionService, useValue: pvSvcMock },
         { provide: AuthService, useValue: authSvcMock },
         { provide: ToastrService, useValue: alertSvcMock },
         { provide: NzModalService, useValue: modalSvcMock },
@@ -167,7 +174,26 @@ describe('ListSyllabiComponent (Server-side Course Search & ADR 0010)', () => {
       lockSyllabus: vi.fn(() => of({ ...mockSyllabus, status: 'ARCHIVED' as const })),
     };
     termSvcMock = {
-      getTerms: vi.fn(() => of(mockTerms)),
+      getTerms: vi.fn(() => of({
+        content: mockTerms,
+        page: 0,
+        size: 20,
+        totalElements: mockTerms.length,
+        totalPages: 1,
+        last: true,
+      })),
+      getTermById: vi.fn(() => of(mockTerms[0])),
+    };
+    pvSvcMock = {
+      getProgramVersions: vi.fn(() => of({
+        content: [{ id: 'pv-1', programId: 'p1', version: '2026', status: 'ACTIVE' }],
+        page: 0,
+        size: 20,
+        totalElements: 1,
+        totalPages: 1,
+        last: true,
+      })),
+      getProgramVersionById: vi.fn(() => of({ id: 'pv-1', programId: 'p1', version: '2026', status: 'ACTIVE' })),
     };
     authSvcMock = {
       getRoles: vi.fn(() => [SystemConstant.ROLE.ADMIN]),
@@ -185,18 +211,18 @@ describe('ListSyllabiComponent (Server-side Course Search & ADR 0010)', () => {
     };
   });
 
-  it('khởi tạo thành công và tải danh sách học phần ban đầu (100 môn)', async () => {
+  it('khởi tạo thành công và tải danh sách học phần ban đầu (20 môn)', async () => {
     await createComponent();
     fixture.detectChanges();
 
-    expect(termSvcMock.getTerms).toHaveBeenCalled();
-    expect(courseSvcMock.getCourses).toHaveBeenCalledWith(0, 100);
+    expect(termSvcMock.getTerms).toHaveBeenCalledWith(undefined, undefined, 0, 20);
+    expect(courseSvcMock.getCourses).toHaveBeenCalledWith(0, 20);
     expect(component.allCourses()).toEqual(mockCourses);
     expect(component.selectedCourseId()).toBe('course-1');
     expect(syllabusSvcMock.getSyllabiByCourse).toHaveBeenCalledWith('course-1');
   });
 
-  it('xử lý deep link query param courseId không nằm trong 100 môn đầu tiên', async () => {
+  it('xử lý deep link query param courseId không nằm trong 20 môn đầu tiên', async () => {
     queryParamMapStub = convertToParamMap({ courseId: 'course-105' });
     await createComponent();
     fixture.detectChanges();
@@ -218,11 +244,44 @@ describe('ListSyllabiComponent (Server-side Course Search & ADR 0010)', () => {
       await createComponent();
       fixture.detectChanges();
 
+      expect(courseSvcMock.getCourses).toHaveBeenCalledWith(0, 20, undefined, 'fac-cntt');
       expect(component.scopedCourses()).toEqual([mockCourseOOP]);
       expect(component.showAllCourses()).toBe(false);
       expect(component.filteredCourses()).toEqual([mockCourseOOP]);
       expect(component.selectedCourseId()).toBe('course-105');
       expect(component.isCourseInScope()).toBe(true);
+    });
+
+    it('PM quay lại từ chi tiết đề cương với ?courseId thuộc Khoa phụ trách: giữ showAllCourses=false và chỉ hiện môn của Khoa', async () => {
+      queryParamMapStub = convertToParamMap({ courseId: 'course-105' });
+      courseSvcMock.getCourses.mockReturnValue(of(pagedResponse([mockCourseOOP])));
+
+      await createComponent();
+      fixture.detectChanges();
+
+      expect(courseSvcMock.getCourses).toHaveBeenCalledWith(0, 20, undefined, 'fac-cntt');
+      expect(component.showAllCourses()).toBe(false);
+      expect(component.filteredCourses()).toEqual([mockCourseOOP]);
+      expect(component.selectedCourseId()).toBe('course-105');
+      expect(component.isCourseInScope()).toBe(true);
+    });
+
+    it('PM mở deep link ?courseId thuộc Khoa khác: bật showAllCourses=true và nạp toàn bộ môn học', async () => {
+      queryParamMapStub = convertToParamMap({ courseId: 'course-1' });
+      courseSvcMock.getCourses
+        .mockReturnValueOnce(of(pagedResponse([mockCourseOOP])))
+        .mockReturnValueOnce(of(pagedResponse([...mockCourses, mockCourseOOP])));
+      courseSvcMock.getCourseById.mockReturnValue(of(mockCourses[0]));
+
+      await createComponent();
+      fixture.detectChanges();
+
+      expect(courseSvcMock.getCourseById).toHaveBeenCalledWith('course-1');
+      expect(component.showAllCourses()).toBe(true);
+      expect(courseSvcMock.getCourses).toHaveBeenNthCalledWith(1, 0, 20, undefined, 'fac-cntt');
+      expect(courseSvcMock.getCourses).toHaveBeenNthCalledWith(2, 0, 20);
+      expect(component.selectedCourseId()).toBe('course-1');
+      expect(component.filteredCourses().length).toBe(3);
     });
 
     it('bấm toggleShowAllCourses chuyển đổi giữa toàn trường và chỉ môn thuộc Khoa, tự reset về môn của Khoa', async () => {
@@ -236,6 +295,7 @@ describe('ListSyllabiComponent (Server-side Course Search & ADR 0010)', () => {
       // Bấm chuyển sang tra cứu toàn trường
       component.toggleShowAllCourses();
       expect(component.showAllCourses()).toBe(true);
+      expect(courseSvcMock.getCourses).toHaveBeenLastCalledWith(0, 20);
       expect(component.filteredCourses().length).toBeGreaterThan(1);
 
       // Chọn 1 môn ngoài Khoa
@@ -243,9 +303,10 @@ describe('ListSyllabiComponent (Server-side Course Search & ADR 0010)', () => {
       expect(component.selectedCourseId()).toBe('course-1');
       expect(component.isCourseInScope()).toBe(false);
 
-      // Bấm quay lại chỉ hiện môn thuộc Khoa -> tự động chuyển selectedCourseId về course-105
+      // Bấm quay lại chỉ hiện môn thuộc Khoa -> gọi lại API theo facultyId và tự động chuyển selectedCourseId về course-105
       component.toggleShowAllCourses();
       expect(component.showAllCourses()).toBe(false);
+      expect(courseSvcMock.getCourses).toHaveBeenLastCalledWith(0, 20, undefined, 'fac-cntt');
       expect(component.filteredCourses()).toEqual([mockCourseOOP]);
       expect(component.selectedCourseId()).toBe('course-105');
       expect(component.isCourseInScope()).toBe(true);
@@ -281,7 +342,7 @@ describe('ListSyllabiComponent (Server-side Course Search & ADR 0010)', () => {
       // Sau đủ 300ms: gọi API đúng 1 lần với keyword mới nhất
       await vi.advanceTimersByTimeAsync(150);
       expect(courseSvcMock.getCourses).toHaveBeenCalledTimes(1);
-      expect(courseSvcMock.getCourses).toHaveBeenCalledWith(0, 100, 'lập trình');
+      expect(courseSvcMock.getCourses).toHaveBeenCalledWith(0, 20, 'lập trình');
       expect(component.isSearchingCourse()).toBe(false);
     });
 
@@ -322,7 +383,7 @@ describe('ListSyllabiComponent (Server-side Course Search & ADR 0010)', () => {
         of({
           content: [mockCourses[0]],
           page: 0,
-          size: 100,
+          size: 20,
           totalElements: 2,
           totalPages: 2,
           last: false,
@@ -339,7 +400,7 @@ describe('ListSyllabiComponent (Server-side Course Search & ADR 0010)', () => {
         of({
           content: [mockCourses[1]],
           page: 1,
-          size: 100,
+          size: 20,
           totalElements: 2,
           totalPages: 2,
           last: true,
@@ -348,7 +409,7 @@ describe('ListSyllabiComponent (Server-side Course Search & ADR 0010)', () => {
 
       component.onCourseScrollToBottom();
 
-      expect(courseSvcMock.getCourses).toHaveBeenCalledWith(1, 100, '');
+      expect(courseSvcMock.getCourses).toHaveBeenCalledWith(1, 20, '');
       expect(component.coursePage()).toBe(1);
       expect(component.isCourseLastPage()).toBe(true);
       expect(component.allCourses()).toEqual([mockCourses[0], mockCourses[1]]);
@@ -360,7 +421,7 @@ describe('ListSyllabiComponent (Server-side Course Search & ADR 0010)', () => {
         of({
           content: mockCourses,
           page: 0,
-          size: 100,
+          size: 20,
           totalElements: 2,
           totalPages: 1,
           last: true,
@@ -380,7 +441,7 @@ describe('ListSyllabiComponent (Server-side Course Search & ADR 0010)', () => {
         of({
           content: [mockCourses[0]],
           page: 0,
-          size: 100,
+          size: 20,
           totalElements: 2,
           totalPages: 2,
           last: false,

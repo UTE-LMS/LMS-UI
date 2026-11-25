@@ -61,6 +61,7 @@ export class DetailCurriculumVersionComponent implements OnInit {
   readonly plos = signal<IPlo[]>([]);
   readonly pis = signal<IPi[]>([]);
   readonly courses = signal<IProgramCourse[]>([]);
+  readonly coursesTotal = signal(0);
 
   readonly isLoading = signal(false);
   readonly userRoles = signal<string[]>([]);
@@ -214,13 +215,15 @@ export class DetailCurriculumVersionComponent implements OnInit {
         forkJoin({
           plos: this.ploPiSvc.getPlos(vId),
           pis: this.ploPiSvc.getPis(vId),
-          courses: this.ploPiSvc.getProgramCourses(vId),
+          courses: this.ploPiSvc.getProgramCourses(vId, 0, 20),
         }).subscribe({
           next: res => {
             this.isLoading.set(false);
             this.plos.set(res.plos || []);
             this.pis.set(res.pis || []);
-            this.courses.set(res.courses || []);
+            const courseList = res.courses?.content ?? [];
+            this.courses.set(courseList);
+            this.coursesTotal.set(res.courses?.totalElements ?? courseList.length);
           },
           error: err => {
             this.isLoading.set(false);

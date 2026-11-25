@@ -1,12 +1,14 @@
-import { HttpClient, HttpContext } from '@angular/common/http';
+import { HttpClient, HttpContext, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { UrlConstant } from '@constants/url.constant';
 import { INLINE_ERRORS } from '@interceptors/http-context.token';
+import { IPagedResults } from '@models/common/response-data.model';
 import {
   ITerm,
   ITermRequest,
   ITermStatusUpdateRequest,
   ITermUpdateRequest,
+  TermStatus,
 } from '@models/course/term.model';
 import { Observable } from 'rxjs';
 
@@ -22,8 +24,18 @@ export class TermService {
   private readonly http = inject(HttpClient);
   private readonly apiUrl = UrlConstant.API.TERMS;
 
-  getTerms(): Observable<ITerm[]> {
-    return this.http.get<ITerm[]>(this.apiUrl);
+  getTerms(search?: string, status?: TermStatus, page = 0, size = 20): Observable<IPagedResults<ITerm>> {
+    let params = new HttpParams()
+      .set('page', page.toString())
+      .set('size', size.toString());
+    const trimmed = search?.trim();
+    if (trimmed) {
+      params = params.set('search', trimmed);
+    }
+    if (status) {
+      params = params.set('status', status);
+    }
+    return this.http.get<IPagedResults<ITerm>>(this.apiUrl, { params });
   }
 
   getTermById(id: string): Observable<ITerm> {

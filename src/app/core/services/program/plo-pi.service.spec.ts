@@ -41,13 +41,23 @@ describe('PloPiService (F02 - chỉ đọc)', () => {
     req.flush([{ id: 'pi_1', code: 'PI1.1', displayOrder: 1 }]);
   });
 
-  it('lấy danh sách môn học thuộc CTĐT gửi GET request', () => {
+  it('lấy danh sách môn học thuộc CTĐT gửi GET request kèm page, size và trả PageResponse', () => {
     service.getProgramCourses(versionId).subscribe(res => {
-      expect(res.length).toBe(1);
+      expect(res.content.length).toBe(1);
+      expect(res.totalElements).toBe(1);
     });
 
-    const req = httpMock.expectOne(UrlConstant.API.PROGRAM_COURSES(versionId));
+    const req = httpMock.expectOne(r => r.url === UrlConstant.API.PROGRAM_COURSES(versionId));
     expect(req.request.method).toBe('GET');
-    req.flush([{ id: 'pc_1', courseId: 'c_1' }]);
+    expect(req.request.params.get('page')).toBe('0');
+    expect(req.request.params.get('size')).toBe('20');
+    req.flush({
+      content: [{ id: 'pc_1', courseId: 'c_1' }],
+      page: 0,
+      size: 20,
+      totalElements: 1,
+      totalPages: 1,
+      last: true,
+    });
   });
 });

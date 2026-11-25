@@ -29,7 +29,8 @@ import { ToastrService } from 'ngx-toastr';
 import { catchError, map, of } from 'rxjs';
 import { AssessmentItemModalComponent } from '../assessment-item-modal/assessment-item-modal.component';
 import {
-  cleanOptional, describeMappings, formatNumber, isStructureEditable, lockHints, lockReason, renumber,
+  buildSectionCloWeightMap, cleanOptional, describeMappings, formatNumber, formatWeightPercent,
+  ISectionCloWeightSummary, isStructureEditable, lockHints, lockReason, renumber, stackedBarWidths,
   sumCloWeights, sumItemMaxScores,
 } from '../assessments.util';
 
@@ -66,6 +67,8 @@ export class DetailAssessmentComponent implements OnInit {
   protected readonly typeOptions = toOptions<AssessmentType>(ASSESSMENT_TYPE_LABEL);
   protected readonly phaseOptions = toOptions<AssessmentPhase>(ASSESSMENT_PHASE_LABEL);
   protected readonly formatNumber = formatNumber;
+  protected readonly formatWeightPercent = formatWeightPercent;
+  protected readonly stackedBarWidths = stackedBarWidths;
   protected readonly describeMappings = describeMappings;
 
   readonly roles = signal<string[]>([]);
@@ -73,6 +76,9 @@ export class DetailAssessmentComponent implements OnInit {
   readonly items = signal<IAssessmentItem[]>([]);
   readonly cloWeights = signal<IAssessmentCloWeight[]>([]);
   readonly clos = signal<IClo[]>([]);
+  readonly sectionAssessments = signal<IAssessment[] | null>(null);
+  readonly isLoadingSectionAssessments = signal(false);
+  readonly sectionAssessmentsError = signal(false);
   readonly itemsDirty = signal(false);
   readonly cloWeightsDirty = signal(false);
 
@@ -117,6 +123,58 @@ export class DetailAssessmentComponent implements OnInit {
 
   readonly itemsSum = computed(() => sumItemMaxScores(this.items()));
   readonly totalCloWeight = computed(() => sumCloWeights(this.cloWeights()));
+
+  readonly isSectionScope = computed(() => this.assessment()?.scope === 'SECTION' && !!this.assessment()?.sectionId);
+
+  readonly sectionCloWeightMap = computed<ReadonlyMap<string, ISectionCloWeightSummary> | null>(() => {
+    const a = this.assessment();
+    const list = this.sectionAssessments();
+    if (!a || !this.isSectionScope() || list === null) {
+      return null;
+    }
+    return buildSectionCloWeightMap(
+      list,
+      a.id,
+      this.cloWeights(),
+      this.clos().map(c => c.id),
+    );
+  });
+
+  readonly sectionCloTotalWeights = computed<ReadonlyMap<string, number>>(() => {
+    const map = this.sectionCloWeightMap();
+    if (!map) {
+      return new Map();
+    }
+    return new Map(Array.from(map.entries(), ([cloId, summary]) => [cloId, summary.totalWeight]));
+  });
+
+  readonly overflowingClos = computed(() => {
+    const map = this.sectionCloWeightMap();
+    if (!map) {
+      return [];
+    }
+    const codes = this.cloCodes();
+    const result: { cloId: string; cloCode: string; summary: ISectionCloWeightSummary; }[] = [];
+    for (const w of this.cloWeights()) {
+      const summary = map.get(w.cloId);
+      if (summary?.status === 'OVER') {
+        result.push({ cloId: w.cloId, cloCode: codes.get(w.cloId) ?? w.cloId, summary });
+      }
+    }
+    return result;
+  });
+
+  readonly sectionCloOverview = computed(() => {
+    const map = this.sectionCloWeightMap();
+    if (!this.isSectionScope() || !map) {
+      return [];
+    }
+    return this.clos().map(c => ({
+      cloId: c.id,
+      cloCode: c.code,
+      summary: map.get(c.id)!,
+    }));
+  });
 
   readonly hints = computed(() => {
     const a = this.assessment();
@@ -179,12 +237,53 @@ export class DetailAssessmentComponent implements OnInit {
         this.isLoading.set(false);
         this.cloSvc.getClosBySyllabus(assessment.syllabusId).pipe(catchError(() => of([] as IClo[])))
           .subscribe(list => this.clos.set(list ?? []));
+        if (assessment.scope === 'SECTION' && assessment.sectionId) {
+          this.loadSectionAssessments(assessment.sectionId);
+        } else {
+          this.sectionAssessments.set(null);
+          this.isLoadingSectionAssessments.set(false);
+          this.sectionAssessmentsError.set(false);
+        }
       },
       error: err => {
         this.isLoading.set(false);
         this.loadError.set(toUserError(err));
       },
     });
+  }
+
+  retrySectionAssessments(): void {
+    const sectionId = this.assessment()?.sectionId;
+    if (sectionId) {
+      this.loadSectionAssessments(sectionId);
+    }
+  }
+
+  private loadSectionAssessments(sectionId: string): void {
+    this.isLoadingSectionAssessments.set(true);
+    this.sectionAssessmentsError.set(false);
+    this.assessmentSvc.getSectionAssessments(sectionId).subscribe({
+      next: list => {
+        this.sectionAssessments.set(list ?? []);
+        this.isLoadingSectionAssessments.set(false);
+      },
+      error: () => {
+        this.sectionAssessments.set(null);
+        this.isLoadingSectionAssessments.set(false);
+        this.sectionAssessmentsError.set(true);
+      },
+    });
+  }
+
+  private syncCurrentInSectionAssessments(updated: IAssessment): void {
+    const list = this.sectionAssessments();
+    if (!list) {
+      return;
+    }
+    const exists = list.some(item => item.id === updated.id);
+    this.sectionAssessments.set(
+      exists ? list.map(item => (item.id === updated.id ? updated : item)) : [...list, updated],
+    );
   }
 
   private applyAssessment(assessment: IAssessment, resetItems: boolean): void {
@@ -227,6 +326,7 @@ export class DetailAssessmentComponent implements OnInit {
       next: updated => {
         this.isSavingInfo.set(false);
         this.applyAssessment(updated, false);
+        this.syncCurrentInSectionAssessments(updated);
         this.cloWeightsDirty.set(false);
         this.alert.success('Đã lưu thông tin chung.');
       },
@@ -274,6 +374,7 @@ export class DetailAssessmentComponent implements OnInit {
           next: updated => {
             this.isLocking.set(false);
             this.applyAssessment(updated, true);
+            this.syncCurrentInSectionAssessments(updated);
             this.alert.success('Đã khóa ma trận thành công.');
           },
           error: err => {
@@ -300,6 +401,7 @@ export class DetailAssessmentComponent implements OnInit {
           next: updated => {
             this.isLocking.set(false);
             this.applyAssessment(updated, true);
+            this.syncCurrentInSectionAssessments(updated);
             this.alert.success('Đã mở khóa ma trận về bản nháp.');
           },
           error: err => {
@@ -338,12 +440,13 @@ export class DetailAssessmentComponent implements OnInit {
   }
 
   updateCloWeight(cloId: string, weight: number): void {
+    const safeWeight = Number.isFinite(weight) && weight >= 0 ? weight : 0;
     const current = [...this.cloWeights()];
     const index = current.findIndex(c => c.cloId === cloId);
     if (index >= 0) {
-      current[index] = { cloId, weight };
+      current[index] = { cloId, weight: safeWeight };
     } else {
-      current.push({ cloId, weight });
+      current.push({ cloId, weight: safeWeight });
     }
     this.cloWeights.set(current);
     this.cloWeightsDirty.set(true);
