@@ -35,7 +35,7 @@
           nzPlaceHolder="Chọn phiên bản CTĐT"
           class="w-full">
           @for (pv of pvSelect.options(); track pv.id) {
-            <nz-option [nzValue]="pv.id" [nzLabel]="pv.version + ' (' + versionStatusLabel(pv.status) + ')'" />
+            <nz-option [nzValue]="pv.id" [nzLabel]="formatProgramVersionLabel(pv) + ' (' + versionStatusLabel(pv.status) + ')'" />
           }
         </nz-select>
         <ng-template #pvFooterTpl>
@@ -128,10 +128,11 @@
       <nz-alert nzType="error" nzShowIcon [nzMessage]="errMsg" class="mb-3" />
       <button nz-button type="button" (click)="loadRuns()">Thử lại</button>
     } @else {
-      <nz-table [nzData]="runs()" [nzLoading]="loadingRuns()" [nzShowPagination]="false" [nzFrontPagination]="false" [nzNoResult]="emptyRunsTpl" [nzScroll]="{ x: '720px' }" nzSize="small">
+      <nz-table [nzData]="runs()" [nzLoading]="loadingRuns()" [nzShowPagination]="false" [nzFrontPagination]="false" [nzNoResult]="emptyRunsTpl" [nzScroll]="{ x: '920px' }" nzSize="small">
         <thead>
           <tr>
             <th>Phạm vi</th>
+            <th>Ngữ cảnh</th>
             <th>Trạng thái</th>
             <th>Chế độ</th>
             <th>KQ Sinh viên</th>
@@ -144,6 +145,7 @@
           @for (r of runs(); track r.id) {
             <tr [class.bg-blue-50]="selectedRun()?.id === r.id">
               <td><nz-tag>{{ scopeLabel[r.scope] || r.scope }}</nz-tag></td>
+              <td class="text-xs text-slate-700">{{ formatRunContext(r) }}</td>
               <td>
                 <nz-tag [nzColor]="r.status === 'SUCCESS' ? 'green' : r.status === 'FAILED' ? 'red' : 'blue'">
                   {{ statusLabel[r.status] || r.status }}
@@ -189,17 +191,18 @@
         </nz-select>
       </div>
 
-      <nz-tabs>
+      <nz-tabs [nzSelectedIndex]="activeTabIndex()" (nzSelectedIndexChange)="onTabChange($event)">
         <nz-tab nzTitle="Kết quả tổng hợp">
           @if (aggregatesError(); as errMsg) {
             <nz-alert nzType="error" nzShowIcon [nzMessage]="errMsg" class="mb-3" />
             <button nz-button type="button" (click)="loadAggregateResults()">Thử lại</button>
           } @else {
-            <nz-table [nzData]="aggregateResults()" [nzLoading]="loadingAggregates()" [nzShowPagination]="false" [nzFrontPagination]="false" [nzNoResult]="emptyAggTpl" [nzScroll]="{ x: '720px' }" nzSize="small">
+            <nz-table [nzData]="aggregateResults()" [nzLoading]="loadingAggregates()" [nzShowPagination]="false" [nzFrontPagination]="false" [nzNoResult]="emptyAggTpl" [nzScroll]="{ x: '960px' }" nzSize="small">
               <thead>
                 <tr>
                   <th>Cấp độ</th>
                   <th>Mã CĐR</th>
+                  <th>Ngữ cảnh</th>
                   <th>Ghi danh</th>
                   <th>Đủ DL</th>
                   <th>Đạt</th>
@@ -215,6 +218,7 @@
                   <tr>
                     <td><nz-tag nzColor="blue">{{ levelLabel[agg.level] || agg.level }}</nz-tag></td>
                     <td class="font-semibold">{{ agg.subjectCode || agg.subjectId }}</td>
+                    <td class="text-xs text-slate-700">{{ formatResultContext(agg) }}</td>
                     <td>{{ agg.counts?.enrolled ?? 0 }}</td>
                     <td>{{ agg.evaluated }}</td>
                     <td class="text-emerald-600 font-medium">{{ agg.counts?.passed ?? 0 }}</td>
@@ -285,11 +289,12 @@
             <nz-alert nzType="error" nzShowIcon [nzMessage]="errMsg" class="mb-3" />
             <button nz-button type="button" (click)="loadStudentResults()">Thử lại</button>
           } @else {
-            <nz-table [nzData]="studentResults()" [nzLoading]="loadingStudents()" [nzShowPagination]="false" [nzFrontPagination]="false" [nzNoResult]="emptyStuTpl" [nzScroll]="{ x: '720px' }" nzSize="small">
+            <nz-table [nzData]="studentResults()" [nzLoading]="loadingStudents()" [nzShowPagination]="false" [nzFrontPagination]="false" [nzNoResult]="emptyStuTpl" [nzScroll]="{ x: '920px' }" nzSize="small">
               <thead>
                 <tr>
                   <th>Cấp độ</th>
                   <th>Mã chuẩn</th>
+                  <th>Ngữ cảnh</th>
                   <th>Mã sinh viên</th>
                   <th>Giá trị</th>
                   <th>Ngưỡng</th>
@@ -302,6 +307,7 @@
                   <tr>
                     <td><nz-tag>{{ levelLabel[sr.level] || sr.level }}</nz-tag></td>
                     <td class="font-semibold">{{ sr.subjectCode || sr.subjectId }}</td>
+                    <td class="text-xs text-slate-700">{{ formatResultContext(sr) }}</td>
                     <td>{{ sr.studentCode || sr.studentId }}</td>
                     <td>{{ sr.value !== undefined && sr.value !== null ? ((sr.value * 100) | number: '1.1-1') + '%' : '—' }}</td>
                     <td>{{ sr.passThreshold !== undefined ? ((sr.passThreshold * 100) | number: '1.0-0') + '%' : '—' }}</td>

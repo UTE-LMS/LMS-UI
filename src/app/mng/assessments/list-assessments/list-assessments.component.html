@@ -13,7 +13,7 @@
     <div>
       <p class="m-0 text-xs font-semibold uppercase tracking-wider text-blue-700">
         @if (mode() === 'SECTION') {
-          {{ section()?.code ?? '—' }} · {{ course()?.name ?? '—' }}
+          {{ section()?.code ?? '—' }} · {{ section()?.courseCode ? section()!.courseCode + ' — ' : '' }}{{ section()?.courseName ?? '—' }}@if (section()?.termCode) { · {{ section()!.termCode }}}@if (section()?.syllabusVersion) { · Đề cương {{ section()!.syllabusVersion }}}
         } @else {
           Khung theo đề cương
         }

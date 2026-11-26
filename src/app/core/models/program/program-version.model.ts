@@ -5,17 +5,35 @@ export type ProgramVersionStatus = 'ACTIVE' | 'ARCHIVED';
 export interface IProgramVersion {
   id: string;
   programId: string;
+  programCode?: string | null;
+  programName?: string | null;
   version: string;
   totalCredits?: number;
   durationYears?: number;
   applicableCohort?: string;
   status: ProgramVersionStatus;
+  ploCount?: number;
+  piCount?: number;
   verification?: IVerificationResponse;
   facultyId?: string;
   facultyCode?: string;
   facultyName?: string;
   createdAt?: string;
   updatedAt?: string;
+}
+
+export function formatProgramVersionLabel(
+  pv: Pick<IProgramVersion, 'version' | 'programCode' | 'programName'>,
+): string {
+  const code = pv.programCode?.trim();
+  if (code) {
+    return `${code} · ${pv.version}`;
+  }
+  const name = pv.programName?.trim();
+  if (name) {
+    return `${name} · ${pv.version}`;
+  }
+  return pv.version;
 }
 
 export interface IProgramVersionRequest {

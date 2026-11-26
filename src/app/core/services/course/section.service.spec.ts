@@ -32,6 +32,7 @@ describe('SectionService (F05a US-19)', () => {
     expect(req.request.params.has('termId')).toBe(false);
     expect(req.request.params.has('courseId')).toBe(false);
     expect(req.request.params.has('search')).toBe(false);
+    expect(req.request.params.has('programVersionId')).toBe(false);
     expect(req.request.context.get(INLINE_ERRORS)).toBe(true);
     req.flush({ content: [], page: 0, size: 20, totalElements: 0, totalPages: 0, last: true });
   });
@@ -45,6 +46,18 @@ describe('SectionService (F05a US-19)', () => {
     expect(req.request.params.get('page')).toBe('1');
     expect(req.request.params.get('size')).toBe('50');
     req.flush({ content: [], page: 1, size: 50, totalElements: 0, totalPages: 0, last: true });
+  });
+
+  it('getSections gửi programVersionId đã trim và bỏ qua khi rỗng', () => {
+    service.getSections('t1', 'c1', 'LOP01', 0, 20, '  pv-1  ').subscribe();
+    const req1 = http.expectOne(r => r.url === UrlConstant.API.SECTIONS);
+    expect(req1.request.params.get('programVersionId')).toBe('pv-1');
+    req1.flush({ content: [], page: 0, size: 20, totalElements: 0, totalPages: 0, last: true });
+
+    service.getSections(undefined, undefined, undefined, 0, 20, '   ').subscribe();
+    const req2 = http.expectOne(r => r.url === UrlConstant.API.SECTIONS);
+    expect(req2.request.params.has('programVersionId')).toBe(false);
+    req2.flush({ content: [], page: 0, size: 20, totalElements: 0, totalPages: 0, last: true });
   });
 
   it('getSections bỏ qua bộ lọc rỗng (chuỗi rỗng không thành query)', () => {

@@ -4,25 +4,19 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import {
-  ENROLLMENT_STATUS_DISPLAY, SECTION_STATUS_DISPLAY, SYLLABUS_STATUS_DISPLAY, TERM_STATUS_DISPLAY,
+  ENROLLMENT_STATUS_DISPLAY, SECTION_STATUS_DISPLAY, SYLLABUS_STATUS_DISPLAY,
 } from '@constants/academic-display.constant';
 import { SystemConstant } from '@constants/system.constant';
 import { UrlConstant } from '@constants/url.constant';
 import { IUserError } from '@models/common/user-error.model';
-import { ICourse } from '@models/course/course.model';
 import {
   EnrollmentStatus, IEnrollment, IEnrollmentList, ISection, SectionStatus,
 } from '@models/course/section.model';
-import { ISyllabus } from '@models/course/syllabus.model';
-import { ITerm } from '@models/course/term.model';
 import { IUser } from '@models/user/user.model';
 import { AuthService } from '@services/auth/auth.service';
 import { toUserError } from '@services/common/api-error.util';
-import { CourseService } from '@services/course/course.service';
 import { EnrollmentService } from '@services/course/enrollment.service';
 import { SectionService } from '@services/course/section.service';
-import { SyllabusService } from '@services/course/syllabus.service';
-import { TermService } from '@services/course/term.service';
 import { DisplayChipComponent } from '@widget/display-chip/display-chip.component';
 import { ErrorStateComponent } from '@widget/error-state/error-state.component';
 import { TestDataFlagComponent } from '@widget/test-data-flag/test-data-flag.component';
@@ -54,9 +48,6 @@ export class DetailSectionComponent implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
   private readonly sectionSvc = inject(SectionService);
   private readonly enrollmentSvc = inject(EnrollmentService);
-  private readonly termSvc = inject(TermService);
-  private readonly courseSvc = inject(CourseService);
-  private readonly syllabusSvc = inject(SyllabusService);
   private readonly authSvc = inject(AuthService);
   private readonly alert = inject(ToastrService);
 
@@ -65,7 +56,6 @@ export class DetailSectionComponent implements OnInit {
 
   protected readonly urlConst = UrlConstant.ROUTE.MANAGEMENT;
   protected readonly sectionStatusDisplay = SECTION_STATUS_DISPLAY;
-  protected readonly termStatusDisplay = TERM_STATUS_DISPLAY;
   protected readonly syllabusStatusDisplay = SYLLABUS_STATUS_DISPLAY;
   protected readonly enrollmentStatusDisplay = ENROLLMENT_STATUS_DISPLAY;
   protected readonly statusOptions: { value: SectionStatus; label: string; }[] = [
@@ -78,9 +68,6 @@ export class DetailSectionComponent implements OnInit {
   readonly currentUserId = signal('');
   readonly currentUserName = signal('');
   readonly section = signal<ISection | null>(null);
-  readonly term = signal<ITerm | null>(null);
-  readonly course = signal<ICourse | null>(null);
-  readonly syllabus = signal<ISyllabus | null>(null);
   readonly roster = signal<IEnrollmentList | null>(null);
   readonly lecturers = signal<IUser[]>([]);
   readonly lecturerListAvailable = signal(false);
@@ -126,15 +113,11 @@ export class DetailSectionComponent implements OnInit {
    */
   readonly frozenReason = computed<string | null>(() => {
     const section = this.section();
-    const term = this.term();
     if (!section) {
       return null;
     }
     if (section.status !== 'OPEN') {
       return `Lớp đang ở trạng thái "${SECTION_STATUS_DISPLAY[section.status].label}" nên danh sách ghi danh (mẫu số của tỷ lệ đạt) bị đóng băng.`;
-    }
-    if (term && term.status !== 'OPEN') {
-      return `Học kỳ ${term.code} đang ở trạng thái "${TERM_STATUS_DISPLAY[term.status].label}" nên danh sách ghi danh (mẫu số của tỷ lệ đạt) bị đóng băng.`;
     }
     return null;
   });
@@ -196,7 +179,6 @@ export class DetailSectionComponent implements OnInit {
     this.sectionSvc.getSection(id).subscribe({
       next: section => {
         this.section.set(section);
-        this.loadReferences(section);
         this.loadRoster();
       },
       error: err => {
@@ -204,12 +186,6 @@ export class DetailSectionComponent implements OnInit {
         this.loadError.set(toUserError(err));
       },
     });
-  }
-
-  private loadReferences(section: ISection): void {
-    this.termSvc.getTermById(section.termId).pipe(catchError(() => of(null))).subscribe(t => this.term.set(t));
-    this.courseSvc.getCourseById(section.courseId).pipe(catchError(() => of(null))).subscribe(c => this.course.set(c));
-    this.syllabusSvc.getSyllabusById(section.syllabusId).pipe(catchError(() => of(null))).subscribe(s => this.syllabus.set(s));
   }
 
   private loadRoster(): void {

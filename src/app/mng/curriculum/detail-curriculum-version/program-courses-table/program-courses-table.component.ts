@@ -4,7 +4,6 @@ import { FormsModule } from '@angular/forms';
 import {
   CourseCategory,
   CourseType,
-  ICourse,
   IProgramCourse,
   IProgramCourseCsvImportResponse,
 } from '@models/course/course.model';
@@ -52,7 +51,6 @@ export class ProgramCoursesTableComponent implements OnInit {
   readonly totalChange = output<number>();
   readonly openCloPiMatrix = output<string>();
 
-  readonly allCourses = signal<ICourse[]>([]);
   readonly filterSemester = signal<number | null>(null);
   readonly filterType = signal<CourseType | null>(null);
   readonly filterCategory = signal<CourseCategory | null>(null);
@@ -119,11 +117,6 @@ export class ProgramCoursesTableComponent implements OnInit {
         this.page.set(0);
         this.loadProgramCourses();
       });
-
-    this.courseSvc.getCourses(0, 100).subscribe({
-      next: page => this.allCourses.set(page.content || []),
-      error: () => undefined,
-    });
   }
 
   loadProgramCourses(): void {
@@ -271,35 +264,30 @@ export class ProgramCoursesTableComponent implements OnInit {
   }
 
   getCourseCode(pc: IProgramCourse): string {
-    return pc.course?.code ?? this.getCourseCodeById(pc.courseId);
+    return pc.course?.code ?? pc.courseId;
   }
 
   getCourseName(pc: IProgramCourse): string {
-    return (
-      pc.course?.name
-      ?? this.allCourses().find(c => c.id === pc.courseId)?.name
-      ?? '—'
-    );
+    return pc.course?.name ?? '—';
   }
 
-  getCourseCodeById(courseId: string): string {
-    const fromPc =
-      this.filteredProgramCourses().find(p => p.courseId === courseId)?.course?.code
-      ?? this.programCourses().find(p => p.courseId === courseId)?.course?.code;
-    if (fromPc) {
-      return fromPc;
+  getPrerequisiteCodes(pc: IProgramCourse): string[] {
+    if (pc.prerequisiteCodes !== undefined) {
+      return pc.prerequisiteCodes;
     }
-    return this.allCourses().find(c => c.id === courseId)?.code ?? courseId;
+    return (pc.prerequisiteCourseIds ?? []).map(id => this.getCourseCodeById(id));
   }
 
-  getCourseTooltip(courseId: string): string {
-    const fromPc =
-      this.filteredProgramCourses().find(p => p.courseId === courseId)?.course
-      ?? this.programCourses().find(p => p.courseId === courseId)?.course;
-    const found = fromPc ?? this.allCourses().find(c => c.id === courseId);
-    if (!found) {
-      return courseId;
+  getPreviousCourseCodes(pc: IProgramCourse): string[] {
+    if (pc.previousCourseCodes !== undefined) {
+      return pc.previousCourseCodes;
     }
-    return `${found.code} — ${found.name}`;
+    return (pc.previousCourseIds ?? []).map(id => this.getCourseCodeById(id));
+  }
+
+  private getCourseCodeById(courseId: string): string {
+    return this.filteredProgramCourses().find(p => p.courseId === courseId)?.course?.code
+      ?? this.programCourses().find(p => p.courseId === courseId)?.course?.code
+      ?? courseId;
   }
 }

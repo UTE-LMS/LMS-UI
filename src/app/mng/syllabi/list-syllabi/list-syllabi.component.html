@@ -134,11 +134,11 @@
           }
         </td>
         <td nzAlign="center">
-          <span class="font-medium text-slate-700">{{ getTermCode(s.effectiveFromTermId) }}</span>
+          <span class="font-medium text-slate-700">{{ s.effectiveFromTermCode || '—' }}</span>
         </td>
         <td nzAlign="center">
-          @if (s.effectiveToTermId) {
-          <span class="font-medium text-slate-700">{{ getTermCode(s.effectiveToTermId) }}</span>
+          @if (s.effectiveToTermCode) {
+          <span class="font-medium text-slate-700">{{ s.effectiveToTermCode }}</span>
           } @else {
           <span class="text-slate-400 text-xs" title="Chưa giới hạn học kỳ kết thúc">— (Còn hiệu lực)</span>
           }
@@ -228,7 +228,7 @@
           (ngModelChange)="onImportPvChange($event)"
         >
           @for (pv of pvSelect.options(); track pv.id) {
-          <nz-option [nzValue]="pv.id" [nzLabel]="pv.version + ' (' + (pv.status === 'ACTIVE' ? 'Đang áp dụng' : 'Lưu trữ') + ')'" />
+          <nz-option [nzValue]="pv.id" [nzLabel]="formatProgramVersionLabel(pv) + ' (' + (pv.status === 'ACTIVE' ? 'Đang áp dụng' : 'Lưu trữ') + ')'" />
           }
         </nz-select>
         <ng-template #pvFooterTpl>

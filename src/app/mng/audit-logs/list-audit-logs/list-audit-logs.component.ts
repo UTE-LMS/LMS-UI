@@ -1,8 +1,8 @@
 import { DatePipe, JsonPipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, DestroyRef, inject, OnInit, signal } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { createListManagerFilter } from '@builder/list-mng-filter.builder';
+import { createPaginatedSelect } from '@builder/paginated-select.builder';
 import { AUDIT_ACTION_LABEL, AUDIT_ENTITY_LABEL } from '@constants/analytics-display.constant';
 import { toOptions } from '@constants/assessment-display.constant';
 import { AuditAction, IAuditLog, IAuditLogFilter } from '@models/common/audit-log.model';
@@ -14,8 +14,9 @@ import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzDatePickerModule } from 'ng-zorro-antd/date-picker';
 import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzSelectModule } from 'ng-zorro-antd/select';
+import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzTableModule } from 'ng-zorro-antd/table';
-import { catchError, map, of } from 'rxjs';
+import { EMPTY } from 'rxjs';
 
 /** Một dòng so sánh trước/sau của khung chi tiết. */
 export interface IAuditDiffRow {
@@ -49,13 +50,12 @@ export function buildDiff(log: IAuditLog | null): IAuditDiffRow[] {
   selector: 'app-list-audit-logs',
   imports: [
     FormsModule, DatePipe, JsonPipe, NzButtonModule, NzDatePickerModule, NzInputModule, NzSelectModule,
-    NzTableModule, TablePaginateComponent,
+    NzSpinModule, NzTableModule, TablePaginateComponent,
   ],
   templateUrl: './list-audit-logs.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class ListAuditLogsComponent implements OnInit {
-  private readonly destroyRef = inject(DestroyRef);
+export class ListAuditLogsComponent {
   private readonly auditLogSvc = inject(AuditLogService);
   private readonly userSvc = inject(UserService);
 
@@ -64,8 +64,11 @@ export class ListAuditLogsComponent implements OnInit {
   protected readonly entityLabel = AUDIT_ENTITY_LABEL;
   protected readonly entityOptions = Object.entries(AUDIT_ENTITY_LABEL).map(([value, label]) => ({ value, label }));
 
-  readonly users = signal<IUser[]>([]);
-  readonly usernameById = computed(() => new Map(this.users().map(u => [u.id, u.username])));
+  readonly userSelect = createPaginatedSelect<IUser>({
+    fetchPage: ({ page, size }) => this.userSvc.filter(page, size),
+    getId: u => u.id,
+    fetchById: id => (this.userSvc.getById ? this.userSvc.getById(id) : EMPTY),
+  });
 
   /** Khoảng thời gian giữ dạng Date cho date-picker; chỉ đổi sang ISO khi áp dụng bộ lọc. */
   readonly fromDate = signal<Date | null>(null);
@@ -80,13 +83,13 @@ export class ListAuditLogsComponent implements OnInit {
 
   readonly diffRows = computed<IAuditDiffRow[]>(() => buildDiff(this.selected()));
 
-  ngOnInit(): void {
-    // Chỉ để hiện tên đăng nhập thay cho ObjectId; lỗi thì vẫn hiện ID.
-    this.userSvc.filter(0, 100).pipe(map(page => page.content), catchError(() => of([])), takeUntilDestroyed(this.destroyRef)).subscribe(list => this.users.set(list));
-  }
-
   setAction(action: AuditAction | null): void {
     this.manager.filter.action = action ?? undefined;
+  }
+
+  onUserFilterChange(userId: string | null): void {
+    this.manager.filter.userId = userId ?? '';
+    this.userSelect.syncSelected(userId);
   }
 
   search(): void {
@@ -111,11 +114,20 @@ export class ListAuditLogsComponent implements OnInit {
     this.manager.resetFilter();
   }
 
-  userLabel(userId: string | null): string {
-    if (!userId) {
-      return '—';
+  actorLabel(log: Pick<IAuditLog, 'username' | 'actorFullName' | 'userId'>): string {
+    const username = log.username?.trim();
+    if (username) {
+      return username;
     }
-    return this.usernameById().get(userId) ?? userId;
+    const fullName = log.actorFullName?.trim();
+    if (fullName) {
+      return fullName;
+    }
+    const userId = log.userId?.trim();
+    if (userId) {
+      return userId;
+    }
+    return 'Hệ thống';
   }
 
   toggleDetail(log: IAuditLog): void {

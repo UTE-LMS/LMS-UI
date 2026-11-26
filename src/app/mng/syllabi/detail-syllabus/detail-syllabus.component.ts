@@ -2,17 +2,11 @@ import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } 
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { SystemConstant } from '@constants/system.constant';
 import { IClo, ICloPiLink } from '@models/course/clo.model';
-import { ICourse } from '@models/course/course.model';
 import { ISyllabus } from '@models/course/syllabus.model';
-import { ITerm } from '@models/course/term.model';
-import { IPi } from '@models/program/plo-pi.model';
 import { AuthService } from '@services/auth/auth.service';
 import { toApiError } from '@services/common/api-error.util';
 import { CloService } from '@services/course/clo.service';
-import { CourseService } from '@services/course/course.service';
 import { SyllabusService } from '@services/course/syllabus.service';
-import { TermService } from '@services/course/term.service';
-import { PloPiService } from '@services/program/plo-pi.service';
 import { BloomLevelLabelComponent } from '@widget/level-label/bloom-level-label.component';
 import { StatusChipComponent } from '@widget/status-chip/status-chip.component';
 import { NzButtonModule } from 'ng-zorro-antd/button';
@@ -36,21 +30,15 @@ import { ToastrService } from 'ngx-toastr';
 export class DetailSyllabusComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly syllabusSvc = inject(SyllabusService);
-  private readonly courseSvc = inject(CourseService);
   private readonly cloSvc = inject(CloService);
-  private readonly ploPiSvc = inject(PloPiService, { optional: true });
-  private readonly termSvc = inject(TermService);
   private readonly authSvc = inject(AuthService);
   private readonly alert = inject(ToastrService);
   private readonly modal = inject(NzModalService, { optional: true });
 
   readonly syllabusId = signal<string>('');
   readonly syllabus = signal<ISyllabus | null>(null);
-  readonly course = signal<ICourse | null>(null);
   readonly clos = signal<IClo[]>([]);
   readonly cloPiLinks = signal<ICloPiLink[]>([]);
-  readonly pis = signal<IPi[]>([]);
-  readonly terms = signal<ITerm[]>([]);
 
   readonly isLoading = signal(false);
   readonly hasError = signal(false);
@@ -68,12 +56,7 @@ export class DetailSyllabusComponent implements OnInit {
     if (!cid || !this.userRoles().includes(SystemConstant.ROLE.PROGRAM_MANAGER)) {
       return false;
     }
-    const pmFacId = this.authSvc.getFacultyId?.();
-    const courseFacId = this.course()?.facultyId;
-    if (pmFacId && courseFacId) {
-      return pmFacId === courseFacId;
-    }
-    return Boolean(pmFacId);
+    return Boolean(this.authSvc.getFacultyId?.());
   });
 
   /**
@@ -104,11 +87,6 @@ export class DetailSyllabusComponent implements OnInit {
   ngOnInit(): void {
     this.userRoles.set(this.authSvc.getRoles());
 
-    this.termSvc.getTerms(undefined, undefined, 0, 20).subscribe({
-      next: res => this.terms.set(res.content ?? []),
-      error: () => undefined,
-    });
-
     const id = this.route.snapshot.paramMap.get('syllabusId');
     if (id) {
       this.syllabusId.set(id);
@@ -126,11 +104,6 @@ export class DetailSyllabusComponent implements OnInit {
     this.syllabusSvc.getSyllabusById(id).subscribe({
       next: syl => {
         this.syllabus.set(syl);
-        this.hydrateEffectiveTerms(syl);
-        this.courseSvc.getCourseById(syl.courseId).subscribe({
-          next: c => this.course.set(c),
-          error: () => undefined,
-        });
         this.cloSvc.getClosBySyllabus(id).subscribe({
           next: list => {
             this.isLoading.set(false);
@@ -143,15 +116,7 @@ export class DetailSyllabusComponent implements OnInit {
         });
         this.cloSvc.getCloPiLinks?.(id).subscribe({
           next: links => {
-            const safeLinks = links || [];
-            this.cloPiLinks.set(safeLinks);
-            const pvIds = Array.from(new Set(safeLinks.map(l => l.programVersionId).filter(Boolean)));
-            if (pvIds.length > 0 && this.ploPiSvc) {
-              this.ploPiSvc.getPis(pvIds[0]).subscribe({
-                next: piList => this.pis.set(piList || []),
-                error: () => undefined,
-              });
-            }
+            this.cloPiLinks.set(links || []);
           },
           error: () => this.cloPiLinks.set([]),
         });
@@ -163,43 +128,16 @@ export class DetailSyllabusComponent implements OnInit {
     });
   }
 
-  getTermCode(termId?: string | null): string {
-    if (!termId) {
-      return '—';
-    }
-    const term = this.terms().find(t => t.id === termId || t.code === termId);
-    if (!term) {
-      return termId;
-    }
-    return term.academicYear ? `${term.code} (${term.academicYear})` : term.code;
-  }
-
-  private hydrateEffectiveTerms(syl: ISyllabus): void {
-    if (!this.termSvc.getTermById) {
-      return;
-    }
-    const ids = [syl.effectiveFromTermId, syl.effectiveToTermId].filter(
-      (id): id is string => Boolean(id),
-    );
-    for (const id of ids) {
-      if (this.terms().some(t => t.id === id)) {
-        continue;
-      }
-      this.termSvc.getTermById(id).subscribe({
-        next: term => {
-          this.terms.update(curr => (curr.some(t => t.id === term.id) ? curr : [...curr, term]));
-        },
-        error: () => undefined,
-      });
-    }
-  }
-
   getLinksForClo(cloId: string): ICloPiLink[] {
     return this.cloPiLinks().filter(l => l.cloId === cloId);
   }
 
-  getPiCode(piId: string): string {
-    return this.pis().find(p => p.id === piId)?.code ?? piId;
+  getPiCode(link: Pick<ICloPiLink, 'piId' | 'piCode'>): string {
+    const code = link.piCode?.trim();
+    if (code) {
+      return code;
+    }
+    return link.piId;
   }
 
   formatWeight(val?: number | null): string {

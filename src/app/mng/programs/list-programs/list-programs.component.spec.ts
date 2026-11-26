@@ -79,6 +79,13 @@ describe('ListProgramsComponent (F02 US-05, M4 PM Decentralization & 422 Lock)',
     confirm: vi.fn(),
   };
 
+  function recreateWithRoles(roles: string[]): void {
+    authSvc.getRoles.mockReturnValue(roles);
+    fixture = TestBed.createComponent(ListProgramsComponent);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+  }
+
   beforeEach(async () => {
     vi.clearAllMocks();
     programSvc.getPrograms.mockReturnValue(
@@ -93,7 +100,7 @@ describe('ListProgramsComponent (F02 US-05, M4 PM Decentralization & 422 Lock)',
     );
     programSvc.createProgram.mockReturnValue(of(mockPrograms[0]));
     programSvc.updateProgram.mockReturnValue(of(mockPrograms[0]));
-    authSvc.getRoles.mockReturnValue([SystemConstant.ROLE.ADMIN]);
+    authSvc.getRoles.mockReturnValue([SystemConstant.ROLE.PROGRAM_MANAGER]);
     authSvc.getFacultyId.mockReturnValue('fac_cntt_01');
 
     await TestBed.configureTestingModule({
@@ -114,48 +121,60 @@ describe('ListProgramsComponent (F02 US-05, M4 PM Decentralization & 422 Lock)',
       })
       .compileComponents();
 
-    fixture = TestBed.createComponent(ListProgramsComponent);
-    component = fixture.componentInstance;
-    fixture.detectChanges();
+    recreateWithRoles([SystemConstant.ROLE.PROGRAM_MANAGER]);
   });
 
-  it('khởi tạo thành công và gọi getPrograms với trang đầu tiên', () => {
+  it('PROGRAM_MANAGER khởi tạo thành công, tải danh sách theo facultyId và nạp Khoa', () => {
     expect(component).toBeTruthy();
-    expect(programSvc.getPrograms).toHaveBeenCalledWith(0, 10);
+    expect(component.canManage()).toBe(true);
+    expect(programSvc.getPrograms).toHaveBeenCalledWith(0, 10, 'fac_cntt_01');
+    expect(facultySvc.getFaculties).toHaveBeenCalled();
     expect(component.manager.listData().data.length).toBe(2);
   });
 
-  it('ADMIN và PROGRAM_MANAGER thấy nút Thêm chương trình đào tạo', () => {
+  it('ADMIN chỉ có quyền xem (canManage = false): ẩn Thêm/Sửa, không gọi getFaculties, giữ cột Thao tác với Xem phiên bản', () => {
+    vi.clearAllMocks();
+    recreateWithRoles([SystemConstant.ROLE.ADMIN]);
+
+    const el = fixture.nativeElement as HTMLElement;
+    expect(component.canManage()).toBe(false);
+    expect(programSvc.getPrograms).toHaveBeenCalledWith(0, 10);
+    expect(facultySvc.getFaculties).not.toHaveBeenCalled();
+    expect(el.querySelector('.add-program-btn')).toBeNull();
+    expect(el.querySelector('button[aria-label="Sửa chương trình đào tạo"]')).toBeNull();
+    expect(el.textContent).toContain('Thao tác');
+    expect(el.textContent).toContain('Xem phiên bản');
+
+    component.openCreateModal();
+    expect(component.isModalVisible()).toBe(false);
+
+    component.openEditModal(mockPrograms[0]);
+    expect(component.isModalVisible()).toBe(false);
+  });
+
+  it('PROGRAM_MANAGER thấy nút Thêm và Sửa chương trình đào tạo', () => {
     const el = fixture.nativeElement as HTMLElement;
     const addBtn = el.querySelector('.add-program-btn');
+    const editBtn = el.querySelector('button[aria-label="Sửa chương trình đào tạo"]');
     expect(addBtn).toBeTruthy();
     expect(addBtn?.textContent).toContain('Thêm chương trình đào tạo');
-
-    component.isAdmin.set(false);
-    component.isProgramManager.set(true);
-    fixture.detectChanges();
-    expect(el.querySelector('.add-program-btn')).toBeTruthy();
+    expect(editBtn).toBeTruthy();
   });
 
-  it('vai trò không phải ADMIN hoặc PROGRAM_MANAGER không thấy nút Thêm chương trình đào tạo', () => {
-    component.isAdmin.set(false);
-    component.isProgramManager.set(false);
-    fixture.detectChanges();
-
+  it('vai trò khác (QA / LECTURER) không có quyền canManage và không thấy nút Thêm/Sửa', () => {
+    recreateWithRoles([SystemConstant.ROLE.QA]);
     const el = fixture.nativeElement as HTMLElement;
-    const addBtn = el.querySelector('.add-program-btn');
-    expect(addBtn).toBeNull();
+    expect(component.canManage()).toBe(false);
+    expect(el.querySelector('.add-program-btn')).toBeNull();
+    expect(el.querySelector('button[aria-label="Sửa chương trình đào tạo"]')).toBeNull();
+
+    recreateWithRoles([SystemConstant.ROLE.LECTURER]);
+    const lecEl = fixture.nativeElement as HTMLElement;
+    expect(component.canManage()).toBe(false);
+    expect(lecEl.querySelector('.add-program-btn')).toBeNull();
   });
 
-  it('PROGRAM_MANAGER chỉ tải danh sách CTĐT theo facultyId và khóa trường Khoa khi tạo/sửa', () => {
-    component.isAdmin.set(false);
-    component.isProgramManager.set(true);
-    programSvc.getPrograms.mockClear();
-
-    component.manager.triggerReload();
-    fixture.detectChanges();
-    expect(programSvc.getPrograms).toHaveBeenCalledWith(0, 10, 'fac_cntt_01');
-
+  it('PROGRAM_MANAGER khóa trường Khoa theo scope khi tạo/sửa và gửi facultyId', () => {
     component.openCreateModal();
     expect(component.programForm.get('facultyId')?.value).toBe('fac_cntt_01');
     expect(component.programForm.get('facultyId')?.disabled).toBe(true);
@@ -208,6 +227,7 @@ describe('ListProgramsComponent (F02 US-05, M4 PM Decentralization & 422 Lock)',
       name: 'Hệ thống thông tin',
       level: 'Đại học',
       degree: 'Kỹ sư',
+      facultyId: 'fac_cntt_01',
     });
     expect(alert.success).toHaveBeenCalledWith('Thêm chương trình đào tạo thành công');
     expect(component.isModalVisible()).toBe(false);

@@ -5,19 +5,16 @@ import { SystemConstant } from '@constants/system.constant';
 import { UrlConstant } from '@constants/url.constant';
 import { IAssessment } from '@models/assessment/assessment.model';
 import { IUserError } from '@models/common/user-error.model';
-import { ICourse } from '@models/course/course.model';
 import { ISection } from '@models/course/section.model';
 import { AssessmentService } from '@services/assessment/assessment.service';
 import { AuthService } from '@services/auth/auth.service';
 import { toUserError } from '@services/common/api-error.util';
-import { CourseService } from '@services/course/course.service';
 import { SectionService } from '@services/course/section.service';
 import { DisplayChipComponent } from '@widget/display-chip/display-chip.component';
 import { ErrorStateComponent } from '@widget/error-state/error-state.component';
 import { TestDataFlagComponent } from '@widget/test-data-flag/test-data-flag.component';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzTableModule } from 'ng-zorro-antd/table';
-import { catchError, of } from 'rxjs';
 import { AssessmentCreateMode, AssessmentCreateModalComponent } from '../assessment-create-modal/assessment-create-modal.component';
 import { formatNumber, isStructureEditable } from '../assessments.util';
 
@@ -41,7 +38,6 @@ export interface IRowAction {
 export class ListAssessmentsComponent implements OnInit {
   private readonly assessmentSvc = inject(AssessmentService);
   private readonly sectionSvc = inject(SectionService);
-  private readonly courseSvc = inject(CourseService);
   private readonly authSvc = inject(AuthService);
 
   readonly sectionId = input<string>();
@@ -54,7 +50,6 @@ export class ListAssessmentsComponent implements OnInit {
   readonly roles = signal<string[]>([]);
   readonly currentUserId = signal('');
   readonly section = signal<ISection | null>(null);
-  readonly course = signal<ICourse | null>(null);
   readonly assessments = signal<IAssessment[]>([]);
   readonly templates = signal<IAssessment[]>([]);
 
@@ -90,7 +85,6 @@ export class ListAssessmentsComponent implements OnInit {
       this.sectionSvc.getSection(sectionId).subscribe({
         next: section => {
           this.section.set(section);
-          this.courseSvc.getCourseById(section.courseId).pipe(catchError(() => of(null))).subscribe(c => this.course.set(c));
           this.loadAssessments(sectionId);
           this.loadTemplates(section.syllabusId, false);
         },

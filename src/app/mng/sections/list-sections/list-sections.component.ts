@@ -11,7 +11,6 @@ import { UrlConstant } from '@constants/url.constant';
 import { IUserError } from '@models/common/user-error.model';
 import { ICourse } from '@models/course/course.model';
 import { ISection } from '@models/course/section.model';
-import { ISyllabus } from '@models/course/syllabus.model';
 import { ITerm } from '@models/course/term.model';
 import { IUser } from '@models/user/user.model';
 import { AuthService } from '@services/auth/auth.service';
@@ -19,7 +18,6 @@ import { toUserError } from '@services/common/api-error.util';
 import { CourseService } from '@services/course/course.service';
 import { EnrollmentService } from '@services/course/enrollment.service';
 import { SectionService } from '@services/course/section.service';
-import { SyllabusService } from '@services/course/syllabus.service';
 import { TermService } from '@services/course/term.service';
 import { ImportTemplateFormat } from '@services/common/import-file.util';
 import { CsvImportModalComponent } from '@widget/csv-import-modal/csv-import-modal.component';
@@ -30,7 +28,7 @@ import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzSelectModule } from 'ng-zorro-antd/select';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzTableModule } from 'ng-zorro-antd/table';
-import { catchError, debounceTime, distinctUntilChanged, EMPTY, forkJoin, map, Observable, of, Subject } from 'rxjs';
+import { catchError, debounceTime, distinctUntilChanged, EMPTY, map, of, Subject } from 'rxjs';
 import { SectionModalComponent } from '../section-modal/section-modal.component';
 import { displayEnrolledCount, sectionLecturersText } from '../sections.util';
 
@@ -53,7 +51,6 @@ export class ListSectionsComponent implements OnInit {
   private readonly enrollmentSvc = inject(EnrollmentService);
   private readonly termSvc = inject(TermService);
   private readonly courseSvc = inject(CourseService);
-  private readonly syllabusSvc = inject(SyllabusService);
   private readonly authSvc = inject(AuthService);
 
   protected readonly urlConst = UrlConstant.ROUTE.MANAGEMENT;
@@ -63,9 +60,6 @@ export class ListSectionsComponent implements OnInit {
   readonly roles = signal<string[]>([]);
   readonly currentUserId = signal('');
   readonly currentUserName = signal('');
-  readonly termCache = signal<ReadonlyMap<string, ITerm>>(new Map());
-  readonly courseCache = signal<ReadonlyMap<string, ICourse>>(new Map());
-  readonly syllabi = signal<ReadonlyMap<string, ISyllabus>>(new Map());
   readonly lecturers = signal<IUser[]>([]);
   readonly sections = signal<ISection[]>([]);
 
@@ -156,8 +150,6 @@ export class ListSectionsComponent implements OnInit {
   }
 
   loadCatalogs(): void {
-    this.termSelect.loadInitial();
-    this.courseSelect.loadInitial();
     if (this.canCreate() && typeof this.sectionSvc.getLecturers === 'function') {
       this.sectionSvc.getLecturers().pipe(catchError(() => of(null))).subscribe(list => {
         this.lecturers.set(list ?? []);
@@ -183,7 +175,6 @@ export class ListSectionsComponent implements OnInit {
         this.page.set(res.page ?? this.page());
         this.size.set(res.size ?? this.size());
         this.isLoading.set(false);
-        this.hydrateReferences(list);
       },
       error: err => {
         this.isLoading.set(false);
@@ -222,21 +213,6 @@ export class ListSectionsComponent implements OnInit {
     this.loadSections();
   }
 
-  termCode(termId: string): string {
-    return this.termSelect.options().find(t => t.id === termId)?.code
-      ?? this.termCache().get(termId)?.code
-      ?? '—';
-  }
-
-  courseOf(courseId: string): ICourse | undefined {
-    return this.courseSelect.options().find(c => c.id === courseId)
-      ?? this.courseCache().get(courseId);
-  }
-
-  syllabusOf(syllabusId: string): ISyllabus | undefined {
-    return this.syllabi().get(syllabusId);
-  }
-
   enrolledText(section: ISection): string {
     return displayEnrolledCount(section.enrolledCount);
   }
@@ -247,42 +223,5 @@ export class ListSectionsComponent implements OnInit {
 
   onSaved(): void {
     this.loadSections();
-  }
-
-  /** Tra thêm các học kỳ/học phần/đề cương chưa có trong bộ nhớ đệm. */
-  private hydrateReferences(list: ISection[]): void {
-    const missingTermIds = [...new Set(list.map(s => s.termId))].filter(
-      id => !this.termSelect.options().some(t => t.id === id) && !this.termCache().has(id),
-    );
-    if (missingTermIds.length > 0 && typeof this.termSvc.getTermById === 'function') {
-      this.fetchAll(missingTermIds.map(id => this.termSvc.getTermById(id))).subscribe(found => {
-        if (found.length > 0) {
-          this.termCache.update(current => new Map([...current, ...found.map(t => [t.id, t] as const)]));
-        }
-      });
-    }
-    const missingCourseIds = [...new Set(list.map(s => s.courseId))].filter(id => !this.courseOf(id));
-    if (missingCourseIds.length > 0) {
-      this.fetchAll(missingCourseIds.map(id => this.courseSvc.getCourseById(id))).subscribe(found => {
-        if (found.length > 0) {
-          this.courseCache.update(current => new Map([...current, ...found.map(c => [c.id, c] as const)]));
-        }
-      });
-    }
-    const syllabusIds = [...new Set(list.map(s => s.syllabusId))].filter(id => !this.syllabi().has(id));
-    if (syllabusIds.length > 0) {
-      this.fetchAll(syllabusIds.map(id => this.syllabusSvc.getSyllabusById(id))).subscribe(found => {
-        if (found.length > 0) {
-          this.syllabi.update(current => new Map([...current, ...found.map(s => [s.id, s] as const)]));
-        }
-      });
-    }
-  }
-
-  /** Gọi song song, lỗi một phần tử bị bỏ qua (khi đó giao diện hiện mã thay vì tên). */
-  private fetchAll<T>(requests: Observable<T>[]): Observable<T[]> {
-    return forkJoin(requests.map(r => r.pipe(catchError(() => of(null))))).pipe(
-      map(values => values.filter((v): v is T => v !== null)),
-    );
   }
 }

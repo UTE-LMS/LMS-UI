@@ -19,9 +19,14 @@
     </div>
 
     @if (canAccessAnalytics) {
-      <button nz-button type="button" [nzLoading]="exporting()" [disabled]="loading()" (click)="exportCsv()">
-        <i class="fa-solid fa-file-csv mr-1.25" aria-hidden="true"></i>Xuất CSV
-      </button>
+      <div class="flex flex-wrap items-center gap-2">
+        <button nz-button type="button" [nzLoading]="exportingFormat() === 'xlsx'" [disabled]="loading() || exporting()" (click)="exportExcel()">
+          <i class="fa-solid fa-file-excel mr-1.25 text-emerald-700" aria-hidden="true"></i>Xuất Excel
+        </button>
+        <button nz-button type="button" [nzLoading]="exportingFormat() === 'csv'" [disabled]="loading() || exporting()" (click)="exportCsv()">
+          <i class="fa-solid fa-file-csv mr-1.25" aria-hidden="true"></i>Xuất CSV
+        </button>
+      </div>
     }
   </header>
 
@@ -104,7 +109,7 @@
               (nzScrollToBottom)="pvSelect.loadMore()"
               (ngModelChange)="onProgramVersionChange($event)">
               @for (pv of pvSelect.options(); track pv.id) {
-                <nz-option [nzLabel]="pv.version" [nzValue]="pv.id" />
+                <nz-option [nzLabel]="formatProgramVersionLabel(pv)" [nzValue]="pv.id" />
               }
             </nz-select>
             <ng-template #pvFooterTpl>
@@ -126,14 +131,14 @@
             [nzServerSearch]="true"
             [nzLoading]="courseSelect.loading()"
             [nzDropdownRender]="courseFooterTpl"
-            nzPlaceHolder="Chọn học phần"
+            [nzPlaceHolder]="programVersionId() ? 'Học phần thuộc phiên bản đã chọn' : 'Chọn học phần'"
             [ngModel]="courseId()"
             (nzOpenChange)="courseSelect.onOpenChange($event)"
             (nzOnSearch)="courseSelect.onSearch($event)"
             (nzScrollToBottom)="courseSelect.loadMore()"
             (ngModelChange)="onCourseChange($event)">
             @for (c of courseSelect.options(); track c.id) {
-              <nz-option [nzLabel]="c.code + ' · ' + c.name" [nzValue]="c.id" />
+              <nz-option [nzLabel]="formatCourseOptionLabel(c)" [nzValue]="c.id" />
             }
           </nz-select>
           <ng-template #courseFooterTpl>
@@ -184,14 +189,14 @@
             [nzServerSearch]="true"
             [nzLoading]="sectionSelect.loading()"
             [nzDropdownRender]="sectionFooterTpl"
-            nzPlaceHolder="Tất cả lớp"
+            [nzPlaceHolder]="(programVersionId() || courseId()) ? 'Lớp học phần theo bộ lọc' : 'Tất cả lớp'"
             [ngModel]="sectionIds()"
             (nzOpenChange)="sectionSelect.onOpenChange($event)"
             (nzOnSearch)="sectionSelect.onSearch($event)"
             (nzScrollToBottom)="sectionSelect.loadMore()"
             (ngModelChange)="onSectionIdsChange($event)">
             @for (s of sectionSelect.options(); track s.id) {
-              <nz-option [nzLabel]="s.code" [nzValue]="s.id" />
+              <nz-option [nzLabel]="formatSectionOptionLabel(s)" [nzValue]="s.id" />
             }
           </nz-select>
           <ng-template #sectionFooterTpl>
@@ -213,11 +218,44 @@
         </div>
         <div>
           <label class="font-medium text-sm text-slate-800 block mb-1" for="f-run">Lần tính</label>
-          <nz-select id="f-run" class="w-full" nzAllowClear nzPlaceHolder="Lần tính mới nhất"
-            [ngModel]="runId()" (ngModelChange)="runId.set($event)">
-            @for (r of runs(); track r.id) {
-              <nz-option [nzLabel]="(r.startedAt ?? r.id) + (r.official ? ' · chính thức' : ' · không chính thức')"
-                [nzValue]="r.id" />
+          <nz-select
+            id="f-run"
+            class="w-full"
+            nzAllowClear
+            nzShowSearch
+            [nzLoading]="loadingRuns()"
+            [nzDropdownMatchSelectWidth]="false"
+            [nzDropdownStyle]="{ minWidth: '340px', maxWidth: '460px' }"
+            [nzOptionHeightPx]="56"
+            nzPlaceHolder="Lần tính mới nhất"
+            nzNotFoundContent="Không có lượt tính phù hợp bộ lọc"
+            [ngModel]="runId()"
+            (ngModelChange)="runId.set($event)">
+            @for (opt of runOptions(); track opt.id) {
+              <nz-option [nzValue]="opt.id" [nzLabel]="opt.selectLabel" nzCustomContent>
+                <div class="py-0.5 leading-snug">
+                  <div class="text-sm font-medium text-slate-900 truncate">{{ opt.primaryLabel }}</div>
+                  <div class="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-slate-500">
+                    <span
+                      class="inline-flex items-center rounded px-1.5 py-0 text-[11px] font-medium"
+                      [class.bg-emerald-50]="opt.official"
+                      [class.text-emerald-700]="opt.official"
+                      [class.bg-slate-100]="!opt.official"
+                      [class.text-slate-600]="!opt.official">
+                      {{ opt.official ? 'Chính thức' : 'Thử nghiệm' }}
+                    </span>
+                    @if (opt.stale) {
+                      <span class="inline-flex items-center rounded bg-amber-50 px-1.5 py-0 text-[11px] font-medium text-amber-700">
+                        Cần tính lại
+                      </span>
+                    }
+                    <span>{{ opt.metaText }}</span>
+                    @if (opt.timeLabel) {
+                      <span>· {{ opt.timeLabel }}</span>
+                    }
+                  </div>
+                </div>
+              </nz-option>
             }
           </nz-select>
         </div>
@@ -228,7 +266,7 @@
               <div>
                 <label class="font-medium text-sm text-slate-800 block mb-1" for="f-cohort">Khóa</label>
                 <input id="f-cohort" nz-input class="ant-input w-full" placeholder="Ví dụ: K22, K23"
-                  [ngModel]="cohortsText()" (ngModelChange)="cohortsText.set($event)" aria-describedby="f-cohort-hint" />
+                  [ngModel]="cohortsText()" (ngModelChange)="onCohortsChange($event)" aria-describedby="f-cohort-hint" />
                 <small id="f-cohort-hint" class="text-slate-600 block mt-1">Để trống thì lấy các khóa áp dụng của CTĐT.</small>
               </div>
             }
@@ -260,9 +298,27 @@
           @case ('COURSE_LECTURER') {
             @if (canAnalyzeProgramScope) {
               <div>
-                <label class="font-medium text-sm text-slate-800 block mb-1" for="f-lecturer">Mã giảng viên</label>
-                <input id="f-lecturer" nz-input class="ant-input w-full" placeholder="Ví dụ: lec1, lec2"
-                  [ngModel]="lecturerIdsText()" (ngModelChange)="lecturerIdsText.set($event)" />
+                <label class="font-medium text-sm text-slate-800 block mb-1" for="f-lecturer">Giảng viên</label>
+                @if (canLoadLecturers) {
+                  <nz-select
+                    id="f-lecturer"
+                    class="w-full"
+                    nzMode="multiple"
+                    nzAllowClear
+                    nzShowSearch
+                    [nzLoading]="loadingLecturers()"
+                    nzPlaceHolder="Tất cả giảng viên"
+                    [ngModel]="selectedLecturerIds()"
+                    (nzOpenChange)="onLecturerDropdownOpen($event)"
+                    (ngModelChange)="selectedLecturerIds.set($event ?? [])">
+                    @for (lec of lecturers(); track lec.id) {
+                      <nz-option [nzLabel]="lecturerOptionLabel(lec)" [nzValue]="lec.id" />
+                    }
+                  </nz-select>
+                } @else {
+                  <input id="f-lecturer" nz-input class="ant-input w-full" placeholder="Ví dụ: lec1, lec2"
+                    [ngModel]="lecturerIdsText()" (ngModelChange)="lecturerIdsText.set($event)" />
+                }
               </div>
             }
           }
@@ -357,6 +413,8 @@
             <span class="text-xs font-medium text-slate-600">
               @if (res.dimension === 'STUDENT' && res.totalElements !== undefined) {
                 {{ res.columns.length }} / {{ res.totalElements }} sinh viên · {{ res.rows.length }} nhóm so sánh
+              } @else if (res.dimension === 'COURSE_LECTURER') {
+                {{ lecturerAxisOf(res) === 'rows' ? res.rows.length : res.columns.length }} giảng viên · {{ lecturerAxisOf(res) === 'rows' ? res.columns.length : res.rows.length }} chuẩn
               } @else {
                 {{ res.columns.length }} chuẩn · {{ res.rows.length }} nhóm so sánh
               }
@@ -364,7 +422,7 @@
           </div>
 
           <ul class="chart-legend-strip flex flex-wrap gap-4 text-sm mb-4" aria-label="Chú giải">
-            @for (l of legend(); track l.label) {
+            @for (l of legend(); track l.id) {
               <li class="flex items-center gap-2 text-slate-800">
                 <span class="inline-block w-3 h-3 rounded-sm" [style.background]="l.color" aria-hidden="true"></span>{{ l.label }}
               </li>
@@ -380,12 +438,17 @@
           }
 
           <div class="chart-plot-frame">
-            <div class="flex justify-between text-xs font-medium text-slate-600 pl-28 pr-14 pb-2" aria-hidden="true">
+            <div class="flex justify-between text-xs font-medium text-slate-600 pr-14 pb-2"
+              [class.pl-40]="res.dimension === 'COURSE_LECTURER'"
+              [class.pl-28]="res.dimension !== 'COURSE_LECTURER'"
+              aria-hidden="true">
               <span>0%</span><span>25%</span><span>50%</span><span>75%</span><span>100%</span>
             </div>
-            @for (g of chartGroups(); track g.label) {
+            @for (g of chartGroups(); track g.id) {
               <div class="flex gap-3 py-2.5 border-t border-slate-200/70" role="group" [attr.aria-label]="g.label">
-                <div class="w-25 shrink-0 text-sm font-semibold text-slate-800 pt-0.5">{{ g.label }}</div>
+                <div class="shrink-0 text-sm font-semibold text-slate-800 pt-0.5"
+                  [class.w-36]="res.dimension === 'COURSE_LECTURER'"
+                  [class.w-25]="res.dimension !== 'COURSE_LECTURER'">{{ g.label }}</div>
                 <div class="flex-1 flex flex-col gap-1">
                   @for (b of g.bars; track b.seriesIndex) {
                     <div class="flex items-center gap-2" [title]="barTitle(g, b)">
@@ -422,18 +485,18 @@
               <tr>
                 <th nzLeft nzWidth="200px">Hàng</th>
                 @for (c of res.columns; track c.id) {
-                  <th nzAlign="center" nzWidth="140px">{{ headerLabel(c) }}</th>
+                  <th nzAlign="center" nzWidth="140px">{{ columnHeaderLabel(c, res) }}</th>
                 }
               </tr>
             </thead>
             <tbody>
               @for (r of res.rows; track r.id; let i = $index) {
                 <tr>
-                  <td nzLeft><b>{{ headerLabel(r) }}</b>
+                  <td nzLeft><b>{{ rowHeaderLabel(r, res) }}</b>
                     @if (r.passThreshold !== null && r.passThreshold !== undefined) {
                       <span class="ml-1.5 text-xs font-normal text-slate-600">ngưỡng {{ (r.passThreshold * 100) | number: '1.0-0' }}%</span>
                     }
-                    @if (r.code && r.name) { <div class="text-xs text-slate-600">{{ r.name }}</div> }
+                    @if (rowSubtitle(r, res); as subtitle) { <div class="text-xs text-slate-600">{{ subtitle }}</div> }
                   </td>
                   @for (c of res.columns; track c.id; let j = $index) {
                     @let cell = res.matrix[i]?.[j];
@@ -457,7 +520,7 @@
           @if (res.dimension === 'STUDENT' && (res.totalElements ?? res.columns.length) > 0) {
             <div class="mt-4 flex flex-wrap items-center justify-between gap-3">
               <span class="text-xs text-slate-600">
-                Hiển thị {{ res.columns.length }} / {{ res.totalElements ?? res.columns.length }} sinh viên (xuất CSV bao gồm toàn bộ sinh viên).
+                Hiển thị {{ res.columns.length }} / {{ res.totalElements ?? res.columns.length }} sinh viên (xuất CSV/Excel bao gồm toàn bộ sinh viên).
               </span>
               <nz-pagination
                 [nzTotal]="res.totalElements ?? res.columns.length"

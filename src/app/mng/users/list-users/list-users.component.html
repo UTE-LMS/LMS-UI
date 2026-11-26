@@ -115,12 +115,12 @@
           <div class="user-scope-text">
             @if (role === 'PROGRAM_MANAGER') {
               @if (hasAssignedFaculty(item)) {
-                <span class="text-slate-800 font-medium">{{ describeRoleScope(role, item, facultyMap()) }}</span>
+                <span class="text-slate-800 font-medium">{{ describeRoleScope(role, item) }}</span>
               } @else {
                 <span class="text-slate-400 italic">Chưa gán Khoa</span>
               }
             } @else {
-              <span class="text-slate-600">{{ describeRoleScope(role, item, facultyMap()) }}</span>
+              <span class="text-slate-600">{{ describeRoleScope(role, item) }}</span>
             }
           </div>
           }

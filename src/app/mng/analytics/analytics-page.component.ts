@@ -17,14 +17,22 @@ import { ITerm } from '@models/course/term.model';
 import {
   AnalyticsDimension, CurriculumClassificationType, IAnalyticsMatrix, IAnalyticsQuery, IMatrixHeader, IMatrixMetricCell,
 } from '@models/measurement/analytics.model';
-import { CalculationRunResponse, ResultLevel } from '@models/measurement/measurement.model';
-import { IProgramVersion } from '@models/program/program-version.model';
+import { CalculationRunResponse, ReportExportFormat, ResultLevel } from '@models/measurement/measurement.model';
+import { IProgramVersion, formatProgramVersionLabel } from '@models/program/program-version.model';
+import { IUser } from '@models/user/user.model';
 import { AuthService } from '@services/auth/auth.service';
 import { toUserError } from '@services/common/api-error.util';
 import { CourseService } from '@services/course/course.service';
+import {
+  formatCourseOptionLabel,
+  formatSectionOptionLabel,
+  invalidatePaginatedSelect,
+  mapProgramCoursesToCoursePage,
+} from '@services/course/program-course-select.util';
 import { SectionService } from '@services/course/section.service';
 import { TermService } from '@services/course/term.service';
 import { AnalyticsService } from '@services/measurement/analytics.service';
+import { buildCalculationRunOptions, CalculationRunLookupMaps } from '@services/measurement/calculation-run-display.util';
 import { CalculationService } from '@services/measurement/calculation.service';
 import { ProgramVersionService } from '@services/program/program-version.service';
 import { ErrorStateComponent } from '@widget/error-state/error-state.component';
@@ -38,7 +46,7 @@ import { NzSelectModule } from 'ng-zorro-antd/select';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzTableModule } from 'ng-zorro-antd/table';
 import { ToastrService } from 'ngx-toastr';
-import { catchError, debounceTime, distinctUntilChanged, EMPTY, finalize, map, of, Subject } from 'rxjs';
+import { catchError, debounceTime, distinctUntilChanged, EMPTY, finalize, map, of, Subject, switchMap } from 'rxjs';
 
 /** Chỉ số người dùng chọn để vẽ. Đều là tỷ lệ 0–1 do backend tính sẵn trong từng ô. */
 export type AnalyticsMetric = 'mean' | 'passRate' | 'passRateOfEnrolled';
@@ -83,8 +91,56 @@ export interface IChartBar {
 }
 
 export interface IChartGroup {
+  id: string;
   label: string;
   bars: IChartBar[];
+}
+
+function trimmedNonEmpty(value?: string | null): string | null {
+  const trimmed = value?.trim();
+  if (trimmed) {
+    return trimmed;
+  }
+  return null;
+}
+
+function isOutcomeHeader(h: IMatrixHeader): boolean {
+  if (
+    (h.passThreshold !== null && h.passThreshold !== undefined)
+    || (h.bloomLevel !== null && h.bloomLevel !== undefined)
+  ) {
+    return true;
+  }
+  const code = trimmedNonEmpty(h.code);
+  return code !== null && /^(PLO|PI|CLO)(?:\d|$|[\s._-])/i.test(code);
+}
+
+/** Xác định trục chứa giảng viên trong ma trận `COURSE_LECTURER` để ưu tiên hiển thị họ tên. */
+export function lecturerAxisOf(res: IAnalyticsMatrix | null): 'columns' | 'rows' | null {
+  if (res?.dimension !== 'COURSE_LECTURER') {
+    return null;
+  }
+  const rowsAreOutcomes = res.rows.some(isOutcomeHeader);
+  const colsAreOutcomes = res.columns.some(isOutcomeHeader);
+  if (colsAreOutcomes && !rowsAreOutcomes) {
+    return 'rows';
+  }
+  return 'columns';
+}
+
+/** Nhãn hiển thị cho giảng viên: ưu tiên họ tên (`name` khác `code`), sau đó tra từ lookup `fullName`, rồi mới fallback `code`/`id`. */
+export function lecturerHeaderLabel(h: IMatrixHeader, nameLookup?: ReadonlyMap<string, string>): string {
+  const code = trimmedNonEmpty(h.code);
+  const name = trimmedNonEmpty(h.name);
+  if (name && name !== code) {
+    return name;
+  }
+  const lookedUp = trimmedNonEmpty(nameLookup?.get(h.id))
+    ?? (code ? trimmedNonEmpty(nameLookup?.get(code)) : null);
+  if (lookedUp) {
+    return lookedUp;
+  }
+  return name ?? code ?? h.id;
 }
 
 /** Nhãn hiển thị của một tiêu đề hàng/cột: mã, rồi tên, rồi ID (bỏ qua chuỗi rỗng). */
@@ -124,10 +180,12 @@ export class AnalyticsPageComponent implements OnInit {
   private readonly toastr = inject(ToastrService);
 
   private readonly role = SystemConstant.MNG_ROLE;
+  readonly isAdmin = this.authSvc.hasAnyRole([this.role.ADMIN]);
   readonly isAdminOrQa = this.authSvc.hasAnyRole([this.role.ADMIN, this.role.QA]);
   readonly isProgramManager = this.authSvc.hasAnyRole([this.role.PROGRAM_MANAGER]);
   readonly isLecturer = this.authSvc.hasAnyRole([this.role.LECTURER]);
   readonly canAnalyzeProgramScope = this.isAdminOrQa || this.isProgramManager;
+  readonly canLoadLecturers = this.isAdmin || this.isProgramManager;
   readonly canAccessAnalytics = this.canAnalyzeProgramScope || this.isLecturer;
 
   protected readonly dimensionDisplay = ANALYTICS_DIMENSION_DISPLAY;
@@ -154,9 +212,17 @@ export class AnalyticsPageComponent implements OnInit {
   protected readonly placeholder = PLACEHOLDER;
   protected readonly maxSeries = MAX_CHART_SERIES;
   protected readonly headerLabel = headerLabel;
+  protected readonly lecturerAxisOf = lecturerAxisOf;
+  protected readonly formatProgramVersionLabel = formatProgramVersionLabel;
+  protected readonly formatCourseOptionLabel = formatCourseOptionLabel;
+  protected readonly formatSectionOptionLabel = formatSectionOptionLabel;
 
   // Danh mục cho bộ lọc (paginated select infinite scroll + runs)
   readonly runs = signal<CalculationRunResponse[]>([]);
+  readonly loadingRuns = signal(false);
+  readonly lecturers = signal<IUser[]>([]);
+  readonly loadingLecturers = signal(false);
+  private lecturersLoaded = false;
 
   // Tham số truy vấn
   readonly dimension = signal<AnalyticsDimension>(
@@ -173,6 +239,7 @@ export class AnalyticsPageComponent implements OnInit {
   readonly cohortsText = signal('');
   readonly assessmentTypes = signal<AssessmentType[]>([]);
   readonly classificationType = signal<CurriculumClassificationType>('PLO_CATEGORY');
+  readonly selectedLecturerIds = signal<string[]>([]);
   readonly lecturerIdsText = signal('');
   readonly studentIdsText = signal('');
   readonly studentSearch = signal('');
@@ -188,7 +255,15 @@ export class AnalyticsPageComponent implements OnInit {
   });
 
   readonly courseSelect = createPaginatedSelect<ICourse>({
-    fetchPage: ({ page, size, search }) => this.courseSvc.getCourses(page, size, search),
+    fetchPage: ({ page, size, search }) => {
+      const pvId = this.canAnalyzeProgramScope ? this.programVersionId() : null;
+      if (pvId) {
+        return this.courseSvc
+          .getProgramCourses(pvId, undefined, undefined, undefined, search, page, size)
+          .pipe(map(mapProgramCoursesToCoursePage));
+      }
+      return this.courseSvc.getCourses(page, size, search);
+    },
     getId: c => c.id,
     fetchById: id => this.courseSvc.getCourseById(id),
   });
@@ -203,24 +278,62 @@ export class AnalyticsPageComponent implements OnInit {
     fetchPage: ({ page, size, search }) => {
       const selectedTerms = this.termIds();
       const singleTermId = selectedTerms.length === 1 ? selectedTerms[0] : undefined;
-      return this.sectionSvc.getSections(singleTermId, this.courseId() ?? undefined, search, page, size);
+      const pvId = this.canAnalyzeProgramScope ? (this.programVersionId() ?? undefined) : undefined;
+      return this.sectionSvc.getSections(singleTermId, this.courseId() ?? undefined, search, page, size, pvId);
     },
     getId: s => s.id,
     fetchById: id => (this.sectionSvc.getSection ? this.sectionSvc.getSection(id) : EMPTY),
   });
 
   private readonly studentSearchSubject$ = new Subject<string>();
+  private readonly runsReload$ = new Subject<string | null>();
+
+  private readonly runLookups = computed<CalculationRunLookupMaps>(() => ({
+    programVersions: new Map(this.pvSelect.options().map(pv => [pv.id, formatProgramVersionLabel(pv)])),
+    sections: new Map(this.sectionSelect.options().map(s => [s.id, s.code])),
+    terms: new Map(this.termSelect.options().map(t => [t.id, t.code])),
+    courses: new Map(this.courseSelect.options().map(c => [c.id, c.code])),
+  }));
+
+  readonly runOptions = computed(() => buildCalculationRunOptions(
+    this.runs(),
+    {
+      programVersionId: this.canAnalyzeProgramScope ? this.programVersionId() : null,
+      courseId: this.courseId(),
+      termIds: this.termIds(),
+      sectionIds: this.sectionIds(),
+      cohorts: this.dimension() === 'COHORT' && this.canAnalyzeProgramScope ? splitList(this.cohortsText()) : [],
+    },
+    this.runLookups(),
+  ));
 
   // Kết quả
   readonly metric = signal<AnalyticsMetric>('mean');
   readonly loading = signal(false);
-  readonly exporting = signal(false);
+  readonly exportingFormat = signal<ReportExportFormat | null>(null);
+  readonly exporting = computed(() => this.exportingFormat() !== null);
   readonly error = signal<IUserError | null>(null);
   readonly result = signal<IAnalyticsMatrix | null>(null);
 
   readonly isEmpty = computed(() => {
     const res = this.result();
     return !!res && (res.rows.length === 0 || res.columns.length === 0);
+  });
+
+  private readonly lecturerNameLookup = computed<ReadonlyMap<string, string>>(() => {
+    const mapByKey = new Map<string, string>();
+    for (const lec of this.lecturers()) {
+      const fullName = trimmedNonEmpty(lec.fullName);
+      if (!fullName) {
+        continue;
+      }
+      mapByKey.set(lec.id, fullName);
+      const username = trimmedNonEmpty(lec.username);
+      if (username) {
+        mapByKey.set(username, fullName);
+      }
+    }
+    return mapByKey;
   });
 
   /** Nhóm theo cột (CLO/PI/PLO…), mỗi nhóm có một thanh cho mỗi hàng (lớp, học kỳ, khóa…). */
@@ -232,12 +345,13 @@ export class AnalyticsPageComponent implements OnInit {
     const metric = this.metric();
     const rows = res.rows.slice(0, MAX_CHART_SERIES);
     return res.columns.map((col, colIndex) => ({
-      label: headerLabel(col),
+      id: col.id,
+      label: this.columnHeaderLabel(col, res),
       bars: rows.map((row, rowIndex) => {
         const cell = res.matrix[rowIndex]?.[colIndex];
         return {
           seriesIndex: rowIndex,
-          label: headerLabel(row),
+          label: this.rowHeaderLabel(row, res),
           color: SERIES_COLORS[rowIndex],
           value: cell ? cell[metric] : null,
           cell,
@@ -246,10 +360,14 @@ export class AnalyticsPageComponent implements OnInit {
     }));
   });
 
-  readonly legend = computed(() => (this.result()?.rows ?? []).slice(0, MAX_CHART_SERIES).map((row, i) => ({
-    label: headerLabel(row),
-    color: SERIES_COLORS[i],
-  })));
+  readonly legend = computed(() => {
+    const res = this.result();
+    return (res?.rows ?? []).slice(0, MAX_CHART_SERIES).map((row, i) => ({
+      id: row.id,
+      label: res ? this.rowHeaderLabel(row, res) : headerLabel(row),
+      color: SERIES_COLORS[i],
+    }));
+  });
 
   ngOnInit(): void {
     this.studentSearchSubject$
@@ -266,6 +384,23 @@ export class AnalyticsPageComponent implements OnInit {
         }
       });
 
+    this.runsReload$
+      .pipe(
+        switchMap(pvId => {
+          this.loadingRuns.set(true);
+          return this.calcSvc.getCalculationRuns(pvId ?? undefined, 0, 20).pipe(
+            map(res => (res.content ?? []).filter(r => r.status === 'SUCCESS')),
+            catchError(() => of([])),
+            finalize(() => this.loadingRuns.set(false)),
+          );
+        }),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe(list => {
+        this.runs.set(list);
+        this.reconcileSelectedRun();
+      });
+
     this.loadLookups();
   }
 
@@ -273,22 +408,30 @@ export class AnalyticsPageComponent implements OnInit {
     if (!this.canAccessAnalytics) {
       return;
     }
-    if (this.canAnalyzeProgramScope) {
-      this.pvSelect.loadInitial();
+    this.runsReload$.next(null);
+  }
+
+  private reconcileSelectedRun(): void {
+    const current = this.runId();
+    if (!current || this.runs().length === 0) {
+      return;
     }
-    this.courseSelect.loadInitial();
-    this.termSelect.loadInitial();
-    this.sectionSelect.loadInitial();
-    this.calcSvc.getCalculationRuns(undefined, 0, 20).pipe(
-      map(res => res.content.filter(r => r.status === 'SUCCESS')),
-      catchError(() => of([])),
-      takeUntilDestroyed(this.destroyRef),
-    ).subscribe(list => this.runs.set(list));
+    if (!this.runOptions().some(opt => opt.id === current)) {
+      this.runId.set(null);
+    }
   }
 
   onProgramVersionChange(pvId: string | null): void {
     this.programVersionId.set(pvId);
     this.pvSelect.syncSelected(pvId);
+    this.courseId.set(null);
+    this.courseSelect.syncSelected(null);
+    invalidatePaginatedSelect(this.courseSelect);
+    this.sectionIds.set([]);
+    this.sectionSelect.syncSelected([]);
+    invalidatePaginatedSelect(this.sectionSelect);
+    this.runsReload$.next(pvId);
+    this.reconcileSelectedRun();
     this.studentPage.set(0);
   }
 
@@ -297,7 +440,8 @@ export class AnalyticsPageComponent implements OnInit {
     this.courseSelect.syncSelected(courseId);
     this.sectionIds.set([]);
     this.sectionSelect.syncSelected([]);
-    this.sectionSelect.reload(true);
+    invalidatePaginatedSelect(this.sectionSelect);
+    this.reconcileSelectedRun();
     this.studentPage.set(0);
   }
 
@@ -305,8 +449,9 @@ export class AnalyticsPageComponent implements OnInit {
     const ids = termIds ?? [];
     this.termIds.set(ids);
     this.termSelect.syncSelected(ids);
-    this.sectionSelect.reload(true);
+    invalidatePaginatedSelect(this.sectionSelect);
     this.sectionSelect.syncSelected(this.sectionIds());
+    this.reconcileSelectedRun();
     this.studentPage.set(0);
   }
 
@@ -314,7 +459,13 @@ export class AnalyticsPageComponent implements OnInit {
     const ids = sectionIds ?? [];
     this.sectionIds.set(ids);
     this.sectionSelect.syncSelected(ids);
+    this.reconcileSelectedRun();
     this.studentPage.set(0);
+  }
+
+  onCohortsChange(text: string): void {
+    this.cohortsText.set(text);
+    this.reconcileSelectedRun();
   }
 
   onStudentSearchChange(keyword: string): void {
@@ -348,16 +499,18 @@ export class AnalyticsPageComponent implements OnInit {
     this.pvSelect.syncSelected(null);
     this.courseId.set(null);
     this.courseSelect.syncSelected(null);
+    invalidatePaginatedSelect(this.courseSelect);
     this.termIds.set([]);
     this.termSelect.syncSelected([]);
     this.sectionIds.set([]);
     this.sectionSelect.syncSelected([]);
-    this.sectionSelect.reload(true);
+    invalidatePaginatedSelect(this.sectionSelect);
     this.level.set(null);
     this.runId.set(null);
     this.cohortsText.set('');
     this.assessmentTypes.set([]);
     this.classificationType.set('PLO_CATEGORY');
+    this.selectedLecturerIds.set([]);
     this.lecturerIdsText.set('');
     this.studentIdsText.set('');
     this.studentSearch.set('');
@@ -365,6 +518,9 @@ export class AnalyticsPageComponent implements OnInit {
     this.subjectIdsText.set('');
     this.passedFilter.set('ALL');
     this.error.set(null);
+    if (this.canAccessAnalytics) {
+      this.runsReload$.next(null);
+    }
   }
 
   /** Gom tham số đang chọn. Trường chỉ dùng cho một chiều hoặc phạm vi cấp CTĐT thì chỉ gửi khi hợp lệ. */
@@ -396,7 +552,8 @@ export class AnalyticsPageComponent implements OnInit {
       }
     }
     if (dimension === 'COURSE_LECTURER' && this.canAnalyzeProgramScope) {
-      query.lecturerIds = splitList(this.lecturerIdsText());
+      const selected = this.selectedLecturerIds();
+      query.lecturerIds = selected.length > 0 ? selected : splitList(this.lecturerIdsText());
     }
     if (dimension === 'STUDENT') {
       query.studentIds = splitList(this.studentIdsText());
@@ -426,6 +583,17 @@ export class AnalyticsPageComponent implements OnInit {
     ).subscribe({
       next: res => {
         this.result.set(res);
+        if (res.dimension === 'COURSE_LECTURER' && this.canLoadLecturers) {
+          const lecturerHeaders = lecturerAxisOf(res) === 'rows' ? res.rows : res.columns;
+          const needsLookup = lecturerHeaders.some(h => {
+            const name = trimmedNonEmpty(h.name);
+            const code = trimmedNonEmpty(h.code);
+            return !name || name === code;
+          });
+          if (needsLookup) {
+            this.ensureLecturersLoaded();
+          }
+        }
         if (res.dimension === 'STUDENT') {
           if (res.page !== undefined) {
             this.studentPage.set(res.page);
@@ -442,13 +610,16 @@ export class AnalyticsPageComponent implements OnInit {
     });
   }
 
-  exportCsv(): void {
+  private runExport(format: ReportExportFormat): void {
     if (this.exporting() || !this.canAccessAnalytics || !this.availableDimensions.includes(this.dimension())) {
       return;
     }
-    this.exporting.set(true);
-    this.analyticsSvc.exportCsv(this.buildQuery()).pipe(
-      finalize(() => this.exporting.set(false)),
+    this.exportingFormat.set(format);
+    const request$ = format === 'xlsx'
+      ? this.analyticsSvc.exportExcel(this.buildQuery())
+      : this.analyticsSvc.exportCsv(this.buildQuery());
+    request$.pipe(
+      finalize(() => this.exportingFormat.set(null)),
       takeUntilDestroyed(this.destroyRef),
     ).subscribe({
       next: res => {
@@ -459,13 +630,21 @@ export class AnalyticsPageComponent implements OnInit {
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
-        link.download = fileNameFrom(res.headers.get('Content-Disposition')) ?? `phan-tich-${this.dimension().toLowerCase()}.csv`;
+        link.download = fileNameFrom(res.headers.get('Content-Disposition')) ?? `phan-tich-${this.dimension().toLowerCase()}.${format}`;
         link.click();
         URL.revokeObjectURL(url);
-        this.toastr.success('Đã xuất tệp CSV');
+        this.toastr.success(format === 'xlsx' ? 'Đã xuất tệp Excel' : 'Đã xuất tệp CSV');
       },
       error: (err: unknown) => this.toastr.error(toUserError(err).message),
     });
+  }
+
+  exportCsv(): void {
+    this.runExport('csv');
+  }
+
+  exportExcel(): void {
+    this.runExport('xlsx');
   }
 
   /** Độ rộng thanh theo % của trục 0–100%; giá trị đã là tỷ lệ 0–1 nên chỉ nhân 100 để vẽ. */
@@ -478,6 +657,64 @@ export class AnalyticsPageComponent implements OnInit {
     const cell = bar.cell;
     const counts = cell ? ` · ${cell.evaluated}/${cell.enrolled} đủ dữ liệu` : '';
     return `${bar.label} · ${group.label} · ${value}${counts}`;
+  }
+
+  ensureLecturersLoaded(): void {
+    if (
+      !this.canLoadLecturers
+      || this.lecturersLoaded
+      || this.loadingLecturers()
+      || typeof this.sectionSvc.getLecturers !== 'function'
+    ) {
+      return;
+    }
+    this.loadingLecturers.set(true);
+    this.sectionSvc.getLecturers().pipe(
+      catchError(() => of(null)),
+      finalize(() => this.loadingLecturers.set(false)),
+      takeUntilDestroyed(this.destroyRef),
+    ).subscribe(list => {
+      if (list !== null) {
+        this.lecturers.set(list);
+        this.lecturersLoaded = true;
+      }
+    });
+  }
+
+  onLecturerDropdownOpen(open: boolean): void {
+    if (open) {
+      this.ensureLecturersLoaded();
+    }
+  }
+
+  protected lecturerOptionLabel(user: IUser): string {
+    return trimmedNonEmpty(user.fullName) ?? trimmedNonEmpty(user.username) ?? user.id;
+  }
+
+  protected columnHeaderLabel(col: IMatrixHeader, res: IAnalyticsMatrix): string {
+    if (lecturerAxisOf(res) === 'columns') {
+      return lecturerHeaderLabel(col, this.lecturerNameLookup());
+    }
+    return headerLabel(col);
+  }
+
+  protected rowHeaderLabel(row: IMatrixHeader, res: IAnalyticsMatrix): string {
+    if (lecturerAxisOf(res) === 'rows') {
+      return lecturerHeaderLabel(row, this.lecturerNameLookup());
+    }
+    return headerLabel(row);
+  }
+
+  protected rowSubtitle(row: IMatrixHeader, res: IAnalyticsMatrix): string | null {
+    if (lecturerAxisOf(res) === 'rows') {
+      return null;
+    }
+    const code = trimmedNonEmpty(row.code);
+    const name = trimmedNonEmpty(row.name);
+    if (code && name) {
+      return name;
+    }
+    return null;
   }
 
   cellValue(cell: IMatrixMetricCell | undefined): number | null {

@@ -16,7 +16,7 @@ import { IPagedResults } from '@models/common/response-data.model';
 import { ICourse } from '@models/course/course.model';
 import { ISyllabus, ISyllabusCsvImportResponse } from '@models/course/syllabus.model';
 import { ITerm } from '@models/course/term.model';
-import { IProgramVersion } from '@models/program/program-version.model';
+import { IProgramVersion, formatProgramVersionLabel } from '@models/program/program-version.model';
 import { AuthService } from '@services/auth/auth.service';
 import { toApiError } from '@services/common/api-error.util';
 import { CourseService } from '@services/course/course.service';
@@ -92,7 +92,7 @@ export class ListSyllabiComponent implements OnInit {
     const fid = this.pmFacultyId();
     return fid ? this.allCourses().filter(c => c.facultyId === fid) : [];
   });
-  readonly termCache = signal<Record<string, ITerm>>({});
+  protected readonly formatProgramVersionLabel = formatProgramVersionLabel;
   readonly termSelect = createPaginatedSelect<ITerm>({
     fetchPage: ({ page, size, search }) => this.termSvc.getTerms(search, undefined, page, size),
     getId: t => t.id,
@@ -248,9 +248,6 @@ export class ListSyllabiComponent implements OnInit {
   }
 
   loadInitialCatalog(preferredCourseId: string | null): void {
-    this.termSelect.loadInitial();
-    this.pvSelect.loadInitial();
-
     this.coursePage.set(0);
     this.currentCourseSearch.set('');
     this.fetchCoursesPage(0).subscribe({
@@ -373,52 +370,12 @@ export class ListSyllabiComponent implements OnInit {
         this.isLoadingSyllabi.set(false);
         const safeList = list || [];
         this.syllabi.set(safeList);
-        this.hydrateTermsFromSyllabi(safeList);
       },
       error: () => {
         this.isLoadingSyllabi.set(false);
         this.hasError.set(true);
       },
     });
-  }
-
-  private hydrateTermsFromSyllabi(syllabi: readonly ISyllabus[]): void {
-    if (!this.termSvc.getTermById) {
-      return;
-    }
-    const loadedIds = new Set<string>([
-      ...this.termSelect.options().map(t => t.id),
-      ...Object.keys(this.termCache()),
-    ]);
-    const missingIds = new Set<string>();
-    for (const s of syllabi) {
-      if (s.effectiveFromTermId && !loadedIds.has(s.effectiveFromTermId)) {
-        missingIds.add(s.effectiveFromTermId);
-      }
-      if (s.effectiveToTermId && !loadedIds.has(s.effectiveToTermId)) {
-        missingIds.add(s.effectiveToTermId);
-      }
-    }
-    for (const id of missingIds) {
-      this.termSvc.getTermById(id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-        next: term => this.termCache.update(prev => ({ ...prev, [term.id]: term })),
-        error: () => undefined,
-      });
-    }
-  }
-
-  getTermCode(termId?: string | null): string {
-    if (!termId) {
-      return '—';
-    }
-    const term =
-      this.termSelect.options().find(t => t.id === termId || t.code === termId)
-      ?? this.termCache()[termId]
-      ?? Object.values(this.termCache()).find(t => t.code === termId);
-    if (!term) {
-      return termId;
-    }
-    return term.academicYear ? `${term.code} (${term.academicYear})` : term.code;
   }
 
   toggleShowAllCourses(): void {

@@ -18,16 +18,16 @@
         Chi tiết Đề cương Học phần &amp; Chuẩn đầu ra
       </div>
       <h1 class="text-2xl font-bold text-slate-900 m-0">
-        {{ course()?.code ?? '—' }} — {{ course()?.name ?? 'Đang tải học phần...' }}
+        {{ syllabus()?.courseCode ?? '—' }} — {{ syllabus()?.courseName ?? '—' }}
       </h1>
       <div class="flex flex-wrap items-center gap-3 text-sm text-slate-600 mt-2">
         <span>Phiên bản đề cương: <strong class="text-slate-900">{{ syllabus()?.version ?? '—' }}</strong></span>
         <span>·</span>
-        <span>Hiệu lực từ: <strong>{{ getTermCode(syllabus()?.effectiveFromTermId) }}</strong></span>
+        <span>Hiệu lực từ: <strong>{{ syllabus()?.effectiveFromTermCode || '—' }}</strong></span>
         <span>·</span>
         <span>
           Hiệu lực đến:
-          <strong>{{ syllabus()?.effectiveToTermId ? getTermCode(syllabus()?.effectiveToTermId) : '— (Còn hiệu lực)' }}</strong>
+          <strong>{{ syllabus()?.effectiveToTermCode || '— (Còn hiệu lực)' }}</strong>
         </span>
         @if (syllabus()?.status; as st) {
         <span>
@@ -109,7 +109,7 @@
           <td>
             <div class="flex flex-col gap-0.5">
               <span class="font-bold text-blue-900 text-sm">{{ clo.code }}</span>
-              <span class="text-xs text-slate-500">{{ course()?.code ?? '—' }} · {{ syllabus()?.version }}</span>
+              <span class="text-xs text-slate-500">{{ syllabus()?.courseCode ?? '—' }} · {{ syllabus()?.version }}</span>
             </div>
           </td>
           <td>
@@ -140,7 +140,7 @@
                 <div class="mt-0.5 flex flex-wrap gap-1">
                   @for (link of links; track link.id) {
                   <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-blue-50 text-blue-800 border border-blue-200 font-medium">
-                    <span>{{ getPiCode(link.piId) }}:</span>
+                    <span>{{ getPiCode(link) }}:</span>
                     <strong>{{ formatWeight(link.weight) }}</strong>
                   </span>
                   }

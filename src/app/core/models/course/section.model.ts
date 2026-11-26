@@ -1,3 +1,5 @@
+import { SyllabusStatus } from './syllabus.model';
+
 /**
  * Lớp học phần, ghi danh và nhập danh sách lớp (F05a US-19, US-20).
  * Tên trường khớp DTO backend: SectionResponse, EnrollmentListResponse, EnrollmentImportResponse.
@@ -16,8 +18,13 @@ export interface ISection {
   id: string;
   code: string;
   courseId: string;
+  courseCode?: string | null;
+  courseName?: string | null;
   syllabusId: string;
+  syllabusVersion?: string | null;
+  syllabusStatus?: SyllabusStatus | null;
   termId: string;
+  termCode?: string | null;
   lecturerIds: string[];
   lecturers?: ISectionLecturerSummary[];
   /**

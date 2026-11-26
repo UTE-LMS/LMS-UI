@@ -52,7 +52,7 @@ export class ListProgramsComponent implements OnInit {
 
   readonly isAdmin = signal(false);
   readonly isProgramManager = signal(false);
-  readonly canManage = computed(() => this.isAdmin() || this.isProgramManager());
+  readonly canManage = computed(() => this.isProgramManager());
   readonly faculties = signal<IFaculty[]>([]);
 
   /** Quản lý danh sách phân trang (UI 1-indexed, backend 0-indexed) */
@@ -100,7 +100,9 @@ export class ListProgramsComponent implements OnInit {
     this.isProgramManager.set(roles.includes(SystemConstant.ROLE.PROGRAM_MANAGER));
 
     this.initForm();
-    this.loadFaculties();
+    if (this.canManage()) {
+      this.loadFaculties();
+    }
     this.manager.triggerReload();
   }
 
@@ -132,6 +134,9 @@ export class ListProgramsComponent implements OnInit {
   }
 
   openCreateModal(): void {
+    if (!this.canManage()) {
+      return;
+    }
     const isPmOnly = this.isProgramManager() && !this.isAdmin();
     const pmFacultyId = this.authSvc.getFacultyId?.() ?? '';
     this.editingProgramId.set(null);
@@ -152,6 +157,9 @@ export class ListProgramsComponent implements OnInit {
   }
 
   openEditModal(item: IProgram): void {
+    if (!this.canManage()) {
+      return;
+    }
     const isPmOnly = this.isProgramManager() && !this.isAdmin();
     const pmFacultyId = this.authSvc.getFacultyId?.() ?? '';
     this.editingProgramId.set(item.id);
@@ -177,6 +185,9 @@ export class ListProgramsComponent implements OnInit {
   }
 
   submitProgram(): void {
+    if (!this.canManage()) {
+      return;
+    }
     if (this.programForm.invalid) {
       Object.values(this.programForm.controls).forEach(c => {
         c.markAsDirty();

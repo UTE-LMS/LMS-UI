@@ -2,13 +2,11 @@ import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } 
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { SystemConstant } from '@constants/system.constant';
 import { IPi, IPlo, IProgramCourse } from '@models/program/plo-pi.model';
-import { IProgram } from '@models/program/program.model';
 import { IProgramVersion } from '@models/program/program-version.model';
 import { AuthService } from '@services/auth/auth.service';
 import { toApiError } from '@services/common/api-error.util';
 import { PloPiService } from '@services/program/plo-pi.service';
 import { ProgramVersionService } from '@services/program/program-version.service';
-import { ProgramService } from '@services/program/program.service';
 import { StatusChipComponent } from '@widget/status-chip/status-chip.component';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzModalService } from 'ng-zorro-antd/modal';
@@ -48,7 +46,6 @@ export interface ITreeRow {
 export class DetailCurriculumVersionComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly versionSvc = inject(ProgramVersionService);
-  private readonly programSvc = inject(ProgramService);
   private readonly ploPiSvc = inject(PloPiService);
   private readonly authSvc = inject(AuthService, { optional: true });
   private readonly alert = inject(ToastrService);
@@ -56,7 +53,6 @@ export class DetailCurriculumVersionComponent implements OnInit {
 
   readonly versionId = signal<string>('');
   readonly version = signal<IProgramVersion | null>(null);
-  readonly program = signal<IProgram | null>(null);
 
   readonly plos = signal<IPlo[]>([]);
   readonly pis = signal<IPi[]>([]);
@@ -74,28 +70,16 @@ export class DetailCurriculumVersionComponent implements OnInit {
       return false;
     }
     const pmFacultyId = this.authSvc?.getFacultyId?.();
-    const progFacultyId = this.program()?.facultyId;
+    const progFacultyId = this.version()?.facultyId;
     if (pmFacultyId && progFacultyId) {
       return pmFacultyId === progFacultyId;
     }
     return Boolean(pmFacultyId);
   });
 
-  readonly canImportProgramCourses = computed(() => {
-    if (this.version()?.status !== 'ACTIVE') {
-      return false;
-    }
-    const roles = this.userRoles();
-    if (roles.includes(SystemConstant.ROLE.ADMIN)) {
-      return true;
-    }
-    if (roles.includes(SystemConstant.ROLE.PROGRAM_MANAGER)) {
-      const pmFacultyId = this.authSvc?.getFacultyId?.();
-      const progFacultyId = this.program()?.facultyId;
-      return pmFacultyId && progFacultyId ? pmFacultyId === progFacultyId : Boolean(pmFacultyId);
-    }
-    return false;
-  });
+  readonly canImportProgramCourses = computed(() => (
+    this.version()?.status === 'ACTIVE' && this.canManage()
+  ));
 
   private readonly ploCategoryLabels: Record<string, string> = {
     GENERAL: 'Kiến thức chung',
@@ -205,11 +189,6 @@ export class DetailCurriculumVersionComponent implements OnInit {
     this.versionSvc.getProgramVersionById(vId).subscribe({
       next: ver => {
         this.version.set(ver);
-        // Tải thông tin CTĐT gốc
-        this.programSvc.getProgramById(ver.programId).subscribe({
-          next: prog => this.program.set(prog),
-          error: () => undefined,
-        });
 
         // Tải đồng thời PLO, PI, Courses
         forkJoin({

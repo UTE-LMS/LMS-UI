@@ -1,8 +1,11 @@
+import { AssessmentType } from '@models/assessment/assessment.model';
+
 export type CalculationScope = 'SECTION' | 'COHORT' | 'PROGRAM';
 export type CalculationStatus = 'PENDING' | 'PROCESSING' | 'SUCCESS' | 'FAILED';
 export type ResultLevel = 'ASSESSMENT_CLO' | 'CLO' | 'PI' | 'PLO';
 export type ResultStatus = 'COMPUTED' | 'INSUFFICIENT_DATA' | 'NOT_APPLICABLE';
 export type ReportType = 'SECTION_CLO' | 'COURSE_PI' | 'PROGRAM_PLO' | 'DATA_COMPLETENESS';
+export type ReportExportFormat = 'csv' | 'xlsx';
 
 export interface CalculationRunRequest {
   scope: CalculationScope;
@@ -25,6 +28,13 @@ export interface CalculationRunResponse {
   };
   lockKey: string;
   programVersionId?: string;
+  programCode?: string | null;
+  programName?: string | null;
+  programVersion?: string | null;
+  termCode?: string | null;
+  sectionCodes?: string[];
+  courseCode?: string | null;
+  courseName?: string | null;
   syllabusIds?: string[];
   official: boolean;
   stale: boolean;
@@ -45,10 +55,16 @@ export interface StudentResultResponse {
   subjectId: string;
   subjectCode?: string;
   sectionId?: string;
+  sectionCode?: string | null;
+  courseCode?: string | null;
+  courseName?: string | null;
   assessmentId?: string;
+  assessmentName?: string | null;
+  assessmentType?: AssessmentType | null;
   studentId: string;
   studentCode?: string;
   termId?: string;
+  termCode?: string | null;
   status: ResultStatus;
   value?: number;
   passThreshold?: number;
@@ -59,6 +75,9 @@ export interface StudentResultResponse {
     ratio: number;
   };
   programVersionId?: string;
+  programCode?: string | null;
+  programName?: string | null;
+  programVersion?: string | null;
   syllabusId?: string;
 }
 
@@ -69,7 +88,12 @@ export interface AggregateResultResponse {
   subjectId: string;
   subjectCode?: string;
   sectionId?: string;
+  sectionCode?: string | null;
+  courseCode?: string | null;
+  courseName?: string | null;
   assessmentId?: string;
+  assessmentName?: string | null;
+  assessmentType?: AssessmentType | null;
   scope?: {
     type: string;
     refId: string;
@@ -88,7 +112,11 @@ export interface AggregateResultResponse {
   passRateOfEnrolled?: number;
   passThreshold?: number;
   dataCompleteness?: number;
+  termCode?: string | null;
   programVersionId?: string;
+  programCode?: string | null;
+  programName?: string | null;
+  programVersion?: string | null;
 }
 
 export interface ReportCreateRequest {

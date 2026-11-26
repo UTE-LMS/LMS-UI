@@ -105,10 +105,10 @@
             <span>{{ formatCohorts(item.applicableCohort) }}</span>
           </td>
           <td nzAlign="center">
-            <span>{{ getPloCount(item.id) }}</span>
+            <span>{{ item.ploCount ?? '—' }}</span>
           </td>
           <td nzAlign="center">
-            <span>{{ getPiCount(item.id) }}</span>
+            <span>{{ item.piCount ?? '—' }}</span>
           </td>
           <td nzAlign="right">
             <div class="flex items-center justify-end gap-3">

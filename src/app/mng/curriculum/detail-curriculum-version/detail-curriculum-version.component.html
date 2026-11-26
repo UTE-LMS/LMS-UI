@@ -17,7 +17,7 @@
       <div class="version-subtitle flex items-center gap-3">
         <span class="font-semibold text-slate-800">{{ version()?.version }}</span>
         <span>·</span>
-        <span>Ngành {{ program()?.name }} ({{ program()?.code }})</span>
+        <span>Ngành {{ version()?.programName ?? '—' }} ({{ version()?.programCode ?? '—' }})</span>
         <span>·</span>
         <span>{{ version()?.totalCredits ?? '—' }} tín chỉ</span>
         <span>·</span>
@@ -55,10 +55,10 @@
         Ngành / Chương trình
       </div>
       <div class="text-sm font-bold text-slate-900">
-        {{ program()?.name ?? '—' }} ({{ program()?.code ?? '—' }})
+        {{ version()?.programName ?? '—' }} ({{ version()?.programCode ?? '—' }})
       </div>
       <div class="text-xs text-slate-500 mt-1">
-        Bậc {{ program()?.level ?? '—' }} · Hệ {{ program()?.degree ?? '—' }}
+        {{ version()?.facultyName || version()?.facultyCode || '—' }}
       </div>
     </div>
 
@@ -79,7 +79,7 @@
         Cấu trúc Khung Chuẩn đầu ra
       </div>
       <div class="text-sm font-bold text-slate-900">
-        {{ plos().length }} PLO · {{ pis().length }} PI
+        {{ version()?.ploCount ?? plos().length }} PLO · {{ version()?.piCount ?? pis().length }} PI
       </div>
       <div class="text-xs text-slate-500 mt-1">
         {{ coursesTotal() }} học phần thuộc khung CTĐT

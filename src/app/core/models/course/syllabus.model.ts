@@ -7,10 +7,12 @@ export interface ISyllabus {
   courseId: string;
   version: string;
   programVersionId?: string;
-  courseCode?: string;
-  courseName?: string;
+  courseCode?: string | null;
+  courseName?: string | null;
   effectiveFromTermId?: string | null;
+  effectiveFromTermCode?: string | null;
   effectiveToTermId?: string | null;
+  effectiveToTermCode?: string | null;
   status: SyllabusStatus;
   verification?: IVerificationResponse;
   extra?: Record<string, unknown>;

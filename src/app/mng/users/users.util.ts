@@ -19,8 +19,8 @@ export function resolveUserFaculty(
   facultyMap?: FacultyLookupMap,
 ): { code?: string; name?: string; } | null {
   const matched = user.facultyId ? facultyMap?.get(user.facultyId) : undefined;
-  const code = user.facultyCode ?? matched?.code;
-  const name = user.facultyName ?? matched?.name;
+  const code = user.facultyCode ?? matched?.code ?? undefined;
+  const name = user.facultyName ?? matched?.name ?? undefined;
   if (!code && !name) {
     return null;
   }

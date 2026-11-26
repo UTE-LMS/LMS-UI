@@ -57,7 +57,13 @@ describe('ListSyllabiComponent (Server-side Course Search & ADR 0010)', () => {
   const mockSyllabus: ISyllabus = {
     id: 'syl-1',
     courseId: 'course-1',
+    courseCode: 'MATH1301',
+    courseName: 'Toán cao cấp A1',
     version: '2026.1',
+    effectiveFromTermId: 'term-1',
+    effectiveFromTermCode: 'HK1_2026_2027',
+    effectiveToTermId: null,
+    effectiveToTermCode: null,
     status: 'CONFIRMED',
   };
 
@@ -211,15 +217,18 @@ describe('ListSyllabiComponent (Server-side Course Search & ADR 0010)', () => {
     };
   });
 
-  it('khởi tạo thành công và tải danh sách học phần ban đầu (20 môn)', async () => {
+  it('khởi tạo thành công, tải danh sách học phần ban đầu (20 môn) và không gọi N+1 term/pv', async () => {
     await createComponent();
     fixture.detectChanges();
 
-    expect(termSvcMock.getTerms).toHaveBeenCalledWith(undefined, undefined, 0, 20);
+    expect(termSvcMock.getTerms).not.toHaveBeenCalled();
+    expect(termSvcMock.getTermById).not.toHaveBeenCalled();
+    expect(pvSvcMock.getProgramVersions).not.toHaveBeenCalled();
     expect(courseSvcMock.getCourses).toHaveBeenCalledWith(0, 20);
     expect(component.allCourses()).toEqual(mockCourses);
     expect(component.selectedCourseId()).toBe('course-1');
     expect(syllabusSvcMock.getSyllabiByCourse).toHaveBeenCalledWith('course-1');
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('HK1_2026_2027');
   });
 
   it('xử lý deep link query param courseId không nằm trong 20 môn đầu tiên', async () => {

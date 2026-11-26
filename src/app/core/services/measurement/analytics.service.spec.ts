@@ -36,11 +36,27 @@ describe('AnalyticsService (F07/US-36)', () => {
     });
     const req = httpMock.expectOne(r => r.url === UrlConstant.API.ANALYTICS_EXPORT);
     expect(req.request.responseType).toBe('blob');
+    expect(req.request.params.get('format')).toBe('csv');
     expect(req.request.params.getAll('cohorts')).toEqual(['K22']);
     expect(req.request.params.get('search')).toBe('SV001');
     expect(req.request.params.has('page')).toBe(false);
     expect(req.request.params.has('size')).toBe(false);
     req.flush(new Blob(['a,b'], { type: 'text/csv' }));
+  });
+
+  it('xuất Excel gửi format=xlsx và loại bỏ page/size nhưng giữ nguyên bộ lọc', () => {
+    service.exportExcel({ dimension: 'STUDENT', cohorts: ['K22'], page: 1, size: 20, search: 'SV002' }).subscribe(res => {
+      expect(res.body).toBeInstanceOf(Blob);
+    });
+    const req = httpMock.expectOne(r => r.url === UrlConstant.API.ANALYTICS_EXPORT);
+    expect(req.request.method).toBe('GET');
+    expect(req.request.responseType).toBe('blob');
+    expect(req.request.params.get('format')).toBe('xlsx');
+    expect(req.request.params.getAll('cohorts')).toEqual(['K22']);
+    expect(req.request.params.get('search')).toBe('SV002');
+    expect(req.request.params.has('page')).toBe(false);
+    expect(req.request.params.has('size')).toBe(false);
+    req.flush(new Blob(['pk'], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
   });
 
   it('getMatrix gửi page, size và search cho chiều STUDENT', () => {
