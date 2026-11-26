@@ -36,6 +36,7 @@ export interface ICloPiLink {
   syllabusId: string;
   cloId: string;
   piId: string;
+  piCode?: string | null;
   weight?: number | null;
   verification?: IVerificationResponse;
 }

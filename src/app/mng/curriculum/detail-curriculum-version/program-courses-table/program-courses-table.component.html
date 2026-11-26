@@ -128,12 +128,9 @@
         </td>
         <td>
           <div class="flex flex-wrap gap-1">
-            @for (reqId of pc.prerequisiteCourseIds ?? []; track reqId) {
-            <span
-              class="text-xs px-2 py-0.5 rounded bg-rose-50 text-rose-700 border border-rose-200 font-medium"
-              [title]="getCourseTooltip(reqId)"
-            >
-              {{ getCourseCodeById(reqId) }}
+            @for (code of getPrerequisiteCodes(pc); track code) {
+            <span class="text-xs px-2 py-0.5 rounded bg-rose-50 text-rose-700 border border-rose-200 font-medium">
+              {{ code }}
             </span>
             } @empty {
             <span class="text-slate-400 text-xs">—</span>
@@ -142,12 +139,9 @@
         </td>
         <td>
           <div class="flex flex-wrap gap-1">
-            @for (prevId of pc.previousCourseIds ?? []; track prevId) {
-            <span
-              class="text-xs px-2 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200 font-medium"
-              [title]="getCourseTooltip(prevId)"
-            >
-              {{ getCourseCodeById(prevId) }}
+            @for (code of getPreviousCourseCodes(pc); track code) {
+            <span class="text-xs px-2 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200 font-medium">
+              {{ code }}
             </span>
             } @empty {
             <span class="text-slate-400 text-xs">—</span>

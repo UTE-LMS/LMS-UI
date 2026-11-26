@@ -29,12 +29,28 @@
   </div>
   <div>
     <label class="font-medium text-sm" for="a-user">Người thực hiện</label>
-    <nz-select id="a-user" class="w-full" nzAllowClear nzShowSearch nzPlaceHolder="Mọi người dùng"
-      [(ngModel)]="manager.filter.userId">
-      @for (u of users(); track u.id) {
-        <nz-option [nzLabel]="u.username" [nzValue]="u.id" />
+    <nz-select
+      id="a-user"
+      class="w-full"
+      nzAllowClear
+      [nzLoading]="userSelect.loading()"
+      [nzDropdownRender]="userFooterTpl"
+      nzPlaceHolder="Mọi người dùng"
+      [ngModel]="manager.filter.userId || null"
+      (nzOpenChange)="userSelect.onOpenChange($event)"
+      (nzScrollToBottom)="userSelect.loadMore()"
+      (ngModelChange)="onUserFilterChange($event)">
+      @for (u of userSelect.options(); track u.id) {
+        <nz-option [nzLabel]="u.username + (u.fullName ? ' (' + u.fullName + ')' : '')" [nzValue]="u.id" />
       }
     </nz-select>
+    <ng-template #userFooterTpl>
+      @if (userSelect.loadingMore()) {
+        <div class="px-3 py-2 text-center text-xs text-slate-500">
+          <nz-spin nzSimple nzSize="small" class="mr-1.5" />Đang tải thêm...
+        </div>
+      }
+    </ng-template>
   </div>
   <div>
     <label class="font-medium text-sm" for="a-from">Từ thời điểm</label>
@@ -89,7 +105,12 @@
         @for (log of manager.listData().data || []; track log.id) {
           <tr [class.bg-blue-50]="selected()?.id === log.id">
             <td class="tabular-nums">{{ log.at | date: 'dd/MM/yyyy HH:mm:ss' }}</td>
-            <td><b>{{ userLabel(log.userId) }}</b></td>
+            <td>
+              <b>{{ actorLabel(log) }}</b>
+              @if (log.username && log.actorFullName) {
+                <div class="text-xs text-slate-600">{{ log.actorFullName }}</div>
+              }
+            </td>
             <td>{{ actionLabel[log.action] || log.action }}</td>
             <td>
               @if (log.entity) {
@@ -118,7 +139,7 @@
     <h2 id="detail-heading" class="text-base font-semibold">
       {{ actionLabel[log.action] || log.action }} · {{ log.at | date: 'dd/MM/yyyy HH:mm:ss' }}
     </h2>
-    <p class="text-sm text-slate-600">{{ userLabel(log.userId) }} · {{ log.ip || 'không rõ IP' }}
+    <p class="text-sm text-slate-600">{{ actorLabel(log) }} · {{ log.ip || 'không rõ IP' }}
       @if (log.reason) { · Lý do: {{ log.reason }} }</p>
     @if (diffRows().length === 0) {
       <p class="text-sm text-slate-600 mt-3">Bản ghi này không lưu ảnh chụp trước/sau.</p>

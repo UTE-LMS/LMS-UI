@@ -55,4 +55,26 @@ describe('ReportService', () => {
     expect(req2.request.method).toBe('GET');
     req2.flush({ scoreId: 'sc1' });
   });
+
+  it('should export report as CSV and Excel via POST with format query param', () => {
+    service.exportReportCsv('rep1').subscribe(res => {
+      expect(res).toBeInstanceOf(Blob);
+    });
+    const csvReq = httpMock.expectOne(
+      r => r.url === UrlConstant.API.REPORT_EXPORT('rep1') && r.params.get('format') === 'csv',
+    );
+    expect(csvReq.request.method).toBe('POST');
+    expect(csvReq.request.responseType).toBe('blob');
+    csvReq.flush(new Blob(['a,b'], { type: 'text/csv' }));
+
+    service.exportReportExcel('rep1').subscribe(res => {
+      expect(res).toBeInstanceOf(Blob);
+    });
+    const xlsxReq = httpMock.expectOne(
+      r => r.url === UrlConstant.API.REPORT_EXPORT('rep1') && r.params.get('format') === 'xlsx',
+    );
+    expect(xlsxReq.request.method).toBe('POST');
+    expect(xlsxReq.request.responseType).toBe('blob');
+    xlsxReq.flush(new Blob(['pk'], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
+  });
 });

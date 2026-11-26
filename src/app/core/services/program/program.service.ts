@@ -7,9 +7,9 @@ import { IProgram, IProgramRequest } from '@models/program/program.model';
 import { Observable } from 'rxjs';
 
 /**
- * Quản trị Danh mục Chương trình Đào tạo cấp trường (F02, US-05, ADR 0005).
- * Quyền ghi (POST, PUT) dành riêng cho ADMIN.
- * Quyền đọc (GET) cho mọi vai trò đã đăng nhập.
+ * Quản trị Danh mục Chương trình Đào tạo (F02, US-05, ADR 0005).
+ * Quyền ghi (POST, PUT) dành cho PROGRAM_MANAGER trong phạm vi Khoa được phân công.
+ * Quyền đọc (GET) cho các vai trò được phép (ADMIN chỉ đọc).
  */
 @Injectable({
   providedIn: 'root',

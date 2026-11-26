@@ -23,9 +23,16 @@ describe('DetailCurriculumVersionComponent (F02 US-06, US-07, US-08 UI.pdf Trang
   const mockVersion: IProgramVersion = {
     id: '671dcba5f123456789abcdef',
     programId: '671dcba5f123456789abcde1',
+    programCode: 'CNTT',
+    programName: 'Công nghệ thông tin',
+    facultyId: 'fac_cntt_01',
+    facultyCode: 'FIT',
+    facultyName: 'Khoa Công nghệ Thông tin',
     version: 'BM7A-2.7-Updated-2026',
     totalCredits: 132,
     durationYears: 4,
+    ploCount: 2,
+    piCount: 2,
     status: 'ACTIVE',
     verification: {
       status: 'VERIFIED',
@@ -178,13 +185,16 @@ describe('DetailCurriculumVersionComponent (F02 US-06, US-07, US-08 UI.pdf Trang
     fixture.detectChanges();
   });
 
-  it('khởi tạo và tải dữ liệu phiên bản, PLO, PI, ma trận thành công', () => {
+  it('khởi tạo và tải dữ liệu phiên bản, PLO, PI, ma trận thành công mà không gọi getProgramById', () => {
     expect(component).toBeTruthy();
+    expect(programSvc.getProgramById).not.toHaveBeenCalled();
     expect(component.version()?.version).toBe('BM7A-2.7-Updated-2026');
-    expect(component.program()?.code).toBe('CNTT');
+    expect(component.version()?.programCode).toBe('CNTT');
     expect(component.plos().length).toBe(2);
     expect(component.pis().length).toBe(2);
     expect(component.courses().length).toBe(1);
+    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    expect(text).toContain('Công nghệ thông tin (CNTT)');
   });
 
   it('sắp xếp danh sách PLO theo displayOrder (bất biến nghiệp vụ)', () => {
@@ -219,6 +229,12 @@ describe('DetailCurriculumVersionComponent (F02 US-06, US-07, US-08 UI.pdf Trang
     // Khi đã khóa (ARCHIVED) thì không hiển thị import nữa
     component.version.set({ ...mockVersion, status: 'ARCHIVED' });
     fixture.detectChanges();
+    expect(component.canImportProgramCourses()).toBe(false);
+
+    // ADMIN chỉ được xem, không có quyền import khung học phần ngay cả khi ACTIVE
+    component.version.set({ ...mockVersion, status: 'ACTIVE' });
+    component.userRoles.set([SystemConstant.ROLE.ADMIN]);
+    expect(component.canManage()).toBe(false);
     expect(component.canImportProgramCourses()).toBe(false);
 
     // QA không có quyền import ngay cả khi ACTIVE

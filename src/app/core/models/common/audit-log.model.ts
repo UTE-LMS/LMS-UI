@@ -23,6 +23,8 @@ export interface IAuditLog {
   id: string;
   at: string;
   userId: string | null;
+  username?: string | null;
+  actorFullName?: string | null;
   action: AuditAction;
   entity: IAuditEntity | null;
   before: Record<string, unknown> | null;

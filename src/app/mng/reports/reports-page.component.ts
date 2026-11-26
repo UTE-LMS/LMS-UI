@@ -1,27 +1,43 @@
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { ChangeDetectionStrategy, Component, computed, OnInit, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, DestroyRef, OnInit, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { createPaginatedSelect } from '@builder/paginated-select.builder';
 import {
-  CALCULATION_SCOPE_LABEL,
   REPORT_TYPE_LABEL,
   RESULT_LEVEL_LABEL,
   RESULT_STATUS_LABEL,
 } from '@constants/analytics-display.constant';
+import { SystemConstant } from '@constants/system.constant';
+import { ICourse } from '@models/course/course.model';
 import { ISection } from '@models/course/section.model';
+import { ITerm } from '@models/course/term.model';
 import {
   CalculationRunResponse,
   ReportCreateRequest,
+  ReportExportFormat,
   ReportResponse,
   ReportType,
 } from '@models/measurement/measurement.model';
+import { IProgramVersion, formatProgramVersionLabel } from '@models/program/program-version.model';
 import { TraceModalComponent } from '@mng/reports/trace-modal/trace-modal.component';
+import { AuthService } from '@services/auth/auth.service';
 import { toApiError } from '@services/common/api-error.util';
+import { CourseService } from '@services/course/course.service';
+import {
+  formatCourseOptionLabel,
+  formatSectionOptionLabel,
+  invalidatePaginatedSelect,
+  mapProgramCoursesToCoursePage,
+} from '@services/course/program-course-select.util';
 import { SectionService } from '@services/course/section.service';
+import { TermService } from '@services/course/term.service';
+import { buildCalculationRunOptions, CalculationRunLookupMaps } from '@services/measurement/calculation-run-display.util';
 import { CalculationService } from '@services/measurement/calculation.service';
 import { ReportService } from '@services/measurement/report.service';
+import { ProgramVersionService } from '@services/program/program-version.service';
 import { TablePaginateComponent } from '@widget/paginate/paginate.component';
 import { Paginate } from '@widget/paginate/paginate.model';
 import { NzAlertModule } from 'ng-zorro-antd/alert';
@@ -33,6 +49,7 @@ import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzTableModule } from 'ng-zorro-antd/table';
 import { NzTagModule } from 'ng-zorro-antd/tag';
 import { ToastrService } from 'ngx-toastr';
+import { catchError, EMPTY, finalize, map, of, Subject, switchMap } from 'rxjs';
 
 @Component({
   selector: 'app-reports-page',
@@ -55,17 +72,31 @@ import { ToastrService } from 'ngx-toastr';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ReportsPageComponent implements OnInit {
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly authSvc = inject(AuthService);
   private readonly reportSvc = inject(ReportService);
   private readonly calcSvc = inject(CalculationService);
+  private readonly programVersionSvc = inject(ProgramVersionService);
+  private readonly courseSvc = inject(CourseService);
   private readonly sectionSvc = inject(SectionService);
+  private readonly termSvc = inject(TermService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly toastr = inject(ToastrService);
 
+  private readonly role = SystemConstant.MNG_ROLE;
+  readonly canFilterProgramVersion = this.authSvc.hasAnyRole([
+    this.role.ADMIN,
+    this.role.QA,
+    this.role.PROGRAM_MANAGER,
+  ]);
+
   protected readonly reportTypeLabel = REPORT_TYPE_LABEL;
-  protected readonly scopeLabel = CALCULATION_SCOPE_LABEL;
   protected readonly levelLabel = RESULT_LEVEL_LABEL;
   protected readonly resultStatusLabel = RESULT_STATUS_LABEL;
+  protected readonly formatProgramVersionLabel = formatProgramVersionLabel;
+  protected readonly formatCourseOptionLabel = formatCourseOptionLabel;
+  protected readonly formatSectionOptionLabel = formatSectionOptionLabel;
 
   readonly reports = signal<ReportResponse[]>([]);
   readonly loadingReports = signal<boolean>(false);
@@ -84,17 +115,67 @@ export class ReportsPageComponent implements OnInit {
   ));
 
   readonly successRuns = signal<CalculationRunResponse[]>([]);
+  readonly loadingRuns = signal<boolean>(false);
+  readonly pvSelect = createPaginatedSelect<IProgramVersion>({
+    fetchPage: ({ page, size, search }) => this.programVersionSvc.getProgramVersions(page, size, undefined, undefined, undefined, undefined, search),
+    getId: pv => pv.id,
+    fetchById: id => this.programVersionSvc.getProgramVersionById(id),
+  });
+  readonly courseSelect = createPaginatedSelect<ICourse>({
+    fetchPage: ({ page, size, search }) => {
+      const pvId = this.canFilterProgramVersion ? this.selectedProgramVersionId() : null;
+      if (pvId) {
+        return this.courseSvc
+          .getProgramCourses(pvId, undefined, undefined, undefined, search, page, size)
+          .pipe(map(mapProgramCoursesToCoursePage));
+      }
+      return this.courseSvc.getCourses(page, size, search);
+    },
+    getId: c => c.id,
+    fetchById: id => this.courseSvc.getCourseById(id),
+  });
   readonly sectionSelect = createPaginatedSelect<ISection>({
-    fetchPage: ({ page, size, search }) => this.sectionSvc.getSections(undefined, undefined, search, page, size),
+    fetchPage: ({ page, size, search }) => {
+      const pvId = this.canFilterProgramVersion ? (this.selectedProgramVersionId() ?? undefined) : undefined;
+      return this.sectionSvc.getSections(undefined, this.selectedCourseId() ?? undefined, search, page, size, pvId);
+    },
     getId: s => s.id,
     fetchById: id => this.sectionSvc.getSection(id),
   });
+  readonly termSelect = createPaginatedSelect<ITerm>({
+    fetchPage: ({ page, size, search }) => this.termSvc.getTerms(search, undefined, page, size),
+    getId: t => t.id,
+    fetchById: id => (this.termSvc.getTermById ? this.termSvc.getTermById(id) : EMPTY),
+  });
 
   readonly selectedType = signal<ReportType>('PROGRAM_PLO');
+  readonly selectedProgramVersionId = signal<string | null>(null);
+  readonly selectedCourseId = signal<string | null>(null);
   readonly selectedRunId = signal<string | null>(null);
   readonly selectedSectionId = signal<string | null>(null);
   readonly reportTitle = signal<string>('');
   readonly generating = signal<boolean>(false);
+  readonly exportingKey = signal<string | null>(null);
+
+  private readonly runsReload$ = new Subject<string | null>();
+
+  private readonly runLookups = computed<CalculationRunLookupMaps>(() => ({
+    programVersions: new Map(this.pvSelect.options().map(pv => [pv.id, formatProgramVersionLabel(pv)])),
+    courses: new Map(this.courseSelect.options().map(c => [c.id, c.code])),
+    sections: new Map(this.sectionSelect.options().map(s => [s.id, s.code])),
+    terms: new Map(this.termSelect.options().map(t => [t.id, t.code])),
+  }));
+
+  readonly runOptions = computed(() => buildCalculationRunOptions(
+    this.successRuns(),
+    {
+      programVersionId: this.canFilterProgramVersion ? this.selectedProgramVersionId() : null,
+      courseId: this.selectedCourseId(),
+      sectionIds: this.selectedSectionId() ? [this.selectedSectionId()!] : [],
+      reportType: this.selectedType(),
+    },
+    this.runLookups(),
+  ));
 
   readonly activeReport = signal<ReportResponse | null>(null);
   readonly traceVisible = signal<boolean>(false);
@@ -110,23 +191,73 @@ export class ReportsPageComponent implements OnInit {
     if (Number.isInteger(s) && s >= 1 && s <= 100) {
       this.size.set(s);
     }
+
+    this.runsReload$
+      .pipe(
+        switchMap(pvId => {
+          this.loadingRuns.set(true);
+          return this.calcSvc.getCalculationRuns(pvId ?? undefined, 0, 20).pipe(
+            map(res => (res.content ?? []).filter(r => r.status === 'SUCCESS')),
+            catchError(() => of([])),
+            finalize(() => this.loadingRuns.set(false)),
+          );
+        }),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe(list => {
+        this.successRuns.set(list);
+        this.reconcileSelectedRun();
+      });
+
     this.loadData();
   }
 
   loadData(): void {
     this.loadReports();
+    this.runsReload$.next(this.canFilterProgramVersion ? this.selectedProgramVersionId() : null);
+  }
 
-    this.calcSvc.getCalculationRuns(undefined, 0, 20).subscribe({
-      next: res => this.successRuns.set((res.content ?? []).filter(r => r.status === 'SUCCESS')),
-      error: () => undefined,
-    });
+  private reconcileSelectedRun(): void {
+    const current = this.selectedRunId();
+    if (!current || this.successRuns().length === 0) {
+      return;
+    }
+    if (!this.runOptions().some(opt => opt.id === current)) {
+      this.selectedRunId.set(null);
+    }
+  }
 
-    this.sectionSelect.loadInitial();
+  onTypeChange(type: ReportType): void {
+    this.selectedType.set(type);
+    this.reconcileSelectedRun();
+  }
+
+  onProgramVersionChange(pvId: string | null): void {
+    this.selectedProgramVersionId.set(pvId);
+    this.pvSelect.syncSelected(pvId);
+    this.selectedCourseId.set(null);
+    this.courseSelect.syncSelected(null);
+    invalidatePaginatedSelect(this.courseSelect);
+    this.selectedSectionId.set(null);
+    this.sectionSelect.syncSelected(null);
+    invalidatePaginatedSelect(this.sectionSelect);
+    this.runsReload$.next(pvId);
+    this.reconcileSelectedRun();
+  }
+
+  onCourseChange(courseId: string | null): void {
+    this.selectedCourseId.set(courseId);
+    this.courseSelect.syncSelected(courseId);
+    this.selectedSectionId.set(null);
+    this.sectionSelect.syncSelected(null);
+    invalidatePaginatedSelect(this.sectionSelect);
+    this.reconcileSelectedRun();
   }
 
   onSectionChange(sectionId: string | null): void {
     this.selectedSectionId.set(sectionId);
     this.sectionSelect.syncSelected(sectionId);
+    this.reconcileSelectedRun();
   }
 
   loadReports(): void {
@@ -212,19 +343,42 @@ export class ReportsPageComponent implements OnInit {
     this.activeReport.set(rep);
   }
 
-  exportCsv(rep: ReportResponse): void {
-    this.reportSvc.exportReportCsv(rep.id).subscribe({
+  private exportReport(rep: ReportResponse, format: ReportExportFormat): void {
+    const key = `${rep.id}:${format}`;
+    if (this.exportingKey() === key) {
+      return;
+    }
+    this.exportingKey.set(key);
+    const request$ = format === 'xlsx'
+      ? this.reportSvc.exportReportExcel(rep.id)
+      : this.reportSvc.exportReportCsv(rep.id);
+    request$.pipe(
+      finalize(() => {
+        if (this.exportingKey() === key) {
+          this.exportingKey.set(null);
+        }
+      }),
+      takeUntilDestroyed(this.destroyRef),
+    ).subscribe({
       next: blob => {
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
-        link.download = `report-${rep.id}.csv`;
+        link.download = `report-${rep.id}.${format}`;
         link.click();
         URL.revokeObjectURL(url);
-        this.toastr.success('Đã xuất tệp CSV báo cáo');
+        this.toastr.success(format === 'xlsx' ? 'Đã xuất tệp Excel báo cáo' : 'Đã xuất tệp CSV báo cáo');
       },
-      error: () => this.toastr.error('Không thể xuất tệp CSV'),
+      error: () => this.toastr.error(format === 'xlsx' ? 'Không thể xuất tệp Excel' : 'Không thể xuất tệp CSV'),
     });
+  }
+
+  exportCsv(rep: ReportResponse): void {
+    this.exportReport(rep, 'csv');
+  }
+
+  exportExcel(rep: ReportResponse): void {
+    this.exportReport(rep, 'xlsx');
   }
 
   getLevelLabel(level: string): string {

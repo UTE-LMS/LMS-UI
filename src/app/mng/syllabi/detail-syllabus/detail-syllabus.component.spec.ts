@@ -1,7 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, provideRouter } from '@angular/router';
 import { SystemConstant } from '@constants/system.constant';
-import { IClo } from '@models/course/clo.model';
+import { IClo, ICloPiLink } from '@models/course/clo.model';
 import { ICourse } from '@models/course/course.model';
 import { ISyllabus } from '@models/course/syllabus.model';
 import { AuthService } from '@services/auth/auth.service';
@@ -31,10 +31,14 @@ describe('DetailSyllabusComponent (F03 US-10, US-11, TD-27, ADR 0010)', () => {
   const mockActiveSyllabus: ISyllabus = {
     id: syllabusId,
     courseId,
+    courseCode: 'OOPR230279',
+    courseName: 'Lập trình hướng đối tượng',
     version: '2026-v1',
     status: 'CONFIRMED',
-    effectiveFromTermId: null,
+    effectiveFromTermId: 'term-1',
+    effectiveFromTermCode: 'HK1-2526',
     effectiveToTermId: null,
+    effectiveToTermCode: null,
   };
 
   const mockClos: IClo[] = [
@@ -71,7 +75,7 @@ describe('DetailSyllabusComponent (F03 US-10, US-11, TD-27, ADR 0010)', () => {
 
   const cloSvc = {
     getClosBySyllabus: vi.fn(() => of(mockClos)),
-    getCloPiLinks: vi.fn(() => of([])),
+    getCloPiLinks: vi.fn(() => of([] as ICloPiLink[])),
     createClo: vi.fn(),
     updateClo: vi.fn(),
     deleteClo: vi.fn(() => of(undefined)),
@@ -135,6 +139,26 @@ describe('DetailSyllabusComponent (F03 US-10, US-11, TD-27, ADR 0010)', () => {
   it('sắp xếp danh sách CLO theo thứ tự số học của mã (CLO1 trước CLO2)', () => {
     const sorted = component.sortedClos();
     expect(sorted.map(c => c.code)).toEqual(['CLO1', 'CLO2']);
+  });
+
+  it('hiển thị học phần, học kỳ hiệu lực và piCode trực tiếp từ DTO mà không gọi getCourseById / getTerms / getTermById', () => {
+    expect(courseSvc.getCourseById).not.toHaveBeenCalled();
+    expect(termSvc.getTerms).not.toHaveBeenCalled();
+    expect(termSvc.getTermById).not.toHaveBeenCalled();
+
+    cloSvc.getCloPiLinks.mockReturnValue(of([
+      { id: 'l1', programVersionId: 'pv1', syllabusId, cloId: 'clo_1', piId: 'pi1', piCode: 'PI1.1', weight: 0.5 },
+      { id: 'l2', programVersionId: 'pv2', syllabusId, cloId: 'clo_1', piId: 'pi2', piCode: 'PI2.3', weight: 0.5 },
+    ]));
+    component.loadSyllabusData();
+    fixture.detectChanges();
+
+    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    expect(text).toContain('OOPR230279');
+    expect(text).toContain('Lập trình hướng đối tượng');
+    expect(text).toContain('HK1-2526');
+    expect(text).toContain('PI1.1:');
+    expect(text).toContain('PI2.3:');
   });
 
   it('PROGRAM_MANAGER trong scope được phép Khóa đề cương (canLockSyllabus = true)', () => {

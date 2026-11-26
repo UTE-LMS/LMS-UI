@@ -31,8 +31,8 @@ export interface IUser {
   fullName: string;
   status: UserStatus;
   facultyId?: string | null;
-  facultyCode?: string;
-  facultyName?: string;
+  facultyCode?: string | null;
+  facultyName?: string | null;
   roles: Role[];
   createdAt: string;
   updatedAt: string;

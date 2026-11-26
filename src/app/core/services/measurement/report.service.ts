@@ -4,6 +4,7 @@ import { UrlConstant } from '@constants/url.constant';
 import { IPagedResults } from '@models/common/response-data.model';
 import {
   ReportCreateRequest,
+  ReportExportFormat,
   ReportResponse,
   ReportType,
   ScoreTraceResponse,
@@ -39,10 +40,20 @@ export class ReportService {
     return this.http.get<ReportResponse>(UrlConstant.API.REPORT_DETAIL(id));
   }
 
-  exportReportCsv(id: string): Observable<Blob> {
+  exportReport(id: string, format: ReportExportFormat = 'csv'): Observable<Blob> {
+    const params = new HttpParams().set('format', format);
     return this.http.post(UrlConstant.API.REPORT_EXPORT(id), null, {
+      params,
       responseType: 'blob',
     });
+  }
+
+  exportReportCsv(id: string): Observable<Blob> {
+    return this.exportReport(id, 'csv');
+  }
+
+  exportReportExcel(id: string): Observable<Blob> {
+    return this.exportReport(id, 'xlsx');
   }
 
   traceStudentResult(studentResultId: string): Observable<StudentResultTraceResponse> {

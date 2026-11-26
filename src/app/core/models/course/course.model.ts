@@ -49,7 +49,9 @@ export interface IProgramCourse {
   type?: CourseType;
   category?: CourseCategory;
   prerequisiteCourseIds?: string[];
+  prerequisiteCodes?: string[];
   previousCourseIds?: string[];
+  previousCourseCodes?: string[];
 }
 
 export interface IProgramCourseRequest {
@@ -59,7 +61,9 @@ export interface IProgramCourseRequest {
   type: CourseType;
   category?: CourseCategory;
   prerequisiteCourseIds?: string[];
+  prerequisiteCodes?: string[];
   previousCourseIds?: string[];
+  previousCourseCodes?: string[];
 }
 
 export interface IProgramCourseUpdateRequest {
@@ -68,7 +72,9 @@ export interface IProgramCourseUpdateRequest {
   type: CourseType;
   category?: CourseCategory;
   prerequisiteCourseIds?: string[];
+  prerequisiteCodes?: string[];
   previousCourseIds?: string[];
+  previousCourseCodes?: string[];
 }
 
 export interface IAssignCourseRequest {

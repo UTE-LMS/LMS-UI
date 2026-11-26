@@ -23,8 +23,13 @@ describe('DetailSectionComponent (F05a US-19, US-20)', () => {
     id: 'sec1',
     code: 'TEST101-01',
     courseId: 'c1',
+    courseCode: 'TEST101',
+    courseName: 'Học phần thử nghiệm',
     syllabusId: 's1',
+    syllabusVersion: '1',
+    syllabusStatus: 'CONFIRMED',
     termId: 't1',
+    termCode: '2026-HK1',
     lecturerIds: ['u1'],
     lecturers: [{ id: 'u1', username: 'gv.test01', fullName: 'Nguyễn Văn Thử' }],
     enrolledCount: 3,
@@ -197,10 +202,15 @@ describe('DetailSectionComponent (F05a US-19, US-20)', () => {
     expect(buttonByLabel('Nhập danh sách lớp')?.disabled).toBe(true);
   });
 
-  it('học kỳ đã khóa sổ điểm: danh sách ghi danh bị đóng băng dù lớp còn OPEN', async () => {
-    await setup([SystemConstant.ROLE.ADMIN], { termStatus: 'SCORE_LOCKED' });
-    expect(component.frozenReason()).toContain('2026-HK1');
-    expect(buttonByLabel('Ghi danh lại SV-0004')?.disabled).toBe(true);
+  it('hiển thị trực tiếp thông tin học phần, học kỳ, đề cương từ SectionResponse mà không gọi 3 API tham chiếu lẻ', async () => {
+    await setup([SystemConstant.ROLE.ADMIN]);
+    expect(termSvc.getTermById).not.toHaveBeenCalled();
+    expect(courseSvc.getCourseById).not.toHaveBeenCalled();
+    expect(syllabusSvc.getSyllabusById).not.toHaveBeenCalled();
+    expect(el().textContent).toContain('TEST101');
+    expect(el().textContent).toContain('Học phần thử nghiệm');
+    expect(el().textContent).toContain('2026-HK1');
+    expect(el().textContent).toContain('Bản 1');
   });
 
   it('lỗi 422 khi rút (ví dụ lớp vừa bị đóng bởi người khác): hiện thông điệp backend, không đổi dữ liệu', async () => {

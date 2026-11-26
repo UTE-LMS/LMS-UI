@@ -2,15 +2,15 @@
   <div>
     <h1 class="text-2xl font-bold text-slate-800 m-0">Báo cáo QA & Truy vết ngược</h1>
     <p class="text-sm text-slate-500 mt-1 mb-0">
-      Sinh báo cáo từ kết quả đã tính, hiển thị mẫu số và giới hạn dữ liệu, hỗ trợ xuất CSV và truy vết về dòng tệp điểm gốc.
+      Sinh báo cáo từ kết quả đã tính, hiển thị mẫu số và giới hạn dữ liệu, hỗ trợ xuất CSV/Excel và truy vết về dòng tệp điểm gốc.
     </p>
   </div>
 
   <nz-card nzTitle="Sinh báo cáo mới" class="rounded-xl shadow-sm">
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
       <div>
-        <label class="block text-xs font-medium text-slate-600 mb-1">Loại báo cáo</label>
-        <nz-select [ngModel]="selectedType()" (ngModelChange)="selectedType.set($event)" class="w-full">
+        <label class="block text-xs font-medium text-slate-600 mb-1" for="rep-type">Loại báo cáo</label>
+        <nz-select id="rep-type" [ngModel]="selectedType()" (ngModelChange)="onTypeChange($event)" class="w-full">
           <nz-option nzValue="SECTION_CLO" nzLabel="CLO theo lớp học phần" />
           <nz-option nzValue="COURSE_PI" nzLabel="PI theo học phần/khóa" />
           <nz-option nzValue="PROGRAM_PLO" nzLabel="PLO theo CTĐT" />
@@ -18,22 +18,70 @@
         </nz-select>
       </div>
 
+      @if (canFilterProgramVersion) {
+        <div>
+          <label class="block text-xs font-medium text-slate-600 mb-1" for="rep-pv">Phiên bản CTĐT (lọc môn, lớp & lượt tính)</label>
+          <nz-select
+            id="rep-pv"
+            [ngModel]="selectedProgramVersionId()"
+            (ngModelChange)="onProgramVersionChange($event)"
+            nzAllowClear
+            nzShowSearch
+            [nzServerSearch]="true"
+            [nzLoading]="pvSelect.loading()"
+            [nzDropdownRender]="pvFooterTpl"
+            (nzOpenChange)="pvSelect.onOpenChange($event)"
+            (nzOnSearch)="pvSelect.onSearch($event)"
+            (nzScrollToBottom)="pvSelect.loadMore()"
+            nzPlaceHolder="Tất cả CTĐT"
+            class="w-full">
+            @for (pv of pvSelect.options(); track pv.id) {
+              <nz-option [nzValue]="pv.id" [nzLabel]="formatProgramVersionLabel(pv)" />
+            }
+          </nz-select>
+          <ng-template #pvFooterTpl>
+            @if (pvSelect.loadingMore()) {
+              <div class="px-3 py-2 text-center text-xs text-slate-500">
+                <nz-spin nzSimple nzSize="small" class="mr-1.5" />Đang tải thêm...
+              </div>
+            }
+          </ng-template>
+        </div>
+      }
+
       <div>
-        <label class="block text-xs font-medium text-slate-600 mb-1">Lượt tính toán hoàn tất</label>
+        <label class="block text-xs font-medium text-slate-600 mb-1" for="rep-course">Học phần (tùy chọn)</label>
         <nz-select
-          [ngModel]="selectedRunId()"
-          (ngModelChange)="selectedRunId.set($event)"
-          nzPlaceHolder="Chọn lượt tính"
+          id="rep-course"
+          [ngModel]="selectedCourseId()"
+          (ngModelChange)="onCourseChange($event)"
+          nzAllowClear
+          nzShowSearch
+          [nzServerSearch]="true"
+          [nzLoading]="courseSelect.loading()"
+          [nzDropdownRender]="courseFooterTpl"
+          (nzOpenChange)="courseSelect.onOpenChange($event)"
+          (nzOnSearch)="courseSelect.onSearch($event)"
+          (nzScrollToBottom)="courseSelect.loadMore()"
+          [nzPlaceHolder]="selectedProgramVersionId() ? 'Học phần thuộc phiên bản đã chọn' : 'Tất cả học phần'"
           class="w-full">
-          @for (r of successRuns(); track r.id) {
-            <nz-option [nzValue]="r.id" [nzLabel]="(scopeLabel[r.scope] || r.scope) + ' - ' + (r.startedAt | date: 'dd/MM HH:mm')" />
+          @for (c of courseSelect.options(); track c.id) {
+            <nz-option [nzValue]="c.id" [nzLabel]="formatCourseOptionLabel(c)" />
           }
         </nz-select>
+        <ng-template #courseFooterTpl>
+          @if (courseSelect.loadingMore()) {
+            <div class="px-3 py-2 text-center text-xs text-slate-500">
+              <nz-spin nzSimple nzSize="small" class="mr-1.5" />Đang tải thêm...
+            </div>
+          }
+        </ng-template>
       </div>
 
       <div>
-        <label class="block text-xs font-medium text-slate-600 mb-1">Lớp học phần (cho báo cáo CLO theo lớp)</label>
+        <label class="block text-xs font-medium text-slate-600 mb-1" for="rep-section">Lớp học phần (cho báo cáo CLO theo lớp)</label>
         <nz-select
+          id="rep-section"
           [ngModel]="selectedSectionId()"
           (ngModelChange)="onSectionChange($event)"
           nzAllowClear
@@ -44,10 +92,10 @@
           (nzOpenChange)="sectionSelect.onOpenChange($event)"
           (nzOnSearch)="sectionSelect.onSearch($event)"
           (nzScrollToBottom)="sectionSelect.loadMore()"
-          nzPlaceHolder="Chọn lớp học phần"
+          [nzPlaceHolder]="(selectedProgramVersionId() || selectedCourseId()) ? 'Lớp học phần theo bộ lọc' : 'Chọn lớp học phần'"
           class="w-full">
           @for (sec of sectionSelect.options(); track sec.id) {
-            <nz-option [nzValue]="sec.id" [nzLabel]="sec.code" />
+            <nz-option [nzValue]="sec.id" [nzLabel]="formatSectionOptionLabel(sec)" />
           }
         </nz-select>
         <ng-template #sectionFooterTpl>
@@ -59,9 +107,54 @@
         </ng-template>
       </div>
 
+      <div [class.lg:col-span-2]="!canFilterProgramVersion">
+        <label class="block text-xs font-medium text-slate-600 mb-1" for="rep-run">Lượt tính toán hoàn tất</label>
+        <nz-select
+          id="rep-run"
+          [ngModel]="selectedRunId()"
+          (ngModelChange)="selectedRunId.set($event)"
+          nzAllowClear
+          nzShowSearch
+          [nzLoading]="loadingRuns()"
+          [nzDropdownMatchSelectWidth]="false"
+          [nzDropdownStyle]="{ minWidth: '340px', maxWidth: '460px' }"
+          [nzOptionHeightPx]="56"
+          nzPlaceHolder="Chọn lượt tính"
+          nzNotFoundContent="Không có lượt tính phù hợp"
+          class="w-full">
+          @for (opt of runOptions(); track opt.id) {
+            <nz-option [nzValue]="opt.id" [nzLabel]="opt.selectLabel" nzCustomContent>
+              <div class="py-0.5 leading-snug">
+                <div class="text-sm font-medium text-slate-900 truncate">{{ opt.primaryLabel }}</div>
+                <div class="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-slate-500">
+                  <span
+                    class="inline-flex items-center rounded px-1.5 py-0 text-[11px] font-medium"
+                    [class.bg-emerald-50]="opt.official"
+                    [class.text-emerald-700]="opt.official"
+                    [class.bg-slate-100]="!opt.official"
+                    [class.text-slate-600]="!opt.official">
+                    {{ opt.official ? 'Chính thức' : 'Thử nghiệm' }}
+                  </span>
+                  @if (opt.stale) {
+                    <span class="inline-flex items-center rounded bg-amber-50 px-1.5 py-0 text-[11px] font-medium text-amber-700">
+                      Cần tính lại
+                    </span>
+                  }
+                  <span>{{ opt.metaText }}</span>
+                  @if (opt.timeLabel) {
+                    <span>· {{ opt.timeLabel }}</span>
+                  }
+                </div>
+              </div>
+            </nz-option>
+          }
+        </nz-select>
+      </div>
+
       <div>
-        <label class="block text-xs font-medium text-slate-600 mb-1">Tiêu đề báo cáo (tùy chọn)</label>
+        <label class="block text-xs font-medium text-slate-600 mb-1" for="rep-title">Tiêu đề báo cáo (tùy chọn)</label>
         <input
+          id="rep-title"
           nz-input
           [ngModel]="reportTitle()"
           (ngModelChange)="reportTitle.set($event)"
@@ -100,7 +193,8 @@
               <td class="text-xs text-slate-500">{{ rep.createdAt | date: 'dd/MM/yyyy HH:mm' }}</td>
               <td class="space-x-2">
                 <button nz-button nzType="link" nzSize="small" (click)="selectReport(rep)">Xem</button>
-                <button nz-button nzType="link" nzSize="small" (click)="exportCsv(rep)">Xuất CSV</button>
+                <button nz-button nzType="link" nzSize="small" [nzLoading]="exportingKey() === rep.id + ':csv'" (click)="exportCsv(rep)">Xuất CSV</button>
+                <button nz-button nzType="link" nzSize="small" [nzLoading]="exportingKey() === rep.id + ':xlsx'" (click)="exportExcel(rep)">Xuất Excel</button>
               </td>
             </tr>
           }
@@ -120,7 +214,17 @@
   </nz-card>
 
   @if (activeReport(); as rep) {
-    <nz-card [nzTitle]="rep.title" class="rounded-xl shadow-sm">
+    <nz-card [nzTitle]="rep.title" [nzExtra]="activeReportExtraTpl" class="rounded-xl shadow-sm">
+      <ng-template #activeReportExtraTpl>
+        <div class="flex flex-wrap items-center gap-2">
+          <button nz-button nzSize="small" [nzLoading]="exportingKey() === rep.id + ':xlsx'" (click)="exportExcel(rep)">
+            <i class="fa-solid fa-file-excel mr-1 text-emerald-700" aria-hidden="true"></i>Xuất Excel
+          </button>
+          <button nz-button nzSize="small" [nzLoading]="exportingKey() === rep.id + ':csv'" (click)="exportCsv(rep)">
+            <i class="fa-solid fa-file-csv mr-1" aria-hidden="true"></i>Xuất CSV
+          </button>
+        </div>
+      </ng-template>
       @if (rep.limitations) {
         <nz-alert
           nzType="warning"

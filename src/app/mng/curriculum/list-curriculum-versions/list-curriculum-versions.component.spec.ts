@@ -32,18 +32,26 @@ describe('ListCurriculumVersionsComponent (F02 US-05, M4 2-Step CSV Import & Loc
     {
       id: '671dcba5f123456789abcdef',
       programId: '671dcba5f123456789abcde1',
+      programCode: 'CNTT',
+      programName: 'Công nghệ thông tin',
       version: 'BM7A-2.7-Updated-2026',
       totalCredits: 132,
       durationYears: 4,
       applicableCohort: '2026-HK1',
+      ploCount: 6,
+      piCount: 18,
       status: 'ACTIVE',
     },
     {
       id: '671dcba5f123456789abcdea',
       programId: '671dcba5f123456789abcde1',
+      programCode: 'CNTT',
+      programName: 'Công nghệ thông tin',
       version: 'BM7A-2.8-Draft',
       totalCredits: 132,
       durationYears: 4,
+      ploCount: 0,
+      piCount: 0,
       status: 'ARCHIVED',
     },
   ];
@@ -153,11 +161,16 @@ describe('ListCurriculumVersionsComponent (F02 US-05, M4 2-Step CSV Import & Loc
     fixture.detectChanges();
   });
 
-  it('khởi tạo và tải danh sách chương trình & phiên bản thành công', () => {
+  it('khởi tạo và tải danh sách chương trình & phiên bản thành công mà không gọi N+1 PLO/PI', () => {
     expect(component).toBeTruthy();
     expect(component.programs().length).toBe(1);
     expect(component.selectedProgramId()).toBe('671dcba5f123456789abcde1');
     expect(component.versions().length).toBe(2);
+    expect(ploPiSvc.getPlos).not.toHaveBeenCalled();
+    expect(ploPiSvc.getPis).not.toHaveBeenCalled();
+    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    expect(text).toContain('6');
+    expect(text).toContain('18');
   });
 
   it('hiển thị canManage = true khi Program Manager có quyền trong scope', () => {

@@ -1028,3 +1028,204 @@ Bước gitleaks của PR Google báo ví dụ `idToken` cắt ngắn ở `doc/A
 
 - **Sinh viên đã sửa/rà soát:** _chờ sinh viên rà soát_
 - **Commit / PR:** chưa commit
+
+
+## Phiên #33: Nhãn ngữ cảnh 2 dòng và lọc liên hoàn cho bộ chọn Lần tính (`runId`) ở Báo cáo QA & Phân tích đa chiều
+
+### 1. Thông tin phiên làm việc
+- **Thời gian:** 2026-11-26
+- **Người thực hiện (`git config user.name`):** `minhat5`
+- **Sinh viên yêu cầu:** Thay thế cách hiển thị thời gian khó phân biệt ở bộ lọc kết quả tính toán (`runId`) bằng nhãn ngữ cảnh 2 dòng (Cách 1) và lọc liên hoàn theo ngữ cảnh đã chọn (Cách 2) trên hai màn hình Báo cáo QA & Phân tích đa chiều.
+- **Công cụ / mô hình:** Antigravity (Gemini 4 Neon). Không thêm package.
+- **Nhánh:** `main` (chưa commit/push)
+
+### 2. Các hạng mục đã thực hiện
+1. **`src/app/core/services/measurement/calculation-run-display.util.ts` & `calculation-run-display.util.spec.ts`:**
+   - Tạo bộ hàm thuần túy (`formatRunTimestamp`, `formatCalculationRunOption`, `filterCalculationRuns`, `buildCalculationRunOptions`) để dựng nhãn dòng chính (`[Phạm vi] · [Lớp/Khóa/Học kỳ/CTĐT]`, fallback `N lớp` nếu chưa tra cứu được, không lộ ObjectId thô), dòng phụ (nhãn `Chính thức`/`Thử nghiệm`, cờ `Cần tính lại`, số lượng `KQ SV` / `tổng hợp`, thời gian `DD/MM/YYYY HH:mm`), lọc liên hoàn theo CTĐT/học kỳ/lớp/học phần/khóa/loại báo cáo, và sắp xếp ưu tiên.
+2. **`src/app/mng/analytics/analytics-page.component.ts` & `analytics-page.component.html`:**
+   - Tích hợp `runLookups`, `runOptions`, `runsReload$` (gọi lại `getCalculationRuns(pvId, 0, 20)` khi đổi Phiên bản CTĐT), tự bỏ chọn `runId` khi bộ lọc mới loại bỏ lượt tính đang chọn, và nâng cấp `#f-run` dùng `nzCustomContent` (`nzOptionHeightPx="56"`).
+3. **`src/app/mng/reports/reports-page.component.ts` & `reports-page.component.html`:**
+   - Bổ sung bộ lọc Phiên bản CTĐT (`canFilterProgramVersion` cho `ADMIN`/`QA`/`PROGRAM_MANAGER`, ẩn hoàn toàn với `LECTURER`), `termSelect` để tra cứu mã học kỳ, `runsReload$`, `runOptions` (ưu tiên phạm vi phù hợp `selectedType()`), tự xóa `selectedRunId` khi không còn khớp, và nâng cấp `#rep-run` dùng `nzCustomContent`.
+4. **`src/app/mng/analytics/analytics-page.component.spec.ts` & `src/app/mng/reports/reports-page.component.spec.ts`:**
+   - Bổ sung unit test cho nhãn ngữ cảnh, lọc liên hoàn, kiểm tra phân quyền `LECTURER`, và điều kiện `generate()`.
+
+### 3. Kết quả kiểm chứng
+- **ESLint (`npm run lint`):** `All files pass linting.` (0 lỗi).
+- **Unit tests (`npx ng test --no-watch --include=src/app/core/services/measurement/calculation-run-display.util.spec.ts --include=src/app/mng/analytics/analytics-page.component.spec.ts --include=src/app/mng/reports/reports-page.component.spec.ts`):** 3/3 files passed, 23/23 tests passed.
+- **Build (`npm run build:dev`):** `ng build --configuration development` thành công tại `dist/` (0 lỗi).
+
+- **Sinh viên đã sửa/rà soát:** _chờ sinh viên rà soát_
+- **Commit / PR:** chưa commit
+
+
+## Phiên #34: Bổ sung xuất Excel (`.xlsx`) cho Báo cáo QA và Phân tích đa chiều
+
+### 1. Thông tin phiên làm việc
+- **Thời gian:** 2026-11-26
+- **Người thực hiện (`git config user.name`):** `minhat5`
+- **Sinh viên yêu cầu:** Bổ sung chức năng xuất kết quả ra Excel (`.xlsx`) trên UI cho màn hình Báo cáo QA (`POST /api/v1/reports/{id}/export?format=csv|xlsx`) và Phân tích đa chiều (`GET /api/v1/reports/analytics/export?format=csv|xlsx`).
+- **Công cụ / mô hình:** Antigravity (Gemini 4 Neon). Không thêm package.
+- **Nhánh:** `main` (chưa commit/push)
+
+### 2. Các hạng mục đã thực hiện
+1. **`src/app/core/models/measurement/measurement.model.ts`:**
+   - Thêm kiểu `ReportExportFormat = 'csv' | 'xlsx'`.
+2. **`src/app/core/services/measurement/report.service.ts`:**
+   - Thêm `exportReport(id, format = 'csv')` gửi `POST /api/v1/reports/{id}/export?format=...` dạng `blob`, giữ `exportReportCsv(id)` và bổ sung `exportReportExcel(id)`.
+3. **`src/app/core/services/measurement/analytics.service.ts`:**
+   - Thêm `exportMatrix(query, format = 'csv')` gửi `GET /api/v1/reports/analytics/export?format=...` (bỏ `page`/`size` để chiều `STUDENT` xuất toàn bộ cột), giữ `exportCsv(query)` và bổ sung `exportExcel(query)`.
+4. **`src/app/mng/reports/reports-page.component.ts` & `.html`:**
+   - Thêm nút **Xuất Excel** ở từng dòng bảng danh sách báo cáo và ở phần header (`nzExtra`) của thẻ chi tiết báo cáo đang xem; hiển thị trạng thái loading theo từng định dạng (`exportingKey`).
+5. **`src/app/mng/analytics/analytics-page.component.ts` & `.html`:**
+   - Thêm nút **Xuất Excel** cạnh **Xuất CSV** trên header trang, xử lý tải tệp theo `Content-Disposition` hoặc tên mặc định `.xlsx`/`.csv`, và cập nhật ghi chú xuất cho chiều `STUDENT`.
+6. **Unit tests:**
+   - Cập nhật `report.service.spec.ts`, `analytics.service.spec.ts`, `reports-page.component.spec.ts`, `analytics-page.component.spec.ts`.
+
+### 3. Kết quả kiểm chứng
+- **ESLint (`npm run lint`):** `All files pass linting.` (0 lỗi).
+- **Unit tests (`npx ng test --no-watch --include=src/app/core/services/measurement/report.service.spec.ts --include=src/app/core/services/measurement/analytics.service.spec.ts --include=src/app/mng/reports/reports-page.component.spec.ts --include=src/app/mng/analytics/analytics-page.component.spec.ts`):** 4/4 files passed, 29/29 tests passed.
+- **Build (`npm run build:dev`):** `ng build --configuration development` thành công tại `dist/` (0 lỗi).
+
+- **Sinh viên đã sửa/rà soát:** _chờ sinh viên rà soát_
+- **Commit / PR:** chưa commit
+
+
+## Phiên #35: Đồng bộ 10 DTO giàu ngữ cảnh từ `LMS-API` và loại bỏ N+1 / danh mục `size=100` / chuỗi gọi phụ trên UI
+
+### 1. Thông tin phiên làm việc
+- **Thời gian:** 2026-11-26
+- **Người thực hiện (`git config user.name`):** `minhat5`
+- **Sinh viên yêu cầu:** Cập nhật đồng bộ 10 TypeScript models/interfaces theo hợp đồng DTO mới của `LMS-API` và refactor 12 màn hình thuộc 3 nhóm (Nhóm 1: xóa N+1 theo dòng bảng; Nhóm 2: xóa tải danh mục `size=100` và bổ sung ngữ cảnh đo lường; Nhóm 3: cắt dây chuyền request ở màn hình chi tiết), kèm cập nhật unit test và chạy kiểm chứng đầy đủ.
+- **Công cụ / mô hình:** Antigravity (Gemini 4 Neon). Không thêm package.
+- **Nhánh:** `main` (chưa commit/push)
+
+### 2. Các hạng mục đã thực hiện
+1. **Cập nhật 10 TypeScript Models & Tiện ích dùng chung:**
+   - `section.model.ts` (`ISection`), `program-version.model.ts` (`IProgramVersion` + `formatProgramVersionLabel`), `syllabus.model.ts` (`ISyllabus`), `audit-log.model.ts` (`IAuditLog`), `user.model.ts` (`IUser`) & `users.util.ts`, `course.model.ts` (`IProgramCourse`), `clo.model.ts` (`ICloPiLink`), `measurement.model.ts` (`CalculationRunResponse`, `AggregateResultResponse`, `StudentResultResponse`).
+   - `calculation-run-display.util.ts`: ưu tiên đọc trường phẳng trên `CalculationRunResponse` khi dựng nhãn lượt tính, bổ sung `formatMeasurementResultContext` định dạng ngữ cảnh theo 4 cấp độ (`ASSESSMENT_CLO`, `CLO`, `PI`, `PLO`).
+2. **Nhóm 1 — Xóa N+1 theo dòng bảng:**
+   - `list-sections.component.ts/.html`: đọc trực tiếp `courseCode`, `courseName`, `termCode`, `syllabusVersion`, `syllabusStatus`; xóa `hydrateReferences()` và các lời gọi `getTermById`, `getCourseById`, `getSyllabusById`, cũng như lazy-load `termSelect`/`courseSelect`.
+   - `list-curriculum-versions.component.ts/.html`: đọc trực tiếp `ploCount`, `piCount`; xóa `loadPloPiCounts()` (`2 × N` request `getPlos`/`getPis`).
+   - `list-syllabi.component.ts/.html`: đọc trực tiếp `effectiveFromTermCode`, `effectiveToTermCode`; xóa `hydrateTermsFromSyllabi()`, bỏ eager `termSelect`/`pvSelect`, dùng `formatProgramVersionLabel(pv)` cho dropdown phiên bản CTĐT trong modal import.
+3. **Nhóm 2 — Xóa tải danh mục `size=100` & hiển thị ngữ cảnh đo lường:**
+   - `list-audit-logs.component.ts/.html`: đọc `username`/`actorFullName` trực tiếp (fallback `userId` hoặc `'Hệ thống'`), xóa `userSvc.filter(0, 100)`, chuyển bộ lọc người thực hiện sang lazy `createPaginatedSelect`.
+   - `list-users.component.ts/.html`: đọc `facultyCode`/`facultyName` trực tiếp từ `IUser`, xóa `facultySvc.getFaculties(0, 100)`.
+   - `program-courses-table.component.ts/.html`: đọc `prerequisiteCodes[]` và `previousCourseCodes[]` trực tiếp, xóa `courseSvc.getCourses(0, 100)`.
+   - `calculations-page.component.ts/.html`: thêm cột **Ngữ cảnh** trên cả 3 bảng (lượt tính, kết quả tổng hợp, kết quả sinh viên), bỏ eager `loadInitial()` cho 3 dropdown, tái sử dụng `aggregate-results` trang 0 để dựng `subjectOptions` và lazy-load tab *Kết quả theo sinh viên* khi chuyển tab, dùng `formatProgramVersionLabel(pv)`.
+   - `reports-page.component.ts/.html` & `analytics-page.component.ts/.html`: bỏ eager `loadInitial()` cho 4 dropdown lọc, dùng `formatProgramVersionLabel(pv)` và nhãn trực tiếp từ `CalculationRunResponse`.
+4. **Nhóm 3 — Cắt dây chuyền request ở màn hình chi tiết:**
+   - `detail-syllabus.component.ts/.html`: dùng `courseCode`, `courseName`, `effectiveFromTermCode`, `effectiveToTermCode`, `piCode` trực tiếp từ DTO (bỏ `getTerms`, `getTermById`, `getCourseById`, `getPis`).
+   - `detail-section.component.ts/.html`: dùng `courseCode`, `courseName`, `termCode`, `syllabusVersion`, `syllabusStatus` từ `getSection` (bỏ `getTermById`, `getCourseById`, `getSyllabusById`).
+   - `detail-curriculum-version.component.ts/.html`: dùng `programCode`, `programName`, `ploCount`, `piCount`, `facultyId`/`facultyCode`/`facultyName` từ `getProgramVersionById` (bỏ `getProgramById`).
+   - `list-assessments.component.ts/.html`: dùng `courseCode`, `courseName`, `termCode`, `syllabusVersion` từ `getSection` (bỏ `getCourseById`).
+5. **Unit tests:**
+   - Cập nhật 11 file spec hiện có và tạo mới `src/app/mng/calculations/calculations-page.component.spec.ts` để xác minh không còn các lời gọi thừa.
+
+### 3. Kết quả kiểm chứng
+- **ESLint (`npm run lint`):** `All files pass linting.` (0 lỗi).
+- **Unit tests (`npx ng test --no-watch --exclude=src/app/auth/login/login.component.spec.ts`):** 113/113 files passed, 1173/1173 tests passed (ngoại trừ `login.component.spec.ts` được exclude do cấu hình `googleClientId` cục bộ sẵn có trong `src/environments/environment.ts`).
+- **Production Build (`npm run build`):** `ng build --configuration production` thành công tại `dist/` (0 lỗi; giữ nguyên 2 cảnh báo budget sẵn có của initial bundle 2.06 MB / 2.00 MB và `list-faculties.component.css` 4.20 kB / 4.00 kB).
+
+- **Sinh viên đã sửa/rà soát:** _chờ sinh viên rà soát_
+- **Commit / PR:** chưa commit
+
+---
+
+## Phiên #36: Lọc liên hoàn Học phần & Lớp học phần theo Phiên bản CTĐT ở Phân tích đa chiều và Báo cáo
+
+### 1. Thông tin phiên làm việc
+- **Thời gian:** 2026-11-26
+- **Người thực hiện (`git config user.name`):** `minhat5`
+- **Sinh viên yêu cầu:** Ở **Phân tích đa chiều** và **Báo cáo**, khi đã lọc theo **Phiên bản CTĐT** thì chỉ hiển thị các học phần và lớp học phần thuộc phiên bản đó thay vì tải toàn bộ danh mục hệ thống.
+- **Công cụ / mô hình:** Antigravity (Gemini). Không thêm package.
+- **Nhánh:** `main` (chưa commit/push)
+
+### 2. Các hạng mục đã thực hiện
+1. **Mở rộng `SectionService.getSections` (`src/app/core/services/course/section.service.ts`):**
+   - Bổ sung tham số tùy chọn cuối cùng `programVersionId?: string` (giữ tương thích ngược với mọi lời gọi hiện có), tự trim và chỉ đính kèm query param `?programVersionId=` khi khác rỗng.
+2. **Tiện ích dùng chung (`src/app/core/services/course/program-course-select.util.ts`):**
+   - `mapProgramCoursesToCoursePage`: chuyển `IPagedResults<IProgramCourse>` (từ `GET /api/v1/program-versions/{pvId}/courses`) sang `IPagedResults<ICourse>`.
+   - `formatCourseOptionLabel`, `formatSectionOptionLabel`: hiển thị nhãn rõ ngữ cảnh (`mã · tên`, `mã lớp · mã môn · học kỳ`).
+   - `invalidatePaginatedSelect`: tự `reload(true)` nếu dropdown đã khởi tạo hoặc `reset()` nếu chưa từng mở (giữ nguyên cơ chế lazy-load).
+3. **Phân tích đa chiều (`src/app/mng/analytics/analytics-page.component.ts/.html`):**
+   - Khi có `programVersionId()` (và tài khoản có quyền phạm vi CTĐT), `courseSelect` gọi `courseSvc.getProgramCourses(...)` thay vì `courseSvc.getCourses(...)`; `sectionSelect` truyền thêm `programVersionId` (cùng `termId`, `courseId`) sang `sectionSvc.getSections(...)`.
+   - `onProgramVersionChange` xóa chọn `courseId`/`sectionIds` cũ và làm mới `courseSelect`/`sectionSelect` qua `invalidatePaginatedSelect`; `onCourseChange`, `onTermIdsChange` và `resetFilters` dùng chung `invalidatePaginatedSelect`.
+   - Bảo đảm RBAC: `LECTURER` không bao giờ gọi `getProgramCourses` hoặc gửi `programVersionId` tới `/sections`.
+4. **Báo cáo QA & Truy vết ngược (`src/app/mng/reports/reports-page.component.ts/.html`):**
+   - Bổ sung bộ lọc **Học phần (`#rep-course`, `selectedCourseId`, `courseSelect`)** với dòng lọc liên hoàn `Phiên bản CTĐT -> Học phần -> Lớp học phần -> Lượt tính`.
+   - Khi chọn `programVersionId`, `courseSelect` gọi `getProgramCourses` và `sectionSelect` truyền `programVersionId` (+ `selectedCourseId`) sang `sectionSvc.getSections`.
+   - `onProgramVersionChange` và `onCourseChange` dọn lựa chọn con, làm mới dropdown liên hoàn và tự đối chiếu lại `selectedRunId` (bao gồm lọc `runOptions` theo `courseId`).
+5. **Unit tests:**
+   - Cập nhật `src/app/core/services/course/section.service.spec.ts`, `src/app/mng/analytics/analytics-page.component.spec.ts` và `src/app/mng/reports/reports-page.component.spec.ts` kiểm tra lọc liên hoàn, lazy-load khi chưa mở dropdown, fallback khi bỏ chọn phiên bản và giới hạn quyền `LECTURER`.
+
+### 3. Kết quả kiểm chứng
+- **ESLint (`npm run lint`):** `All files pass linting.` (0 lỗi).
+- **Targeted unit tests (`npx ng test --no-watch --include=src/app/core/services/course/section.service.spec.ts --include=src/app/mng/analytics/analytics-page.component.spec.ts --include=src/app/mng/reports/reports-page.component.spec.ts`):** 3/3 files passed, 36/36 tests passed.
+- **Production Build (`npm run build`):** `ng build --configuration production` thành công tại `dist/` (0 lỗi; giữ nguyên 2 cảnh báo budget sẵn có của initial bundle 2.06 MB / 2.00 MB và `list-faculties.component.css` 4.20 kB / 4.00 kB).
+
+- **Sinh viên đã sửa/rà soát:** _chờ sinh viên rà soát_
+- **Commit / PR:** chưa commit
+
+---
+
+## Phiên #37: Gỡ quyền quản lý CTĐT khỏi ADMIN (chỉ đọc) và giữ quyền ghi cho PROGRAM_MANAGER
+
+### 1. Thông tin phiên làm việc
+- **Thời gian:** 2026-11-26
+- **Người thực hiện (`git config user.name`):** `minhat5`
+- **Sinh viên yêu cầu:** Đồng bộ UI theo thay đổi phân quyền Backend mới: bỏ quyền quản lý/chỉnh sửa CTĐT khỏi `ADMIN` (chỉ giữ quyền xem) và chỉ cho `PROGRAM_MANAGER` thực hiện thao tác thêm/sửa CTĐT cũng như import khung học phần.
+- **Công cụ / mô hình:** Antigravity (Gemini). Không thêm package.
+- **Nhánh:** `main` (chưa commit/push)
+
+### 2. Các hạng mục đã thực hiện
+1. **Danh mục CTĐT (`src/app/mng/programs/list-programs/list-programs.component.ts/.html`):**
+   - Cập nhật `canManage = computed(() => this.isProgramManager())`: gỡ `ADMIN` khỏi quyền thêm/sửa CTĐT (`ADMIN` vẫn vào trang ở chế độ chỉ đọc và bấm *Xem phiên bản*).
+   - Chỉ gọi `loadFaculties()` trong `ngOnInit()` khi `canManage()` là `true`; bổ sung guard `if (!this.canManage()) return;` ở đầu `openCreateModal()`, `openEditModal()` và `submitProgram()`.
+   - Bỏ `@if (canManage())` quanh `<th nzAlign="right" nzWidth="160px">Thao tác</th>` để tiêu đề cột khớp với cột hành động (*Xem phiên bản*) khi `ADMIN` chỉ đọc, đồng thời giữ ẩn các nút *Thêm chương trình đào tạo*, *Sửa*, và *Thêm chương trình đầu tiên*. Cập nhật mô tả gợi ý trong modal tạo/sửa theo phạm vi Khoa của PM.
+2. **Chi tiết Phiên bản CTĐT (`src/app/mng/curriculum/detail-curriculum-version/detail-curriculum-version.component.ts`):**
+   - Rút gọn `canImportProgramCourses` thành `this.version()?.status === 'ACTIVE' && this.canManage()`, bỏ nhánh đặc cách cho `ADMIN` import khung học phần (`program-courses`).
+3. **Service JSDoc (`src/app/core/services/program/program.service.ts`):**
+   - Cập nhật JSDoc mô tả đúng quyền `POST`/`PUT` thuộc `PROGRAM_MANAGER` theo phạm vi Khoa, `ADMIN` chỉ đọc.
+4. **Unit tests:**
+   - Cập nhật `src/app/mng/programs/list-programs/list-programs.component.spec.ts` kiểm tra `ADMIN` chỉ đọc (`canManage() === false`, không gọi `getFaculties`, ẩn nút Thêm/Sửa, chặn `openCreateModal`/`openEditModal`), `PROGRAM_MANAGER` vẫn Thêm/Sửa theo `facultyId`, và vai trò khác (`QA`/`LECTURER`) không có quyền ghi.
+   - Cập nhật `src/app/mng/curriculum/detail-curriculum-version/detail-curriculum-version.component.spec.ts` xác nhận `ADMIN` có `canManage() === false` và `canImportProgramCourses() === false` ngay cả khi phiên bản đang `ACTIVE`.
+
+### 3. Kết quả kiểm chứng
+- **ESLint (`npm run lint`):** `All files pass linting.` (0 lỗi).
+- **Targeted unit tests (`npx ng test --no-watch --include=src/app/mng/programs/list-programs/list-programs.component.spec.ts --include=src/app/mng/curriculum/detail-curriculum-version/detail-curriculum-version.component.spec.ts --include=src/app/mng/curriculum/list-curriculum-versions/list-curriculum-versions.component.spec.ts --include=src/app/layout/mng/management-header/management-header.component.spec.ts`):** 4/4 files passed, 28/28 tests passed.
+- **Production Build (`npm run build`):** `ng build --configuration production` thành công tại `dist/` (0 lỗi; giữ nguyên 2 cảnh báo budget sẵn có của initial bundle 2.06 MB / 2.00 MB và `list-faculties.component.css` 4.20 kB / 4.00 kB).
+
+- **Sinh viên đã sửa/rà soát:** _chờ sinh viên rà soát_
+- **Commit / PR:** chưa commit
+
+---
+
+## Phiên #38: Hiển thị giảng viên bằng họ tên ở Phân tích đa chiều (`COURSE_LECTURER`)
+
+### 1. Thông tin phiên làm việc
+- **Thời gian:** 2026-11-26
+- **Người thực hiện (`git config user.name`):** `minhat5`
+- **Sinh viên yêu cầu:** Ở **Phân tích đa chiều** (`/mng/analytics`), giảng viên ở chiều `COURSE_LECTURER` hiển thị bằng **họ tên (`fullName` / `name`)** thay vì `username`.
+- **Công cụ / mô hình:** Antigravity (Gemini). Không thêm package.
+- **Nhánh:** `main` (chưa commit/push)
+
+### 2. Các hạng mục đã thực hiện
+1. **Logic định danh và tra cứu họ tên (`src/app/mng/analytics/analytics-page.component.ts`):**
+   - Bổ sung `lecturerAxisOf` (nhận diện trục chứa giảng viên dựa trên tiêu đề chuẩn đầu ra `PLO`/`PI`/`CLO` của trục còn lại) và `lecturerHeaderLabel` (ưu tiên `name` khác `code`, sau đó tra `fullName` từ `lecturerNameLookup` theo `id`/`username`, cuối cùng mới fallback `name`/`code`/`id`).
+   - Đổi `IChartGroup` thêm `id` để `@for` track theo `id` (tránh trùng key nếu 2 giảng viên trùng họ tên).
+   - Bổ sung `canLoadLecturers = isAdmin || isProgramManager` (loại trừ `QA`/`LECTURER` tránh lỗi 403 trên `GET /api/v1/sections/lecturers`), nạp lazy `lecturers` khi mở dropdown bộ lọc hoặc khi ma trận `COURSE_LECTURER` trả về tiêu đề thiếu `name`/`name === code`.
+   - Bổ sung `selectedLecturerIds` gửi vào `query.lecturerIds` cho `ADMIN`/`PROGRAM_MANAGER` (giữ ô nhập text cho `QA`).
+2. **Giao diện (`src/app/mng/analytics/analytics-page.component.html`):**
+   - Dùng `columnHeaderLabel`, `rowHeaderLabel` và `rowSubtitle` để hiển thị họ tên giảng viên ở chú giải, nhãn nhóm biểu đồ và tiêu đề hàng/cột bảng số liệu (không hiển thị lặp lại hay lộ `username` bên dưới dòng tên giảng viên).
+   - Nâng cấp bộ lọc `#f-lecturer` thành dropdown chọn nhiều giảng viên hiển thị theo `fullName` cho `ADMIN`/`PROGRAM_MANAGER` (`QA` giữ input fallback).
+   - Điều chỉnh độ rộng nhãn biểu đồ (`w-36`/`pl-40`) và dòng đếm số lượng (`X giảng viên · Y chuẩn`) cho chiều `COURSE_LECTURER`.
+3. **Unit tests (`src/app/mng/analytics/analytics-page.component.spec.ts`):**
+   - Kiểm tra `COURSE_LECTURER` hiển thị họ tên thay vì `username` cho cả trường hợp giảng viên ở `columns` và ở `rows`, fallback gọi `getLecturers()` khi thiếu `name` cho `ADMIN`/`PM`, tuyệt đối không gọi `getLecturers()` với `QA`, và tải/gửi/reset bộ lọc `selectedLecturerIds`.
+
+### 3. Kết quả kiểm chứng
+- **ESLint (`npm run lint`):** `All files pass linting.` (0 lỗi).
+- **Targeted unit tests (`npx ng test --no-watch --include=src/app/mng/analytics/analytics-page.component.spec.ts`):** 1/1 file passed, 21/21 tests passed.
+- **Production Build (`npm run build`):** `ng build --configuration production` thành công tại `dist/` (0 lỗi; giữ nguyên 2 cảnh báo budget sẵn có của initial bundle 2.06 MB / 2.00 MB và `list-faculties.component.css` 4.20 kB / 4.00 kB).
+
+- **Sinh viên đã sửa/rà soát:** _chờ sinh viên rà soát_
+- **Commit / PR:** chưa commit

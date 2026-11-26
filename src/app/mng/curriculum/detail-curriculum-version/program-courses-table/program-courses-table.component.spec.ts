@@ -17,6 +17,8 @@ describe('ProgramCoursesTableComponent (Read-only)', () => {
       category: 'MAJOR_FOUNDATION' as const,
       semester: 2,
       credits: 3,
+      prerequisiteCodes: ['INTR130185'],
+      previousCourseCodes: ['MATH1301'],
       course: { id: '671dcba5f123456789abcde1', code: 'OOPR230279', name: 'Lập trình OOP', credits: 3 },
     },
     {
@@ -27,6 +29,8 @@ describe('ProgramCoursesTableComponent (Read-only)', () => {
       category: 'FOUNDATION' as const,
       semester: 1,
       credits: 3,
+      prerequisiteCodes: [],
+      previousCourseCodes: [],
       course: { id: '671dcba5f123456789abcde2', code: 'INTR130185', name: 'Nhập môn lập trình', credits: 3 },
     },
   ];
@@ -102,11 +106,15 @@ describe('ProgramCoursesTableComponent (Read-only)', () => {
     fixture.detectChanges();
   });
 
-  it('tải danh sách học phần phân trang server-side và lọc theo học kỳ, loại, khối kiến thức, search', async () => {
+  it('tải danh sách học phần phân trang server-side, đọc mã tiên quyết/học trước từ DTO và không gọi getCourses(0, 100)', async () => {
     vi.useFakeTimers();
     try {
+      expect(courseSvc.getCourses).not.toHaveBeenCalled();
       expect(courseSvc.getProgramCourses).toHaveBeenCalledWith('671dcba5f123456789abcdef', undefined, undefined, undefined, undefined, 0, 20);
       expect(component.filteredProgramCourses().length).toBe(2);
+      const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+      expect(text).toContain('INTR130185');
+      expect(text).toContain('MATH1301');
 
       component.onSemesterChange(2);
       expect(courseSvc.getProgramCourses).toHaveBeenLastCalledWith('671dcba5f123456789abcdef', 2, undefined, undefined, undefined, 0, 20);

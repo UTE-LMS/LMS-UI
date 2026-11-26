@@ -119,7 +119,7 @@ describe('ListUsersComponent (F01 US-02)', () => {
     expect(content.toLowerCase()).not.toContain('passwordhash');
   });
 
-  it('hiển thị Khoa phụ trách cho người dùng PROGRAM_MANAGER trong cột Phạm vi', async () => {
+  it('hiển thị Khoa phụ trách trực tiếp từ DTO và KHÔNG gọi FacultyService (size=100)', async () => {
     const pmAssigned: IUser = {
       ...makeUser('pm1', 'pm.fit', 'ACTIVE', 'PROGRAM_MANAGER'),
       facultyCode: 'FIT',
@@ -130,22 +130,9 @@ describe('ListUsersComponent (F01 US-02)', () => {
 
     await setup();
     const content = text();
+    expect(facultySvc.getFaculties).not.toHaveBeenCalled();
     expect(content).toContain('FIT - Khoa Công nghệ Thông tin');
     expect(content).toContain('Chưa gán Khoa');
-  });
-
-  it('vẫn hiển thị tên Khoa khi API người dùng chỉ trả về facultyId mà không trả facultyCode/facultyName', async () => {
-    const pmWithIdOnly: IUser = {
-      ...makeUser('pm3', 'pm.idonly', 'ACTIVE', 'PROGRAM_MANAGER'),
-      facultyId: 'fac_fit_01',
-    };
-    userSvc.filter.mockImplementation(() => of(page([pmWithIdOnly])));
-
-    await setup();
-    const content = text();
-    expect(facultySvc.getFaculties).toHaveBeenCalledWith(0, 100);
-    expect(content).toContain('FIT - Khoa Công nghệ Thông tin');
-    expect(content).not.toContain('Chưa gán Khoa');
   });
 
   it('trạng thái rỗng: có hướng dẫn việc kế tiếp', async () => {

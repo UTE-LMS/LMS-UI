@@ -1,16 +1,13 @@
 import { DatePipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, DestroyRef, inject, OnInit, signal } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { createListManagerNoFilter } from '@builder/list-mng-no-filter.builder';
 import { SystemConstant } from '@constants/system.constant';
 import { UrlConstant } from '@constants/url.constant';
-import { IFaculty } from '@models/faculty/faculty.model';
 import { IUser, UserStatus } from '@models/user/user.model';
 import { AuthService } from '@services/auth/auth.service';
 import { toApiError } from '@services/common/api-error.util';
-import { FacultyService } from '@services/faculty/faculty.service';
 import { UserService } from '@services/user/user.service';
 import { BreadCrumb } from '@widget/breadcrumb/breadcrumb.model';
 import { ImportTemplateFormat } from '@services/common/import-file.util';
@@ -22,8 +19,7 @@ import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzModalModule, NzModalService } from 'ng-zorro-antd/modal';
 import { NzTableModule } from 'ng-zorro-antd/table';
 import { ToastrService } from 'ngx-toastr';
-import { catchError, of } from 'rxjs';
-import { describeRoleScope, FacultyLookupMap, roleLabel } from '../users.util';
+import { describeRoleScope, roleLabel } from '../users.util';
 
 @Component({
   selector: 'app-list-users',
@@ -43,10 +39,8 @@ import { describeRoleScope, FacultyLookupMap, roleLabel } from '../users.util';
   styleUrl: './list-users.component.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class ListUsersComponent implements OnInit {
-  private readonly destroyRef = inject(DestroyRef);
+export class ListUsersComponent {
   private readonly userSvc = inject(UserService);
-  private readonly facultySvc = inject(FacultyService);
   private readonly authSvc = inject(AuthService);
   private readonly alert = inject(ToastrService);
   private readonly nzModalSvc = inject(NzModalService);
@@ -57,7 +51,6 @@ export class ListUsersComponent implements OnInit {
   protected readonly currentUserId = this.authSvc.getUserId();
   readonly isAdmin = computed(() => (this.authSvc.getRoles?.() ?? []).includes(SystemConstant.ROLE.ADMIN));
   readonly isImportModalVisible = signal(false);
-  readonly facultyMap = signal<FacultyLookupMap>(new Map());
 
   readonly downloadUserTemplate = (format: ImportTemplateFormat) => this.userSvc.downloadImportTemplate(format);
   readonly importUserCsv = (file: File) => this.userSvc.importUsers(file);
@@ -95,22 +88,6 @@ export class ListUsersComponent implements OnInit {
       return usernameMatch || nameMatch || emailMatch;
     });
   });
-
-  ngOnInit(): void {
-    this.facultySvc.getFaculties(0, 100).pipe(
-      catchError(() => of(null)),
-      takeUntilDestroyed(this.destroyRef),
-    ).subscribe(res => {
-      if (!res?.content) {
-        return;
-      }
-      const map = new Map<string, IFaculty>();
-      for (const fac of res.content) {
-        map.set(fac.id, fac);
-      }
-      this.facultyMap.set(map);
-    });
-  }
 
   hasAssignedFaculty(user: IUser): boolean {
     return Boolean(user.facultyId) || Boolean(user.facultyCode) || Boolean(user.facultyName);

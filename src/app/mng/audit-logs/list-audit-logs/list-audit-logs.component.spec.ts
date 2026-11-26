@@ -12,7 +12,7 @@ import { buildDiff, ListAuditLogsComponent } from './list-audit-logs.component';
 
 // DỮ LIỆU THỬ NGHIỆM
 const log: IAuditLog = {
-  id: 'a1', at: '2026-10-27T09:12:00Z', userId: 'u1', action: 'SCORE_UPDATE',
+  id: 'a1', at: '2026-10-27T09:12:00Z', userId: 'u1', username: 'gv.test', actorFullName: 'Giảng viên Thử', action: 'SCORE_UPDATE',
   entity: { collection: 'scores', id: 's1' }, before: { value: 1.5, note: 'x' }, after: { value: 2.5, note: 'x' },
   reason: 'Phúc khảo', ip: '10.0.0.1',
 };
@@ -24,9 +24,14 @@ describe('ListAuditLogsComponent (F01 nhật ký thao tác)', () => {
   let fixture: ComponentFixture<ListAuditLogsComponent>;
   let component: ListAuditLogsComponent;
   let auditSvc: { filter: ReturnType<typeof vi.fn>; };
+  let userSvc: { filter: ReturnType<typeof vi.fn>; getById: ReturnType<typeof vi.fn>; };
 
   beforeEach(async () => {
     auditSvc = { filter: vi.fn(() => of(page([log]))) };
+    userSvc = {
+      filter: vi.fn(() => of({ ...page([]), content: [{ id: 'u1', username: 'gv.test', fullName: 'Giảng viên Thử' }] })),
+      getById: vi.fn(),
+    };
     await TestBed.configureTestingModule({
       imports: [ListAuditLogsComponent],
       providers: [
@@ -34,7 +39,7 @@ describe('ListAuditLogsComponent (F01 nhật ký thao tác)', () => {
         { provide: NZ_I18N, useValue: vi_VN },
         { provide: NZ_DATE_LOCALE, useValue: viDate },
         { provide: AuditLogService, useValue: auditSvc },
-        { provide: UserService, useValue: { filter: () => of({ ...page([]), content: [{ id: 'u1', username: 'gv.test' }] }) } },
+        { provide: UserService, useValue: userSvc },
       ],
     }).compileComponents();
     fixture = TestBed.createComponent(ListAuditLogsComponent);
@@ -42,10 +47,15 @@ describe('ListAuditLogsComponent (F01 nhật ký thao tác)', () => {
     fixture.detectChanges();
   });
 
-  it('tải trang đầu (page 0) và hiện tên đăng nhập thay cho ID', () => {
+  it('tải trang đầu (page 0), đọc username trực tiếp từ DTO và không gọi UserService lúc khởi tạo', () => {
     expect(auditSvc.filter).toHaveBeenCalledWith({}, 0, 10);
-    expect(component.userLabel('u1')).toBe('gv.test');
-    expect(component.userLabel('khong-co')).toBe('khong-co');
+    expect(userSvc.filter).not.toHaveBeenCalled();
+    expect(component.actorLabel(log)).toBe('gv.test');
+    expect(component.actorLabel({ userId: null, username: null, actorFullName: null })).toBe('Hệ thống');
+    expect(component.actorLabel({ userId: 'khong-co', username: null, actorFullName: null })).toBe('khong-co');
+
+    component.userSelect.onOpenChange(true);
+    expect(userSvc.filter).toHaveBeenCalledWith(0, 20);
   });
 
   it('chặn khoảng thời gian ngược và không gọi API', () => {

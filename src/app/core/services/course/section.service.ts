@@ -30,6 +30,7 @@ export class SectionService {
     search?: string,
     page = 0,
     size = 20,
+    programVersionId?: string,
   ): Observable<IPagedResults<ISection>> {
     let params = new HttpParams()
       .set('page', page.toString())
@@ -43,6 +44,10 @@ export class SectionService {
     const trimmed = search?.trim();
     if (trimmed) {
       params = params.set('search', trimmed);
+    }
+    const trimmedPv = programVersionId?.trim();
+    if (trimmedPv) {
+      params = params.set('programVersionId', trimmedPv);
     }
     return this.http.get<IPagedResults<ISection>>(UrlConstant.API.SECTIONS, {
       params,

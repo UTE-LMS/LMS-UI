@@ -19,11 +19,15 @@ import {
   ResultLevel,
   StudentResultResponse,
 } from '@models/measurement/measurement.model';
-import { IProgramVersion } from '@models/program/program-version.model';
+import { IProgramVersion, formatProgramVersionLabel } from '@models/program/program-version.model';
 import { TraceModalComponent } from '@mng/reports/trace-modal/trace-modal.component';
 import { toApiError } from '@services/common/api-error.util';
 import { SectionService } from '@services/course/section.service';
 import { TermService } from '@services/course/term.service';
+import {
+  formatCalculationRunOption,
+  formatMeasurementResultContext,
+} from '@services/measurement/calculation-run-display.util';
 import { CalculationService } from '@services/measurement/calculation.service';
 import { ProgramVersionService } from '@services/program/program-version.service';
 import { TablePaginateComponent } from '@widget/paginate/paginate.component';
@@ -76,6 +80,9 @@ export class CalculationsPageComponent implements OnInit {
   protected readonly scopeLabel = CALCULATION_SCOPE_LABEL;
   protected readonly statusLabel = CALCULATION_STATUS_LABEL;
   protected readonly levelLabel = RESULT_LEVEL_LABEL;
+  protected readonly formatProgramVersionLabel = formatProgramVersionLabel;
+  protected readonly formatRunContext = (run: CalculationRunResponse): string => formatCalculationRunOption(run).primaryLabel;
+  protected readonly formatResultContext = formatMeasurementResultContext;
 
   readonly runs = signal<CalculationRunResponse[]>([]);
   readonly loadingRuns = signal<boolean>(false);
@@ -118,6 +125,9 @@ export class CalculationsPageComponent implements OnInit {
 
   readonly selectedRun = signal<CalculationRunResponse | null>(null);
   readonly selectedLevel = signal<ResultLevel | ''>('');
+  readonly activeTabIndex = signal<number>(0);
+  private subjectOptionsLoadedForRunId: string | null = null;
+  private studentResultsLoadedKey: string | null = null;
 
   // Bộ lọc chi tiết Student Results (B1)
   readonly selectedSubjectId = signal<string | null>(null);
@@ -175,9 +185,6 @@ export class CalculationsPageComponent implements OnInit {
 
   loadInitialData(): void {
     this.loadRuns();
-    this.pvSelect.loadInitial();
-    this.sectionSelect.loadInitial();
-    this.termSelect.loadInitial();
   }
 
   onProgramVersionChange(pvId: string | null): void {
@@ -282,14 +289,32 @@ export class CalculationsPageComponent implements OnInit {
     this.aggPage.set(0);
     this.stuPage.set(0);
     this.selectedSubjectId.set(null);
-    this.loadSubjectOptions(run.id);
+    this.subjectOptions.set([]);
+    this.subjectOptionsLoadedForRunId = null;
+    this.studentResultsLoadedKey = null;
     this.loadRunDetails();
+  }
+
+  onTabChange(index: number): void {
+    this.activeTabIndex.set(index);
+    const run = this.selectedRun();
+    if (!run || index !== 1) {
+      return;
+    }
+    if (this.subjectOptionsLoadedForRunId !== run.id) {
+      this.loadSubjectOptions(run.id);
+    }
+    const key = `${run.id}:${this.selectedLevel()}`;
+    if (this.studentResultsLoadedKey !== key) {
+      this.loadStudentResults();
+    }
   }
 
   onLevelFilterChange(level: ResultLevel | ''): void {
     this.selectedLevel.set(level);
     this.aggPage.set(0);
     this.stuPage.set(0);
+    this.studentResultsLoadedKey = null;
     this.loadRunDetails();
   }
 
@@ -300,7 +325,9 @@ export class CalculationsPageComponent implements OnInit {
 
   loadRunDetails(): void {
     this.loadAggregateResults();
-    this.loadStudentResults();
+    if (this.activeTabIndex() === 1) {
+      this.loadStudentResults();
+    }
   }
 
   loadAggregateResults(): void {
@@ -317,6 +344,26 @@ export class CalculationsPageComponent implements OnInit {
         this.aggTotalElements.set(res.totalElements ?? list.length);
         this.aggTotalPages.set(res.totalPages || 1);
         this.loadingAggregates.set(false);
+        if (!level && this.aggPage() === 0) {
+          const seen = new Set<string>();
+          const opts: { id: string; label: string; }[] = [];
+          for (const item of list) {
+            if (!seen.has(item.subjectId)) {
+              seen.add(item.subjectId);
+              opts.push({
+                id: item.subjectId,
+                label: `${this.levelLabel[item.level] ?? item.level}: ${item.subjectCode ?? item.subjectId}`,
+              });
+            }
+          }
+          const isComplete = res.last ?? list.length >= (res.totalElements ?? list.length);
+          if (isComplete) {
+            this.subjectOptions.set(opts);
+            this.subjectOptionsLoadedForRunId = run.id;
+          } else if (this.subjectOptionsLoadedForRunId !== run.id) {
+            this.subjectOptions.set(opts);
+          }
+        }
       },
       error: err => {
         this.aggregateResults.set([]);
@@ -337,6 +384,7 @@ export class CalculationsPageComponent implements OnInit {
 
     this.loadingStudents.set(true);
     this.studentsError.set(null);
+    this.studentResultsLoadedKey = `${run.id}:${this.selectedLevel()}`;
 
     this.calcSvc.getStudentResults(run.id, {
       level,
@@ -384,6 +432,7 @@ export class CalculationsPageComponent implements OnInit {
   }
 
   private loadSubjectOptions(runId: string): void {
+    this.subjectOptionsLoadedForRunId = runId;
     this.calcSvc.getAggregateResults(runId, undefined, undefined, 0, 100).subscribe({
       next: res => {
         const seen = new Set<string>();
@@ -399,7 +448,10 @@ export class CalculationsPageComponent implements OnInit {
         }
         this.subjectOptions.set(opts);
       },
-      error: () => this.subjectOptions.set([]),
+      error: () => {
+        this.subjectOptionsLoadedForRunId = null;
+        this.subjectOptions.set([]);
+      },
     });
   }
 

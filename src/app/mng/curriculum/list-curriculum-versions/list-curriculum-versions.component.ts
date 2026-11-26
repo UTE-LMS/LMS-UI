@@ -12,7 +12,6 @@ import {
 import { AuthService } from '@services/auth/auth.service';
 import { toApiError } from '@services/common/api-error.util';
 import { CourseService } from '@services/course/course.service';
-import { PloPiService } from '@services/program/plo-pi.service';
 import { ProgramVersionService } from '@services/program/program-version.service';
 import { ProgramService } from '@services/program/program.service';
 import { StatusChipComponent } from '@widget/status-chip/status-chip.component';
@@ -25,8 +24,6 @@ import { NzSelectModule } from 'ng-zorro-antd/select';
 import { NzStepsModule } from 'ng-zorro-antd/steps';
 import { NzTableModule } from 'ng-zorro-antd/table';
 import { ToastrService } from 'ngx-toastr';
-import { forkJoin, of } from 'rxjs';
-import { catchError } from 'rxjs/operators';
 import { ImportTemplateFormat, saveBlobAs, templateFileNameFor } from '@services/common/import-file.util';
 import { ImportFilePreviewComponent } from '@widget/import-file-preview/import-file-preview.component';
 
@@ -52,7 +49,6 @@ import { ImportFilePreviewComponent } from '@widget/import-file-preview/import-f
 export class ListCurriculumVersionsComponent implements OnInit {
   private readonly programSvc = inject(ProgramService);
   private readonly versionSvc = inject(ProgramVersionService);
-  private readonly ploPiSvc = inject(PloPiService);
   private readonly courseSvc = inject(CourseService);
   private readonly authSvc = inject(AuthService);
   private readonly route = inject(ActivatedRoute);
@@ -66,9 +62,6 @@ export class ListCurriculumVersionsComponent implements OnInit {
   readonly selectedProgramId = signal<string>('');
   readonly versions = signal<IProgramVersion[]>([]);
   readonly isLoading = signal(false);
-
-  readonly ploCountMap = signal<Record<string, number>>({});
-  readonly piCountMap = signal<Record<string, number>>({});
 
   readonly page = signal(1);
   readonly size = signal(20);
@@ -233,9 +226,6 @@ export class ListCurriculumVersionsComponent implements OnInit {
           const vList = res.content || [];
           this.versions.set(vList);
           this.total.set(res.totalElements ?? vList.length);
-
-          // Tải số lượng PLO và PI cho các phiên bản
-          this.loadPloPiCounts(vList);
         },
         error: err => {
           this.isLoading.set(false);
@@ -243,28 +233,6 @@ export class ListCurriculumVersionsComponent implements OnInit {
           this.alert.error(apiErr?.message ?? 'Không thể tải danh sách phiên bản');
         },
       });
-  }
-
-  private loadPloPiCounts(vList: IProgramVersion[]): void {
-    vList.forEach(v => {
-      forkJoin({
-        plos: this.ploPiSvc.getPlos(v.id).pipe(catchError(() => of([]))),
-        pis: this.ploPiSvc.getPis(v.id).pipe(catchError(() => of([]))),
-      }).subscribe(({ plos, pis }) => {
-        this.ploCountMap.update(m => ({ ...m, [v.id]: plos.length }));
-        this.piCountMap.update(m => ({ ...m, [v.id]: pis.length }));
-      });
-    });
-  }
-
-  getPloCount(versionId: string): string | number {
-    const count = this.ploCountMap()[versionId];
-    return typeof count === 'number' ? count : '—';
-  }
-
-  getPiCount(versionId: string): string | number {
-    const count = this.piCountMap()[versionId];
-    return typeof count === 'number' ? count : '—';
   }
 
   formatCohorts(cohort?: string): string {

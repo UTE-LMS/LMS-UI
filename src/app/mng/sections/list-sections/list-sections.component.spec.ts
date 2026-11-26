@@ -28,8 +28,13 @@ describe('ListSectionsComponent (F05a US-19)', () => {
       id: 'sec1',
       code: 'TEST101-01',
       courseId: 'c1',
+      courseCode: 'TEST101',
+      courseName: 'Học phần thử nghiệm',
       syllabusId: 's1',
+      syllabusVersion: '1',
+      syllabusStatus: 'CONFIRMED',
       termId: 't1',
+      termCode: '2026-HK1',
       lecturerIds: ['u1'],
       lecturers: [{ id: 'u1', username: 'gv.test01', fullName: 'GV Thử' }],
       enrolledCount: 45,
@@ -39,8 +44,13 @@ describe('ListSectionsComponent (F05a US-19)', () => {
       id: 'sec2',
       code: 'TEST101-02',
       courseId: 'c1',
+      courseCode: 'TEST101',
+      courseName: 'Học phần thử nghiệm',
       syllabusId: 's1',
+      syllabusVersion: '1',
+      syllabusStatus: 'CONFIRMED',
       termId: 't1',
+      termCode: '2026-HK1',
       lecturerIds: ['u_locked'],
       lecturers: [{ id: 'u_locked', username: 'gv.locked', fullName: 'GV Đã Khóa' }],
       enrolledCount: 0,
@@ -82,6 +92,7 @@ describe('ListSectionsComponent (F05a US-19)', () => {
   const authSvc = { getRoles: vi.fn<() => string[]>(), getUserId: vi.fn(() => 'u1'), getNameOfLogin: vi.fn(() => 'Nguyễn Văn Thử') };
 
   async function setup(roles: string[], list: ISection[] = sections): Promise<void> {
+    vi.clearAllMocks();
     sectionSvc.getSections.mockReset();
     sectionSvc.getLecturers.mockClear();
     sectionSvc.getLecturers.mockReturnValue(of([
@@ -122,6 +133,11 @@ describe('ListSectionsComponent (F05a US-19)', () => {
     expect(text()).toContain('GV Đã Khóa');
     expect(text()).not.toContain('gv.test01');
     expect(sectionSvc.getLecturers).toHaveBeenCalled();
+    expect(termSvc.getTermById).not.toHaveBeenCalled();
+    expect(courseSvc.getCourseById).not.toHaveBeenCalled();
+    expect(syllabusSvc.getSyllabusById).not.toHaveBeenCalled();
+    expect(termSvc.getTerms).not.toHaveBeenCalled();
+    expect(courseSvc.getCourses).not.toHaveBeenCalled();
     expect(fixture.componentInstance.lecturerListAvailable()).toBe(true);
   });
 

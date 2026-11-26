@@ -117,17 +117,23 @@
       <tr>
         <td><a class="font-semibold text-blue-800 hover:underline" [routerLink]="urlConst.SECTION_DETAIL(section.id)">{{ section.code }}</a></td>
         <td>
-          @if (courseOf(section.courseId); as course) {
-          <span class="font-medium">{{ course.code }}</span> · {{ course.name }}
+          @if (section.courseCode || section.courseName) {
+            @if (section.courseCode) {
+              <span class="font-medium">{{ section.courseCode }}</span>
+            }
+            @if (section.courseCode && section.courseName) { · }
+            {{ section.courseName }}
           } @else {
           <span class="text-slate-600">—</span>
           }
         </td>
-        <td>{{ termCode(section.termId) }}</td>
+        <td>{{ section.termCode || '—' }}</td>
         <td>
-          @if (syllabusOf(section.syllabusId); as syllabus) {
-          <span class="mr-1">Bản {{ syllabus.version }}</span>
-          <app-display-chip [display]="syllabusStatusDisplay[syllabus.status]" />
+          @if (section.syllabusVersion) {
+          <span class="mr-1">Bản {{ section.syllabusVersion }}</span>
+            @if (section.syllabusStatus) {
+              <app-display-chip [display]="syllabusStatusDisplay[section.syllabusStatus]" />
+            }
           } @else {
           <span class="text-slate-600">—</span>
           }

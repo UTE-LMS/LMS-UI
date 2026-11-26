@@ -17,7 +17,18 @@ describe('ListAssessmentsComponent (F04 US-15, ADR 0014)', () => {
   let component: ListAssessmentsComponent;
 
   const section: ISection = {
-    id: 'sec1', code: 'TEST101-01', courseId: 'c1', syllabusId: 'syl1', termId: 't1', lecturerIds: ['u1'], enrolledCount: 3, status: 'OPEN',
+    id: 'sec1',
+    code: 'TEST101-01',
+    courseId: 'c1',
+    courseCode: 'TEST101',
+    courseName: 'Học phần thử nghiệm',
+    syllabusId: 'syl1',
+    syllabusVersion: 'v1',
+    termId: 't1',
+    termCode: 'HK1-2526',
+    lecturerIds: ['u1'],
+    enrolledCount: 3,
+    status: 'OPEN',
   };
   const make = (id: string, name: string, status: AssessmentStatus, extra: Partial<IAssessment> = {}): IAssessment => ({
     id, syllabusId: 'syl1', sectionId: 'sec1', code: id.toUpperCase(), name, scope: 'SECTION',
@@ -65,12 +76,15 @@ describe('ListAssessmentsComponent (F04 US-15, ADR 0014)', () => {
     fixture.detectChanges();
   }
 
-  it('xem theo lớp: nạp đủ bài đánh giá của lớp và thông tin học phần', async () => {
+  it('xem theo lớp: nạp đủ bài đánh giá của lớp, hiển thị học phần từ SectionResponse và không gọi getCourseById', async () => {
     await setup([SystemConstant.ROLE.LECTURER]);
     expect(component.mode()).toBe('SECTION');
     expect(assessmentSvc.getSectionAssessments).toHaveBeenCalledWith('sec1');
+    expect(courseSvc.getCourseById).not.toHaveBeenCalled();
     expect(component.assessments().length).toBe(3);
-    expect(component.course()?.code).toBe('TEST101');
+    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    expect(text).toContain('TEST101');
+    expect(text).toContain('Học phần thử nghiệm');
   });
 
   it('quyền tạo bài cho lớp: chỉ giảng viên của lớp mới được tạo', async () => {
